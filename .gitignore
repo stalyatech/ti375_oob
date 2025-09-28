@@ -1,0 +1,8 @@
+.lock
+*.o
+*.out
+*.obj
+
+embedded_sw/
+outflow/
+work_*/

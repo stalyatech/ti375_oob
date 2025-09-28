@@ -1,0 +1,48 @@
+{
+    "args": [
+        "-o",
+        "gTSE_core_fifo_ctrl",
+        "--base_path",
+        "D:\\Projects\\fpga\\efinix\\project\\fpga\\efx_ti375c529_oob_v2.1\\efx_ti375_oob_v2_1\\bsp\\TI375C529_DK\\ip",
+        "--vlnv",
+        {
+            "vendor": "efinixinc.com",
+            "library": "memory",
+            "name": "efx_fifo_top",
+            "version": "8.0"
+        }
+    ],
+    "conf": {
+        "SYNC_CLK": "0",
+        "SYNC_STAGE": "2",
+        "DEPTH_2": "9",
+        "DATA_WIDTH": "16",
+        "MODE": "\"FWFT\"",
+        "OUTPUT_REG": "0",
+        "PROG_FULL_ASSERT": "4",
+        "PROGRAMMABLE_FULL": "\"NONE\"",
+        "PFN_INTERNAL": "3",
+        "PEA_INTERNAL": "2",
+        "PEN_INTERNAL": "3",
+        "PROGRAMMABLE_EMPTY": "\"NONE\"",
+        "OPTIONAL_FLAGS": "0",
+        "PIPELINE_REG": "1",
+        "ASYM_WIDTH_RATIO": "4",
+        "BYPASS_RESET_SYNC": "0",
+        "ENDIANESS": "0",
+        "RAM_STYLE": "\"block_ram\"",
+        "OVERFLOW_PROTECT": "0",
+        "UNDERFLOW_PROTECT": "0"
+    },
+    "output": {
+        "external_source_source": [
+            "gTSE_core_fifo_ctrl\\gTSE_core_fifo_ctrl.sv",
+            "gTSE_core_fifo_ctrl\\gTSE_core_fifo_ctrl_define.svh",
+            "gTSE_core_fifo_ctrl\\gTSE_core_fifo_ctrl_tmpl.sv",
+            "gTSE_core_fifo_ctrl\\gTSE_core_fifo_ctrl_tmpl.vhd"
+        ]
+    },
+    "ooc_synthesis": {},
+    "sw_version": "2025.1.110.5.9",
+    "generated_date": "2025-09-27T16:48:00.909493+00:00"
+}

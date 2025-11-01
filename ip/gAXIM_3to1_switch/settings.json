@@ -3,7 +3,7 @@
         "-o",
         "gAXIM_3to1_switch",
         "--base_path",
-        "D:\\Projects\\fpga\\efinix\\project\\fpga\\efx_ti375c529_oob_v2.1\\efx_ti375_oob_v2_1\\bsp\\TI375C529_DK\\ip",
+        "D:\\Projects\\fpga\\efinix\\project\\fpga\\ti375_oob\\ip",
         "--vlnv",
         {
             "vendor": "efinixinc.com",
@@ -23,7 +23,7 @@
         "TABLE0_AXI_S5__MIN": "32'd805306368",
         "TABLE0_AXI_S6__MIN": "32'd1073741824",
         "TABLE0_AXI_S7__MIN": "32'd1090519040",
-        "TABLE0_AXI_S0__MAX": "32'd28",
+        "TABLE0_AXI_S0__MAX": "32'd32",
         "TABLE0_AXI_S1__MAX": "32'd24",
         "TABLE0_AXI_S2__MAX": "32'd12",
         "TABLE0_AXI_S3__MAX": "32'd20",
@@ -41,13 +41,13 @@
     "output": {
         "external_script_generator": [],
         "external_source_source": [
-            "gAXIM_3to1_switch\\gAXIM_3to1_switch.v",
+            "gAXIM_3to1_switch\\gAXIM_3to1_switch_define.vh",
             "gAXIM_3to1_switch\\gAXIM_3to1_switch_tmpl.v",
             "gAXIM_3to1_switch\\gAXIM_3to1_switch_tmpl.vhd",
-            "gAXIM_3to1_switch\\gAXIM_3to1_switch_define.vh"
+            "gAXIM_3to1_switch\\gAXIM_3to1_switch.v"
         ]
     },
     "ooc_synthesis": {},
     "sw_version": "2025.1.110.5.9",
-    "generated_date": "2025-09-27T18:04:34.928327+00:00"
+    "generated_date": "2025-11-01T04:53:42.844442+00:00"
 }

@@ -3,7 +3,7 @@
         "-o",
         "gTSE_core_fifo_ctrl",
         "--base_path",
-        "D:\\Projects\\fpga\\efinix\\project\\fpga\\efx_ti375c529_oob_v2.1\\efx_ti375_oob_v2_1\\bsp\\TI375C529_DK\\ip",
+        "D:\\Projects\\fpga\\efinix\\project\\fpga\\ti375_oob\\ip",
         "--vlnv",
         {
             "vendor": "efinixinc.com",
@@ -37,12 +37,12 @@
     "output": {
         "external_source_source": [
             "gTSE_core_fifo_ctrl\\gTSE_core_fifo_ctrl.sv",
-            "gTSE_core_fifo_ctrl\\gTSE_core_fifo_ctrl_define.svh",
             "gTSE_core_fifo_ctrl\\gTSE_core_fifo_ctrl_tmpl.sv",
-            "gTSE_core_fifo_ctrl\\gTSE_core_fifo_ctrl_tmpl.vhd"
+            "gTSE_core_fifo_ctrl\\gTSE_core_fifo_ctrl_tmpl.vhd",
+            "gTSE_core_fifo_ctrl\\gTSE_core_fifo_ctrl_define.svh"
         ]
     },
     "ooc_synthesis": {},
     "sw_version": "2025.1.110.5.9",
-    "generated_date": "2025-09-27T16:48:00.909493+00:00"
+    "generated_date": "2025-11-01T04:53:19.189157+00:00"
 }

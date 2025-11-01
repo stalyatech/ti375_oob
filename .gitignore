@@ -3,6 +3,7 @@
 *.out
 *.obj
 
+Bitstream/
 embedded_sw/
 outflow/
 work_*/

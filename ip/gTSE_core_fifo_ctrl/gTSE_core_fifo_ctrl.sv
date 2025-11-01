@@ -43,7 +43,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-`define IP_UUID _25823c1a0ce946fd9b85946e6dfcd0c9
+`define IP_UUID _6bff1014bf5c438fb842b2bb99e2774f
 `define IP_NAME_CONCAT(a,b) a``b
 `define IP_MODULE_NAME(name) `IP_NAME_CONCAT(name,`IP_UUID)
 module gTSE_core_fifo_ctrl

@@ -1,64 +1,24 @@
 module EfxSapphireHpSoc_wrapper (
-input		io_cfuClk,
-input		io_cfuReset,
-output		userInterruptD,
-output		system_uart_1_io_txd,
-input		system_uart_1_io_rxd,
-output		userInterruptF,
-output		userInterruptH,
-output		userInterruptI,
-output		system_i2c_2_io_sda_writeEnable,
-output		system_i2c_2_io_sda_write,
-input		system_i2c_2_io_sda_read,
-output		system_i2c_2_io_scl_writeEnable,
-output		system_i2c_2_io_scl_write,
-input		system_i2c_2_io_scl_read,
-output		userInterruptJ,
-output		userInterruptB,
-output		userInterruptK,
-output		system_uart_2_io_txd,
-input		system_uart_2_io_rxd,
 output		system_i2c_1_io_sda_writeEnable,
 output		system_i2c_1_io_sda_write,
 input		system_i2c_1_io_sda_read,
 output		system_i2c_1_io_scl_writeEnable,
 output		system_i2c_1_io_scl_write,
 input		system_i2c_1_io_scl_read,
-input [7:0] system_gpio_0_io_read,
-output [7:0] system_gpio_0_io_write,
-output [7:0] system_gpio_0_io_writeEnable,
-input		cpu1_customInstruction_cmd_valid,
-output		cpu1_customInstruction_cmd_ready,
-input [9:0] cpu1_customInstruction_function_id,
-input [31:0] cpu1_customInstruction_inputs_0,
-input [31:0] cpu1_customInstruction_inputs_1,
-output		cpu1_customInstruction_rsp_valid,
-input		cpu1_customInstruction_rsp_ready,
-output [31:0] cpu1_customInstruction_outputs_0,
-output		system_spi_0_io_sclk_write,
-output		system_spi_0_io_data_0_writeEnable,
-input		system_spi_0_io_data_0_read,
-output		system_spi_0_io_data_0_write,
-output		system_spi_0_io_data_1_writeEnable,
-input		system_spi_0_io_data_1_read,
-output		system_spi_0_io_data_1_write,
-output		system_spi_0_io_data_2_writeEnable,
-input		system_spi_0_io_data_2_read,
-output		system_spi_0_io_data_2_write,
-output		system_spi_0_io_data_3_writeEnable,
-input		system_spi_0_io_data_3_read,
-output		system_spi_0_io_data_3_write,
-output [3:0] system_spi_0_io_ss,
-output		userInterruptC,
-output		userInterruptG,
-input		cpu3_customInstruction_cmd_valid,
-output		cpu3_customInstruction_cmd_ready,
-input [9:0] cpu3_customInstruction_function_id,
-input [31:0] cpu3_customInstruction_inputs_0,
-input [31:0] cpu3_customInstruction_inputs_1,
-output		cpu3_customInstruction_rsp_valid,
-input		cpu3_customInstruction_rsp_ready,
-output [31:0] cpu3_customInstruction_outputs_0,
+output		system_watchdog_hardPanic_reset,
+output		userInterruptF,
+input		cpu0_customInstruction_cmd_valid,
+output		cpu0_customInstruction_cmd_ready,
+input [9:0] cpu0_customInstruction_function_id,
+input [31:0] cpu0_customInstruction_inputs_0,
+input [31:0] cpu0_customInstruction_inputs_1,
+output		cpu0_customInstruction_rsp_valid,
+input		cpu0_customInstruction_rsp_ready,
+output [31:0] cpu0_customInstruction_outputs_0,
+output		system_uart_0_io_txd,
+input		system_uart_0_io_rxd,
+output		system_uart_1_io_txd,
+input		system_uart_1_io_rxd,
 output		jtagCtrl_tdi,
 input		jtagCtrl_tdo,
 output		jtagCtrl_enable,
@@ -73,15 +33,38 @@ input		ut_jtagCtrl_capture,
 input		ut_jtagCtrl_shift,
 input		ut_jtagCtrl_update,
 input		ut_jtagCtrl_reset,
-output		system_i2c_0_io_sda_writeEnable,
-output		system_i2c_0_io_sda_write,
-input		system_i2c_0_io_sda_read,
-output		system_i2c_0_io_scl_writeEnable,
-output		system_i2c_0_io_scl_write,
-input		system_i2c_0_io_scl_read,
-output		userInterruptE,
-output		userInterruptA,
-output		system_watchdog_hardPanic_reset,
+output		system_i2c_2_io_sda_writeEnable,
+output		system_i2c_2_io_sda_write,
+input		system_i2c_2_io_sda_read,
+output		system_i2c_2_io_scl_writeEnable,
+output		system_i2c_2_io_scl_write,
+input		system_i2c_2_io_scl_read,
+input		cpu1_customInstruction_cmd_valid,
+output		cpu1_customInstruction_cmd_ready,
+input [9:0] cpu1_customInstruction_function_id,
+input [31:0] cpu1_customInstruction_inputs_0,
+input [31:0] cpu1_customInstruction_inputs_1,
+output		cpu1_customInstruction_rsp_valid,
+input		cpu1_customInstruction_rsp_ready,
+output [31:0] cpu1_customInstruction_outputs_0,
+output		system_uart_2_io_txd,
+input		system_uart_2_io_rxd,
+input		cpu2_customInstruction_cmd_valid,
+output		cpu2_customInstruction_cmd_ready,
+input [9:0] cpu2_customInstruction_function_id,
+input [31:0] cpu2_customInstruction_inputs_0,
+input [31:0] cpu2_customInstruction_inputs_1,
+output		cpu2_customInstruction_rsp_valid,
+input		cpu2_customInstruction_rsp_ready,
+output [31:0] cpu2_customInstruction_outputs_0,
+input		cpu3_customInstruction_cmd_valid,
+output		cpu3_customInstruction_cmd_ready,
+input [9:0] cpu3_customInstruction_function_id,
+input [31:0] cpu3_customInstruction_inputs_0,
+input [31:0] cpu3_customInstruction_inputs_1,
+output		cpu3_customInstruction_rsp_valid,
+input		cpu3_customInstruction_rsp_ready,
+output [31:0] cpu3_customInstruction_outputs_0,
 output		system_spi_1_io_sclk_write,
 output		system_spi_1_io_data_0_writeEnable,
 input		system_spi_1_io_data_0_read,
@@ -96,21 +79,34 @@ output		system_spi_1_io_data_3_writeEnable,
 input		system_spi_1_io_data_3_read,
 output		system_spi_1_io_data_3_write,
 output [3:0] system_spi_1_io_ss,
-output		system_spi_2_io_sclk_write,
-output		system_spi_2_io_data_0_writeEnable,
-input		system_spi_2_io_data_0_read,
-output		system_spi_2_io_data_0_write,
-output		system_spi_2_io_data_1_writeEnable,
-input		system_spi_2_io_data_1_read,
-output		system_spi_2_io_data_1_write,
-output		system_spi_2_io_data_2_writeEnable,
-input		system_spi_2_io_data_2_read,
-output		system_spi_2_io_data_2_write,
-output		system_spi_2_io_data_3_writeEnable,
-input		system_spi_2_io_data_3_read,
-output		system_spi_2_io_data_3_write,
-output [3:0] system_spi_2_io_ss,
-output		userInterruptL,
+output		userInterruptA,
+output		system_i2c_0_io_sda_writeEnable,
+output		system_i2c_0_io_sda_write,
+input		system_i2c_0_io_sda_read,
+output		system_i2c_0_io_scl_writeEnable,
+output		system_i2c_0_io_scl_write,
+input		system_i2c_0_io_scl_read,
+output		userInterruptK,
+output		userInterruptI,
+input [7:0] system_gpio_0_io_read,
+output [7:0] system_gpio_0_io_write,
+output [7:0] system_gpio_0_io_writeEnable,
+output		userInterruptE,
+output		userInterruptG,
+output		system_spi_0_io_sclk_write,
+output		system_spi_0_io_data_0_writeEnable,
+input		system_spi_0_io_data_0_read,
+output		system_spi_0_io_data_0_write,
+output		system_spi_0_io_data_1_writeEnable,
+input		system_spi_0_io_data_1_read,
+output		system_spi_0_io_data_1_write,
+output		system_spi_0_io_data_2_writeEnable,
+input		system_spi_0_io_data_2_read,
+output		system_spi_0_io_data_2_write,
+output		system_spi_0_io_data_3_writeEnable,
+input		system_spi_0_io_data_3_read,
+output		system_spi_0_io_data_3_write,
+output [3:0] system_spi_0_io_ss,
 output		io_ddrMasters_0_aw_valid,
 input		io_ddrMasters_0_aw_ready,
 output [31:0] io_ddrMasters_0_aw_payload_addr,
@@ -153,24 +149,28 @@ input [1:0] io_ddrMasters_0_r_payload_resp,
 input		io_ddrMasters_0_r_payload_last,
 input		io_ddrMasters_0_clk,
 input		io_ddrMasters_0_reset,
-output		system_uart_0_io_txd,
-input		system_uart_0_io_rxd,
-input		cpu2_customInstruction_cmd_valid,
-output		cpu2_customInstruction_cmd_ready,
-input [9:0] cpu2_customInstruction_function_id,
-input [31:0] cpu2_customInstruction_inputs_0,
-input [31:0] cpu2_customInstruction_inputs_1,
-output		cpu2_customInstruction_rsp_valid,
-input		cpu2_customInstruction_rsp_ready,
-output [31:0] cpu2_customInstruction_outputs_0,
-input		cpu0_customInstruction_cmd_valid,
-output		cpu0_customInstruction_cmd_ready,
-input [9:0] cpu0_customInstruction_function_id,
-input [31:0] cpu0_customInstruction_inputs_0,
-input [31:0] cpu0_customInstruction_inputs_1,
-output		cpu0_customInstruction_rsp_valid,
-input		cpu0_customInstruction_rsp_ready,
-output [31:0] cpu0_customInstruction_outputs_0,
+output		userInterruptL,
+output		userInterruptH,
+output		userInterruptJ,
+output		userInterruptD,
+input		io_cfuClk,
+input		io_cfuReset,
+output		system_spi_2_io_sclk_write,
+output		system_spi_2_io_data_0_writeEnable,
+input		system_spi_2_io_data_0_read,
+output		system_spi_2_io_data_0_write,
+output		system_spi_2_io_data_1_writeEnable,
+input		system_spi_2_io_data_1_read,
+output		system_spi_2_io_data_1_write,
+output		system_spi_2_io_data_2_writeEnable,
+input		system_spi_2_io_data_2_read,
+output		system_spi_2_io_data_2_write,
+output		system_spi_2_io_data_3_writeEnable,
+input		system_spi_2_io_data_3_read,
+output		system_spi_2_io_data_3_write,
+output [3:0] system_spi_2_io_ss,
+output		userInterruptB,
+output		userInterruptC,
 input [31:0]  axiA_awaddr,
 input [7:0]	  axiA_awlen,
 input [2:0]	  axiA_awsize,
@@ -277,16 +277,43 @@ assign io_ddrMasters_0_r_ready = 1'b1;
 /*	INFO: USER TO MODIFY CODES BELOW						*/
 /*	INFO: REFER EXAMPLE DESIGN FOR IMPLEMENTATION DETAILS	*/
 /**/
-assign cpu0_customInstruction_cmd_ready = 1'b1;
-assign cpu0_customInstruction_rsp_valid = 1'b0;
-assign cpu0_customInstruction_outputs_0 = 32'd0;
+assign io_apbSlave_0_PREADY = 1'b1;
+assign io_apbSlave_0_PRDATA = 32'd0;
+//io_apbSlave_0_PADDR;
+//io_apbSlave_0_PSEL;
+//io_apbSlave_0_PENABLE;
+//io_apbSlave_0_PWRITE;
+//io_apbSlave_0_PWDATA;
+//io_apbSlave_0_PSLVERROR;
+/**/
+/*	INFO: USER TO MODIFY CODES BELOW						*/
+/*	INFO: REFER EXAMPLE DESIGN FOR IMPLEMENTATION DETAILS	*/
+/**/
+assign cpu2_customInstruction_cmd_ready = 1'b1;
+assign cpu2_customInstruction_rsp_valid = 1'b0;
+assign cpu2_customInstruction_outputs_0 = 32'd0;
 //io_cfuClk
 //io_cfyReset
-//cpu0_customInstruction_rsp_ready
-//cpu0_customInstruction_cmd_valid
-//cpu0_customInstruction_function_id
-//cpu0_customInstruction_inputs_0
-//cpu0_customInstruction_inputs_1
+//cpu2_customInstruction_rsp_ready
+//cpu2_customInstruction_cmd_valid
+//cpu2_customInstruction_function_id
+//cpu2_customInstruction_inputs_0
+//cpu2_customInstruction_inputs_1
+
+/**/
+/*	INFO: USER TO MODIFY CODES BELOW						*/
+/*	INFO: REFER EXAMPLE DESIGN FOR IMPLEMENTATION DETAILS	*/
+/**/
+assign cpu1_customInstruction_cmd_ready = 1'b1;
+assign cpu1_customInstruction_rsp_valid = 1'b0;
+assign cpu1_customInstruction_outputs_0 = 32'd0;
+//io_cfuClk
+//io_cfyReset
+//cpu1_customInstruction_rsp_ready
+//cpu1_customInstruction_cmd_valid
+//cpu1_customInstruction_function_id
+//cpu1_customInstruction_inputs_0
+//cpu1_customInstruction_inputs_1
 
 /**/
 /*	INFO: USER TO MODIFY CODES BELOW						*/
@@ -307,66 +334,22 @@ assign cpu3_customInstruction_outputs_0 = 32'd0;
 /*	INFO: USER TO MODIFY CODES BELOW						*/
 /*	INFO: REFER EXAMPLE DESIGN FOR IMPLEMENTATION DETAILS	*/
 /**/
-assign cpu2_customInstruction_cmd_ready = 1'b1;
-assign cpu2_customInstruction_rsp_valid = 1'b0;
-assign cpu2_customInstruction_outputs_0 = 32'd0;
+assign cpu0_customInstruction_cmd_ready = 1'b1;
+assign cpu0_customInstruction_rsp_valid = 1'b0;
+assign cpu0_customInstruction_outputs_0 = 32'd0;
 //io_cfuClk
 //io_cfyReset
-//cpu2_customInstruction_rsp_ready
-//cpu2_customInstruction_cmd_valid
-//cpu2_customInstruction_function_id
-//cpu2_customInstruction_inputs_0
-//cpu2_customInstruction_inputs_1
-
-/**/
-/*	INFO: USER TO MODIFY CODES BELOW						*/
-/*	INFO: REFER EXAMPLE DESIGN FOR IMPLEMENTATION DETAILS	*/
-/**/
-assign io_apbSlave_0_PREADY = 1'b1;
-assign io_apbSlave_0_PRDATA = 32'd0;
-//io_apbSlave_0_PADDR;
-//io_apbSlave_0_PSEL;
-//io_apbSlave_0_PENABLE;
-//io_apbSlave_0_PWRITE;
-//io_apbSlave_0_PWDATA;
-//io_apbSlave_0_PSLVERROR;
-/**/
-/*	INFO: USER TO MODIFY CODES BELOW						*/
-/*	INFO: REFER EXAMPLE DESIGN FOR IMPLEMENTATION DETAILS	*/
-/**/
-assign cpu1_customInstruction_cmd_ready = 1'b1;
-assign cpu1_customInstruction_rsp_valid = 1'b0;
-assign cpu1_customInstruction_outputs_0 = 32'd0;
-//io_cfuClk
-//io_cfyReset
-//cpu1_customInstruction_rsp_ready
-//cpu1_customInstruction_cmd_valid
-//cpu1_customInstruction_function_id
-//cpu1_customInstruction_inputs_0
-//cpu1_customInstruction_inputs_1
+//cpu0_customInstruction_rsp_ready
+//cpu0_customInstruction_cmd_valid
+//cpu0_customInstruction_function_id
+//cpu0_customInstruction_inputs_0
+//cpu0_customInstruction_inputs_1
 
 
 
 //axi4 bridge to various I/O
 EfxSapphireHpSoc_slb u_top_peripherals(
-.system_watchdog_hardPanic_reset(system_watchdog_hardPanic_reset),
-.userInterruptI(userInterruptI),
-.userInterruptA(userInterruptA),
-.userInterruptL(userInterruptL),
-.system_i2c_1_io_sda_writeEnable(system_i2c_1_io_sda_writeEnable),
-.system_i2c_1_io_sda_write(system_i2c_1_io_sda_write),
-.system_i2c_1_io_sda_read(system_i2c_1_io_sda_read),
-.system_i2c_1_io_scl_writeEnable(system_i2c_1_io_scl_writeEnable),
-.system_i2c_1_io_scl_write(system_i2c_1_io_scl_write),
-.system_i2c_1_io_scl_read(system_i2c_1_io_scl_read),
-.io_apbSlave_0_PADDR(io_apbSlave_0_PADDR),
-.io_apbSlave_0_PSEL(io_apbSlave_0_PSEL),
-.io_apbSlave_0_PENABLE(io_apbSlave_0_PENABLE),
-.io_apbSlave_0_PREADY(io_apbSlave_0_PREADY),
-.io_apbSlave_0_PWRITE(io_apbSlave_0_PWRITE),
-.io_apbSlave_0_PWDATA(io_apbSlave_0_PWDATA),
-.io_apbSlave_0_PRDATA(io_apbSlave_0_PRDATA),
-.io_apbSlave_0_PSLVERROR(io_apbSlave_0_PSLVERROR),
+.userInterruptH(userInterruptH),
 .jtagCtrl_tdi(jtagCtrl_tdi),
 .jtagCtrl_tdo(jtagCtrl_tdo),
 .jtagCtrl_enable(jtagCtrl_enable),
@@ -381,19 +364,17 @@ EfxSapphireHpSoc_slb u_top_peripherals(
 .ut_jtagCtrl_shift(ut_jtagCtrl_shift),
 .ut_jtagCtrl_update(ut_jtagCtrl_update),
 .ut_jtagCtrl_reset(ut_jtagCtrl_reset),
-.system_uart_0_io_txd(system_uart_0_io_txd),
-.system_uart_0_io_rxd(system_uart_0_io_rxd),
-.userInterruptH(userInterruptH),
-.userInterruptC(userInterruptC),
+.userInterruptA(userInterruptA),
+.userInterruptD(userInterruptD),
+.system_uart_1_io_txd(system_uart_1_io_txd),
+.system_uart_1_io_rxd(system_uart_1_io_rxd),
 .userInterruptF(userInterruptF),
-.userInterruptJ(userInterruptJ),
-.userInterruptB(userInterruptB),
-.system_i2c_2_io_sda_writeEnable(system_i2c_2_io_sda_writeEnable),
-.system_i2c_2_io_sda_write(system_i2c_2_io_sda_write),
-.system_i2c_2_io_sda_read(system_i2c_2_io_sda_read),
-.system_i2c_2_io_scl_writeEnable(system_i2c_2_io_scl_writeEnable),
-.system_i2c_2_io_scl_write(system_i2c_2_io_scl_write),
-.system_i2c_2_io_scl_read(system_i2c_2_io_scl_read),
+.userInterruptL(userInterruptL),
+.system_watchdog_hardPanic_reset(system_watchdog_hardPanic_reset),
+.userInterruptK(userInterruptK),
+.system_uart_2_io_txd(system_uart_2_io_txd),
+.system_uart_2_io_rxd(system_uart_2_io_rxd),
+.userInterruptI(userInterruptI),
 .system_spi_0_io_sclk_write(system_spi_0_io_sclk_write),
 .system_spi_0_io_data_0_writeEnable(system_spi_0_io_data_0_writeEnable),
 .system_spi_0_io_data_0_read(system_spi_0_io_data_0_read),
@@ -408,21 +389,12 @@ EfxSapphireHpSoc_slb u_top_peripherals(
 .system_spi_0_io_data_3_read(system_spi_0_io_data_3_read),
 .system_spi_0_io_data_3_write(system_spi_0_io_data_3_write),
 .system_spi_0_io_ss(system_spi_0_io_ss),
-.system_i2c_0_io_sda_writeEnable(system_i2c_0_io_sda_writeEnable),
-.system_i2c_0_io_sda_write(system_i2c_0_io_sda_write),
-.system_i2c_0_io_sda_read(system_i2c_0_io_sda_read),
-.system_i2c_0_io_scl_writeEnable(system_i2c_0_io_scl_writeEnable),
-.system_i2c_0_io_scl_write(system_i2c_0_io_scl_write),
-.system_i2c_0_io_scl_read(system_i2c_0_io_scl_read),
-.system_uart_1_io_txd(system_uart_1_io_txd),
-.system_uart_1_io_rxd(system_uart_1_io_rxd),
-.userInterruptD(userInterruptD),
-.userInterruptE(userInterruptE),
-.system_uart_2_io_txd(system_uart_2_io_txd),
-.system_uart_2_io_rxd(system_uart_2_io_rxd),
-.system_gpio_0_io_read(system_gpio_0_io_read),
-.system_gpio_0_io_write(system_gpio_0_io_write),
-.system_gpio_0_io_writeEnable(system_gpio_0_io_writeEnable),
+.system_i2c_2_io_sda_writeEnable(system_i2c_2_io_sda_writeEnable),
+.system_i2c_2_io_sda_write(system_i2c_2_io_sda_write),
+.system_i2c_2_io_sda_read(system_i2c_2_io_sda_read),
+.system_i2c_2_io_scl_writeEnable(system_i2c_2_io_scl_writeEnable),
+.system_i2c_2_io_scl_write(system_i2c_2_io_scl_write),
+.system_i2c_2_io_scl_read(system_i2c_2_io_scl_read),
 .system_spi_1_io_sclk_write(system_spi_1_io_sclk_write),
 .system_spi_1_io_data_0_writeEnable(system_spi_1_io_data_0_writeEnable),
 .system_spi_1_io_data_0_read(system_spi_1_io_data_0_read),
@@ -437,8 +409,33 @@ EfxSapphireHpSoc_slb u_top_peripherals(
 .system_spi_1_io_data_3_read(system_spi_1_io_data_3_read),
 .system_spi_1_io_data_3_write(system_spi_1_io_data_3_write),
 .system_spi_1_io_ss(system_spi_1_io_ss),
+.system_i2c_0_io_sda_writeEnable(system_i2c_0_io_sda_writeEnable),
+.system_i2c_0_io_sda_write(system_i2c_0_io_sda_write),
+.system_i2c_0_io_sda_read(system_i2c_0_io_sda_read),
+.system_i2c_0_io_scl_writeEnable(system_i2c_0_io_scl_writeEnable),
+.system_i2c_0_io_scl_write(system_i2c_0_io_scl_write),
+.system_i2c_0_io_scl_read(system_i2c_0_io_scl_read),
+.system_i2c_1_io_sda_writeEnable(system_i2c_1_io_sda_writeEnable),
+.system_i2c_1_io_sda_write(system_i2c_1_io_sda_write),
+.system_i2c_1_io_sda_read(system_i2c_1_io_sda_read),
+.system_i2c_1_io_scl_writeEnable(system_i2c_1_io_scl_writeEnable),
+.system_i2c_1_io_scl_write(system_i2c_1_io_scl_write),
+.system_i2c_1_io_scl_read(system_i2c_1_io_scl_read),
+.system_uart_0_io_txd(system_uart_0_io_txd),
+.system_uart_0_io_rxd(system_uart_0_io_rxd),
 .userInterruptG(userInterruptG),
-.userInterruptK(userInterruptK),
+.io_apbSlave_0_PADDR(io_apbSlave_0_PADDR),
+.io_apbSlave_0_PSEL(io_apbSlave_0_PSEL),
+.io_apbSlave_0_PENABLE(io_apbSlave_0_PENABLE),
+.io_apbSlave_0_PREADY(io_apbSlave_0_PREADY),
+.io_apbSlave_0_PWRITE(io_apbSlave_0_PWRITE),
+.io_apbSlave_0_PWDATA(io_apbSlave_0_PWDATA),
+.io_apbSlave_0_PRDATA(io_apbSlave_0_PRDATA),
+.io_apbSlave_0_PSLVERROR(io_apbSlave_0_PSLVERROR),
+.userInterruptE(userInterruptE),
+.userInterruptC(userInterruptC),
+.userInterruptB(userInterruptB),
+.userInterruptJ(userInterruptJ),
 .system_spi_2_io_sclk_write(system_spi_2_io_sclk_write),
 .system_spi_2_io_data_0_writeEnable(system_spi_2_io_data_0_writeEnable),
 .system_spi_2_io_data_0_read(system_spi_2_io_data_0_read),
@@ -453,6 +450,9 @@ EfxSapphireHpSoc_slb u_top_peripherals(
 .system_spi_2_io_data_3_read(system_spi_2_io_data_3_read),
 .system_spi_2_io_data_3_write(system_spi_2_io_data_3_write),
 .system_spi_2_io_ss(system_spi_2_io_ss),
+.system_gpio_0_io_read(system_gpio_0_io_read),
+.system_gpio_0_io_write(system_gpio_0_io_write),
+.system_gpio_0_io_writeEnable(system_gpio_0_io_writeEnable),
 .axiA_awvalid(axiA_awvalid),
 .axiA_awready(axiA_awready),
 .axiA_awaddr(axiA_awaddr),

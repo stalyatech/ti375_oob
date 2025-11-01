@@ -1,5 +1,6 @@
 // Generator : SpinalHDL dev    git head : 81793df2c4f55a20f7eff1130c4bb74a4b11319f
 // Component : EfxDMA
+// Git hash  : 9938416297ee11db5317fe4f1c7ddc45afea832b
 
 `timescale 1ns/1ps
 

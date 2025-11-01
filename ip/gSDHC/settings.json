@@ -3,7 +3,7 @@
         "-o",
         "gSDHC",
         "--base_path",
-        "D:\\Projects\\fpga\\efinix\\project\\fpga\\efx_ti375c529_oob_v2.1\\efx_ti375_oob_v2_1\\bsp\\TI375C529_DK\\ip",
+        "D:\\Projects\\fpga\\efinix\\project\\fpga\\ti375_oob\\ip",
         "--vlnv",
         {
             "vendor": "efinixinc.com",
@@ -19,13 +19,13 @@
     "output": {
         "external_script_reference_design": [],
         "external_source_source": [
-            "gSDHC\\gSDHC_tmpl.v",
-            "gSDHC\\gSDHC.v",
             "gSDHC\\gSDHC_define.vh",
-            "gSDHC\\gSDHC_tmpl.vhd"
+            "gSDHC\\gSDHC_tmpl.v",
+            "gSDHC\\gSDHC_tmpl.vhd",
+            "gSDHC\\gSDHC.v"
         ]
     },
     "ooc_synthesis": {},
     "sw_version": "2025.1.110.5.9",
-    "generated_date": "2025-09-27T16:46:38.815194+00:00"
+    "generated_date": "2025-11-01T04:53:10.535407+00:00"
 }

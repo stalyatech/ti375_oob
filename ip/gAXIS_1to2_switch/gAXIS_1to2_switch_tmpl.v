@@ -43,7 +43,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-gAXIS_1to3_switch u_gAXIS_1to3_switch
+gAXIS_1to2_switch u_gAXIS_1to2_switch
 (
     .rst_n ( rst_n ),
     .clk ( clk ),

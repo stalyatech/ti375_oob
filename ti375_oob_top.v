@@ -17,6 +17,7 @@ input		    ut_jtagCtrl_update,
 input		    ut_jtagCtrl_reset,
 input		    io_cfuClk,
 input		    io_cfuReset,
+
 input		    cpu0_customInstruction_cmd_valid,
 output		    cpu0_customInstruction_cmd_ready,
 input [9:0]     cpu0_customInstruction_function_id,
@@ -49,6 +50,7 @@ input [31:0]    cpu3_customInstruction_inputs_1,
 output		    cpu3_customInstruction_rsp_valid,
 input		    cpu3_customInstruction_rsp_ready,
 output [31:0]   cpu3_customInstruction_outputs_0,
+
 output		    io_ddrMasters_0_aw_valid,
 input		    io_ddrMasters_0_aw_ready,
 output [31:0]   io_ddrMasters_0_aw_payload_addr,
@@ -92,6 +94,7 @@ input		    io_ddrMasters_0_r_payload_last,
 input		    io_ddrMasters_0_clk,
 input		    io_ddrMasters_0_reset,
 output          io_ddrMasters_memCheck_pass,
+
 output		    userInterruptA,
 output		    userInterruptB,
 output		    userInterruptC,
@@ -110,9 +113,9 @@ input 			sys_jtag_io_tms,
 input 			sys_jtag_io_tdi	,
 output 			sys_jtag_io_tdo,
 
-input [3:0]     sys_gpio_0_io_read,
-output [3:0]    sys_gpio_0_io_write,
-output [3:0]    sys_gpio_0_io_writeEnable,
+input [5:0]     sys_gpio_0_io_read,
+output [5:0]    sys_gpio_0_io_write,
+output [5:0]    sys_gpio_0_io_writeEnable,
 
 output		    sys_uart_0_io_txd,
 input		    sys_uart_0_io_rxd,
@@ -122,70 +125,70 @@ output		    sys_uart_2_io_txd,
 input		    sys_uart_2_io_rxd,
 
 output		    sys_spi_0_io_sclk_write,
-output		    sys_spi_0_io_data_0_writeEnable,
 input		    sys_spi_0_io_data_0_read,
 output		    sys_spi_0_io_data_0_write,
-output		    sys_spi_0_io_data_1_writeEnable,
+output		    sys_spi_0_io_data_0_writeEnable,
 input		    sys_spi_0_io_data_1_read,
 output		    sys_spi_0_io_data_1_write,
-output		    sys_spi_0_io_data_2_writeEnable,
+output		    sys_spi_0_io_data_1_writeEnable,
 input		    sys_spi_0_io_data_2_read,
 output		    sys_spi_0_io_data_2_write,
-output		    sys_spi_0_io_data_3_writeEnable,
+output		    sys_spi_0_io_data_2_writeEnable,
 input		    sys_spi_0_io_data_3_read,
 output		    sys_spi_0_io_data_3_write,
+output		    sys_spi_0_io_data_3_writeEnable,
 output [3:0]    sys_spi_0_io_ss,
 
 output		    sys_spi_1_io_sclk_write,
-output		    sys_spi_1_io_data_0_writeEnable,
 input		    sys_spi_1_io_data_0_read,
 output		    sys_spi_1_io_data_0_write,
-output		    sys_spi_1_io_data_1_writeEnable,
+output		    sys_spi_1_io_data_0_writeEnable,
 input		    sys_spi_1_io_data_1_read,
 output		    sys_spi_1_io_data_1_write,
-output		    sys_spi_1_io_data_2_writeEnable,
+output		    sys_spi_1_io_data_1_writeEnable,
 input		    sys_spi_1_io_data_2_read,
 output		    sys_spi_1_io_data_2_write,
-output		    sys_spi_1_io_data_3_writeEnable,
+output		    sys_spi_1_io_data_2_writeEnable,
 input		    sys_spi_1_io_data_3_read,
 output		    sys_spi_1_io_data_3_write,
+output		    sys_spi_1_io_data_3_writeEnable,
 output [3:0]    sys_spi_1_io_ss,
 
 output		    sys_spi_2_io_sclk_write,
-output		    sys_spi_2_io_data_0_writeEnable,
 input		    sys_spi_2_io_data_0_read,
 output		    sys_spi_2_io_data_0_write,
-output		    sys_spi_2_io_data_1_writeEnable,
+output		    sys_spi_2_io_data_0_writeEnable,
 input		    sys_spi_2_io_data_1_read,
 output		    sys_spi_2_io_data_1_write,
-output		    sys_spi_2_io_data_2_writeEnable,
+output		    sys_spi_2_io_data_1_writeEnable,
 input		    sys_spi_2_io_data_2_read,
 output		    sys_spi_2_io_data_2_write,
-output		    sys_spi_2_io_data_3_writeEnable,
+output		    sys_spi_2_io_data_2_writeEnable,
 input		    sys_spi_2_io_data_3_read,
 output		    sys_spi_2_io_data_3_write,
+output		    sys_spi_2_io_data_3_writeEnable,
 output [3:0]    sys_spi_2_io_ss,
 
-output		    sys_i2c_0_io_sda_writeEnable,
-output		    sys_i2c_0_io_sda_write,
 input		    sys_i2c_0_io_sda_read,
-output		    sys_i2c_0_io_scl_writeEnable,
-output		    sys_i2c_0_io_scl_write,
+output		    sys_i2c_0_io_sda_write,
+output		    sys_i2c_0_io_sda_writeEnable,
 input		    sys_i2c_0_io_scl_read,
+output		    sys_i2c_0_io_scl_write,
+output		    sys_i2c_0_io_scl_writeEnable,
 
-output		    sys_i2c_1_io_sda_writeEnable,
-output		    sys_i2c_1_io_sda_write,
 input		    sys_i2c_1_io_sda_read,
-output		    sys_i2c_1_io_scl_writeEnable,
-output		    sys_i2c_1_io_scl_write,
+output		    sys_i2c_1_io_sda_write,
+output		    sys_i2c_1_io_sda_writeEnable,
 input		    sys_i2c_1_io_scl_read,
+output		    sys_i2c_1_io_scl_write,
+output		    sys_i2c_1_io_scl_writeEnable,
 
-output		    sys_i2c_2_io_sda_writeEnable,
-output		    sys_i2c_2_io_sda_write,
 input		    sys_i2c_2_io_sda_read,
-output		    sys_i2c_2_io_scl_writeEnable,
-output		    sys_i2c_2_io_scl_write,
+output		    sys_i2c_2_io_sda_write,
+output		    sys_i2c_2_io_sda_writeEnable,
 input		    sys_i2c_2_io_scl_read,
+output		    sys_i2c_2_io_scl_write,
+output		    sys_i2c_2_io_scl_writeEnable,
 
 input [31:0]    axiA_awaddr,
 input [7:0]	    axiA_awlen,
@@ -223,6 +226,7 @@ output		    axiA_rlast,
 output		    axiA_rvalid,
 input		    axiA_rready,
 output          axiAInterrupt,
+
 input           cfg_done,
 output          cfg_start,
 output          cfg_sel,
@@ -273,56 +277,57 @@ input           rgmii_rxc_slow
 );
 ////////////////////////////////////////////////////////////////////////////
 localparam PERI_FREQ = 200;
-localparam AXIS_DEV  = 3;
-localparam AXIM_DEV  = 3;
-localparam SLB  = 0;
-//  SDHC
-localparam SDHC  = 1;
-localparam MSDHC = 0;
-// TSEMAC
-localparam TSE  = 2;
-localparam MTSE = 1;
-// MFCU
-localparam MFCU	= 2;
+
+localparam TSE		= 0;	// AXI S1
+localparam SDHC		= 1;	// AXI S0
+localparam AXIS_DEV	= 2;
+
+localparam MTSE		= 0;
+localparam MSDHC	= 1;
+localparam MFCU		= 2;
+localparam AXIM_DEV	= 3;
 
 ////////////////////////////////////////////////////////////////////////////
-//  Switch between sdhc, tsemac and slb
-wire [(AXIS_DEV*32)-1:0]    gAXIS_m_awaddr;
-wire [(AXIS_DEV*8)-1:0]	    gAXIS_m_awlen;
-wire [(AXIS_DEV*3)-1:0]	    gAXIS_m_awsize;
-wire [(AXIS_DEV*2)-1:0]     gAXIS_m_awburst;
-wire [(AXIS_DEV*2)-1:0]     gAXIS_m_awlock;
-wire [(AXIS_DEV*4)-1:0]	    gAXIS_m_awcache;
-wire [(AXIS_DEV*4)-1:0]	    gAXIS_m_awprot;
-wire [(AXIS_DEV*4)-1:0]	    gAXIS_m_awqos;
-wire [(AXIS_DEV*4)-1:0]	    gAXIS_m_awregion;
-wire [AXIS_DEV-1:0]         gAXIS_m_awvalid;
-wire [AXIS_DEV-1:0]         gAXIS_m_awready;
-wire [(AXIS_DEV*32)-1:0]    gAXIS_m_wdata;
-wire [(AXIS_DEV*4)-1:0]     gAXIS_m_wstrb;
-wire [AXIS_DEV-1:0]         gAXIS_m_wvalid;
-wire [AXIS_DEV-1:0]         gAXIS_m_wlast;
-wire [AXIS_DEV-1:0]         gAXIS_m_wready;
-wire [(AXIS_DEV*2)-1:0]     gAXIS_m_bresp;
-wire [AXIS_DEV-1:0]         gAXIS_m_bvalid;
-wire [AXIS_DEV-1:0]         gAXIS_m_bready;
-wire [(AXIS_DEV*32)-1:0]    gAXIS_m_araddr;
-wire [(AXIS_DEV*8)-1:0]	    gAXIS_m_arlen;
-wire [(AXIS_DEV*3)-1:0]	    gAXIS_m_arsize;
-wire [(AXIS_DEV*2)-1:0]	    gAXIS_m_arburst;
-wire [(AXIS_DEV*2)-1:0]     gAXIS_m_arlock;
-wire [(AXIS_DEV*4)-1:0]	    gAXIS_m_arcache;
-wire [(AXIS_DEV*4)-1:0]	    gAXIS_m_arprot;
-wire [(AXIS_DEV*4)-1:0]	    gAXIS_m_arqos;
-wire [(AXIS_DEV*4)-1:0]	    gAXIS_m_arregion;
-wire [AXIS_DEV-1:0]         gAXIS_m_arvalid;
-wire [AXIS_DEV-1:0]         gAXIS_m_arready;
-wire [(AXIS_DEV*32)-1:0]    gAXIS_m_rdata;
-wire [(AXIS_DEV*2)-1:0]     gAXIS_m_rresp;
-wire [AXIS_DEV-1:0]         gAXIS_m_rlast;
-wire [AXIS_DEV-1:0]         gAXIS_m_rvalid;
-wire [AXIS_DEV-1:0]         gAXIS_m_rready;
-// Switch between sdhc, tsemac and fcu (flight controller unit)
+// Switch between SP SoC -> SDHC, TSEMAC
+// 	These AXI Slaves are connected to the AXI Interconnect Master ports 
+wire [(AXIS_DEV*32)-1:0]    spAXIS_m_awaddr;
+wire [(AXIS_DEV*8)-1:0]	    spAXIS_m_awlen;
+wire [(AXIS_DEV*3)-1:0]	    spAXIS_m_awsize;
+wire [(AXIS_DEV*2)-1:0]     spAXIS_m_awburst;
+wire [(AXIS_DEV*2)-1:0]     spAXIS_m_awlock;
+wire [(AXIS_DEV*4)-1:0]	    spAXIS_m_awcache;
+wire [(AXIS_DEV*4)-1:0]	    spAXIS_m_awprot;
+wire [(AXIS_DEV*4)-1:0]	    spAXIS_m_awqos;
+wire [(AXIS_DEV*4)-1:0]	    spAXIS_m_awregion;
+wire [AXIS_DEV-1:0]         spAXIS_m_awvalid;
+wire [AXIS_DEV-1:0]         spAXIS_m_awready;
+wire [(AXIS_DEV*32)-1:0]    spAXIS_m_wdata;
+wire [(AXIS_DEV*4)-1:0]     spAXIS_m_wstrb;
+wire [AXIS_DEV-1:0]         spAXIS_m_wvalid;
+wire [AXIS_DEV-1:0]         spAXIS_m_wlast;
+wire [AXIS_DEV-1:0]         spAXIS_m_wready;
+wire [(AXIS_DEV*2)-1:0]     spAXIS_m_bresp;
+wire [AXIS_DEV-1:0]         spAXIS_m_bvalid;
+wire [AXIS_DEV-1:0]         spAXIS_m_bready;
+wire [(AXIS_DEV*32)-1:0]    spAXIS_m_araddr;
+wire [(AXIS_DEV*8)-1:0]	    spAXIS_m_arlen;
+wire [(AXIS_DEV*3)-1:0]	    spAXIS_m_arsize;
+wire [(AXIS_DEV*2)-1:0]	    spAXIS_m_arburst;
+wire [(AXIS_DEV*2)-1:0]     spAXIS_m_arlock;
+wire [(AXIS_DEV*4)-1:0]	    spAXIS_m_arcache;
+wire [(AXIS_DEV*4)-1:0]	    spAXIS_m_arprot;
+wire [(AXIS_DEV*4)-1:0]	    spAXIS_m_arqos;
+wire [(AXIS_DEV*4)-1:0]	    spAXIS_m_arregion;
+wire [AXIS_DEV-1:0]         spAXIS_m_arvalid;
+wire [AXIS_DEV-1:0]         spAXIS_m_arready;
+wire [(AXIS_DEV*32)-1:0]    spAXIS_m_rdata;
+wire [(AXIS_DEV*2)-1:0]     spAXIS_m_rresp;
+wire [AXIS_DEV-1:0]         spAXIS_m_rlast;
+wire [AXIS_DEV-1:0]         spAXIS_m_rvalid;
+wire [AXIS_DEV-1:0]         spAXIS_m_rready;
+////////////////////////////////////////////////////////////////////////////
+// Switch between SDHC, TSEMAC, FCU -> DDRAM
+// 	These AXI Masters are connected to the AXI Interconnect Slave ports
 wire [(AXIM_DEV*32)-1:0]    gAXIM_s_awaddr;
 wire [(AXIM_DEV*8)-1:0]	    gAXIM_s_awlen;
 wire [(AXIM_DEV*3)-1:0]	    gAXIM_s_awsize;
@@ -376,8 +381,8 @@ wire [31:0]                 dma_apb3_pwdata;
 wire [31:0]                 dma_apb3_prdata;
 wire                        dma_apb3_pslverror;
 // TSE
-wire                        tse_pll_ok;       
-wire                        phy_sw_rst;   
+wire                        tse_pll_ok;
+wire                        phy_sw_rst;
 wire                        mac_ext_rst;
 wire [2:0]                  eth_speed;
 wire                        s_eth_tx_tvalid;
@@ -393,95 +398,139 @@ wire [0:0]                  m_eth_rx_tkeep;
 wire [3:0]                  m_eth_rx_tdest;
 wire                        m_eth_rx_tlast;
 
-gAXIS_1to3_switch u_AXIS_1to3_switch
+wire						fcu_asyncReset;
+wire 						fcu_watchdogReset;
+wire						fcu_spi_io_sclk_write;
+wire						fcu_spi_0_io_sclk_write;
+wire						fcu_spi_1_io_sclk_write;
+
+wire [31:0]    				sp_m_axi_awaddr;
+wire [7:0]	    			sp_m_axi_awlen;
+wire [2:0]	    			sp_m_axi_awsize;
+wire [1:0]	    			sp_m_axi_awburst;
+wire		    			sp_m_axi_awlock;
+wire [3:0]	    			sp_m_axi_awcache;
+wire [2:0]	    			sp_m_axi_awprot;
+wire [3:0]	    			sp_m_axi_awqos;
+wire [3:0]	    			sp_m_axi_awregion;
+wire		    			sp_m_axi_awvalid;
+wire		    			sp_m_axi_awready;
+wire [31:0]    				sp_m_axi_wdata;
+wire [3:0]     				sp_m_axi_wstrb;
+wire		    			sp_m_axi_wvalid;
+wire		    			sp_m_axi_wlast;
+wire		    			sp_m_axi_wready;
+wire [1:0]    				sp_m_axi_bresp;
+wire		    			sp_m_axi_bvalid;
+wire		    			sp_m_axi_bready;
+wire [31:0]    				sp_m_axi_araddr;
+wire [7:0]	    			sp_m_axi_arlen;
+wire [2:0]	    			sp_m_axi_arsize;
+wire [1:0]	    			sp_m_axi_arburst;
+wire		    			sp_m_axi_arlock;
+wire [3:0]	    			sp_m_axi_arcache;
+wire [2:0]	    			sp_m_axi_arprot;
+wire [3:0]	    			sp_m_axi_arqos;
+wire [3:0]	    			sp_m_axi_arregion;
+wire		    			sp_m_axi_arvalid;
+wire		    			sp_m_axi_arready;
+wire [7:0]					sp_m_axi_arid;
+wire [31:0]   				sp_m_axi_rdata;
+wire [1:0]    				sp_m_axi_rresp;
+wire		    			sp_m_axi_rlast;
+wire		    			sp_m_axi_rvalid;
+wire		    			sp_m_axi_rready;
+
+gAXIS_1to2_switch u_AXIS_1to2_switch
 (
     .rst_n              ( ~io_peripheralReset ),
     .clk                ( io_peripheralClk ),
-    .m_axi_awvalid      ( gAXIS_m_awvalid ),
-    .m_axi_awready      ( gAXIS_m_awready ),
+    .m_axi_awvalid      ( spAXIS_m_awvalid ),
+    .m_axi_awready      ( spAXIS_m_awready ),
     .m_axi_awid         ( ),
-    .m_axi_awaddr       ( gAXIS_m_awaddr ),
-    .m_axi_awburst      ( gAXIS_m_awburst ),
-    .m_axi_awlen        ( gAXIS_m_awlen ),
-    .m_axi_awsize       ( gAXIS_m_awsize ),
-    .m_axi_awcache      ( gAXIS_m_awcache ),
-    .m_axi_awqos        ( gAXIS_m_awqos ),
-    .m_axi_awprot       ( gAXIS_m_awprot ),
+    .m_axi_awaddr       ( spAXIS_m_awaddr ),
+    .m_axi_awburst      ( spAXIS_m_awburst ),
+    .m_axi_awlen        ( spAXIS_m_awlen ),
+    .m_axi_awsize       ( spAXIS_m_awsize ),
+    .m_axi_awcache      ( spAXIS_m_awcache ),
+    .m_axi_awqos        ( spAXIS_m_awqos ),
+    .m_axi_awprot       ( spAXIS_m_awprot ),
     .m_axi_awuser       ( ),
-    .m_axi_awlock       ( gAXIS_m_awlock ),
-    .m_axi_awregion     ( gAXIS_m_awregion ),
-    .m_axi_wvalid       ( gAXIS_m_wvalid ),
-    .m_axi_wready       ( gAXIS_m_wready ),
-    .m_axi_wdata        ( gAXIS_m_wdata ),
-    .m_axi_wstrb        ( gAXIS_m_wstrb ),
-    .m_axi_wlast        ( gAXIS_m_wlast ),
+    .m_axi_awlock       ( spAXIS_m_awlock ),
+    .m_axi_awregion     ( spAXIS_m_awregion ),
+    .m_axi_wvalid       ( spAXIS_m_wvalid ),
+    .m_axi_wready       ( spAXIS_m_wready ),
+    .m_axi_wdata        ( spAXIS_m_wdata ),
+    .m_axi_wstrb        ( spAXIS_m_wstrb ),
+    .m_axi_wlast        ( spAXIS_m_wlast ),
     .m_axi_wuser        ( ),
-    .m_axi_bready       ( gAXIS_m_bready ),
-    .m_axi_bvalid       ( gAXIS_m_bvalid ),
-    .m_axi_bresp        ( gAXIS_m_bresp ),
-    .m_axi_buser        ( {AXIS_DEV{3'h0}} ),
-    .m_axi_bid          ( {AXIS_DEV{8'h0}} ),
-    .m_axi_arvalid      ( gAXIS_m_arvalid ),
-    .m_axi_arready      ( gAXIS_m_arready ),
+    .m_axi_bready       ( spAXIS_m_bready ),
+    .m_axi_bvalid       ( spAXIS_m_bvalid ),
+    .m_axi_bresp        ( spAXIS_m_bresp ),
+    .m_axi_buser        ( {AXIS_DEV{3'b0}} ),
+    .m_axi_bid          ( {AXIS_DEV{8'b0}} ),
+    .m_axi_arvalid      ( spAXIS_m_arvalid ),
+    .m_axi_arready      ( spAXIS_m_arready ),
     .m_axi_arid         ( ),
-    .m_axi_araddr       ( gAXIS_m_araddr ),
-    .m_axi_arburst      ( gAXIS_m_arburst ),
-    .m_axi_arlen        ( gAXIS_m_arlen ),
-    .m_axi_arsize       ( gAXIS_m_arsize ),
-    .m_axi_arlock       ( gAXIS_m_arlock ),
-    .m_axi_arprot       ( gAXIS_m_arprot ),
-    .m_axi_arcache      ( gAXIS_m_arcache ),
-    .m_axi_arqos        ( gAXIS_m_arqos ),
+    .m_axi_araddr       ( spAXIS_m_araddr ),
+    .m_axi_arburst      ( spAXIS_m_arburst ),
+    .m_axi_arlen        ( spAXIS_m_arlen ),
+    .m_axi_arsize       ( spAXIS_m_arsize ),
+    .m_axi_arlock       ( spAXIS_m_arlock ),
+    .m_axi_arprot       ( spAXIS_m_arprot ),
+    .m_axi_arcache      ( spAXIS_m_arcache ),
+    .m_axi_arqos        ( spAXIS_m_arqos ),
     .m_axi_aruser       ( ),
-    .m_axi_arregion     ( gAXIS_m_arregion ),
-    .m_axi_ruser        ( {AXIS_DEV{3'h0}}),
-    .m_axi_rvalid       ( gAXIS_m_rvalid ),
-    .m_axi_rready       ( gAXIS_m_rready ),
-    .m_axi_rid          ( {AXIS_DEV{8'h0}}),
-    .m_axi_rdata        ( gAXIS_m_rdata ),
-    .m_axi_rresp        ( gAXIS_m_rresp ),
-    .m_axi_rlast        ( gAXIS_m_rlast ),
-    .s_axi_awvalid      ( axiA_awvalid ),
-    .s_axi_awready      ( axiA_awready ),
-    .s_axi_awaddr       ( {7'h00, axiA_awaddr[24:0]} ),
-    .s_axi_awid         ( 8'h00 ),
-    .s_axi_awburst      ( axiA_awburst ),
-    .s_axi_awlen        ( axiA_awlen ),
-    .s_axi_awsize       ( axiA_awsize ),
-    .s_axi_awprot       ( {1'b0, axiA_awprot} ),
-    .s_axi_awlock       ( {1'b0, axiA_awlock} ),
-    .s_axi_awcache      ( axiA_awcache ),
-    .s_axi_awqos        ( axiA_awqos ),
-    .s_axi_awuser       ( 3'h0 ),
-    .s_axi_wvalid       ( axiA_wvalid ),
-    .s_axi_wready       ( axiA_wready ),
-    .s_axi_wid          ( 8'h00 ),
-    .s_axi_wdata        ( axiA_wdata ),
-    .s_axi_wlast        ( axiA_wlast ),
-    .s_axi_wstrb        ( axiA_wstrb ),
-    .s_axi_wuser        ( 3'h0 ),
-    .s_axi_bvalid       ( axiA_bvalid ),
-    .s_axi_bready       ( axiA_bready ),
-    .s_axi_bresp        ( axiA_bresp ),
+    .m_axi_arregion     ( spAXIS_m_arregion ),
+    .m_axi_ruser        ( {AXIS_DEV{3'b0}}),
+    .m_axi_rvalid       ( spAXIS_m_rvalid ),
+    .m_axi_rready       ( spAXIS_m_rready ),
+    .m_axi_rid          ( {AXIS_DEV{8'b0}}),
+    .m_axi_rdata        ( spAXIS_m_rdata ),
+    .m_axi_rresp        ( spAXIS_m_rresp ),
+    .m_axi_rlast        ( spAXIS_m_rlast ),
+
+    .s_axi_awvalid      ( sp_m_axi_awvalid ),
+    .s_axi_awready      ( sp_m_axi_awready ),
+    .s_axi_awaddr       ( {7'b0, sp_m_axi_awaddr[24:0]} ),
+    .s_axi_awid         ( 8'b0 ),
+    .s_axi_awburst      ( sp_m_axi_awburst ),
+    .s_axi_awlen        ( sp_m_axi_awlen ),
+    .s_axi_awsize       ( sp_m_axi_awsize ),
+    .s_axi_awprot       ( {1'b0, sp_m_axi_awprot} ),
+    .s_axi_awlock       ( {1'b0, sp_m_axi_awlock} ),
+    .s_axi_awcache      ( sp_m_axi_awcache ),
+    .s_axi_awqos        ( sp_m_axi_awqos ),
+    .s_axi_awuser       ( 3'b0 ),
+    .s_axi_wvalid       ( sp_m_axi_wvalid ),
+    .s_axi_wready       ( sp_m_axi_wready ),
+    .s_axi_wid          ( 8'b0 ),
+    .s_axi_wdata        ( sp_m_axi_wdata ),
+    .s_axi_wlast        ( sp_m_axi_wlast ),
+    .s_axi_wstrb        ( sp_m_axi_wstrb ),
+    .s_axi_wuser        ( 3'b0 ),
+    .s_axi_bvalid       ( sp_m_axi_bvalid ),
+    .s_axi_bready       ( sp_m_axi_bready ),
+    .s_axi_bresp        ( sp_m_axi_bresp ),
     .s_axi_bid          ( ),
     .s_axi_buser        ( ),
-    .s_axi_arvalid      ( axiA_arvalid ),
-    .s_axi_arready      ( axiA_arready ),
-    .s_axi_araddr       ( {7'h00, axiA_araddr[24:0]} ),
-    .s_axi_arid         ( 8'h00 ),
-    .s_axi_arburst      ( axiA_arburst ),
-    .s_axi_arlen        ( axiA_arlen ),
-    .s_axi_arsize       ( axiA_arsize ),
-    .s_axi_arprot       ( { 1'b0, axiA_arprot} ),
-    .s_axi_arlock       ( { 1'b0, axiA_arlock} ),
-    .s_axi_arcache      ( axiA_arcache ),
-    .s_axi_arqos        ( axiA_arqos ),
-    .s_axi_aruser       ( 3'h0 ),
-    .s_axi_rready       ( axiA_rready ),
-    .s_axi_rvalid       ( axiA_rvalid ),
-    .s_axi_rdata        ( axiA_rdata ),
-    .s_axi_rresp        ( axiA_rresp ),
-    .s_axi_rlast        ( axiA_rlast ),
+    .s_axi_arvalid      ( sp_m_axi_arvalid ),
+    .s_axi_arready      ( sp_m_axi_arready ),
+    .s_axi_araddr       ( {7'b0, sp_m_axi_araddr[24:0]} ),
+    .s_axi_arid         ( 8'b0 ),
+    .s_axi_arburst      ( sp_m_axi_arburst ),
+    .s_axi_arlen        ( sp_m_axi_arlen ),
+    .s_axi_arsize       ( sp_m_axi_arsize ),
+    .s_axi_arprot       ( {1'b0, sp_m_axi_arprot} ),
+    .s_axi_arlock       ( {1'b0, sp_m_axi_arlock} ),
+    .s_axi_arcache      ( sp_m_axi_arcache ),
+    .s_axi_arqos        ( sp_m_axi_arqos ),
+    .s_axi_aruser       ( 3'b0 ),
+    .s_axi_rready       ( sp_m_axi_rready ),
+    .s_axi_rvalid       ( sp_m_axi_rvalid ),
+    .s_axi_rdata        ( sp_m_axi_rdata ),
+    .s_axi_rresp        ( sp_m_axi_rresp ),
+    .s_axi_rlast        ( sp_m_axi_rlast ),
     .s_axi_rid          ( ),
     .s_axi_ruser        ( )
 );
@@ -512,8 +561,8 @@ gAXIM_3to1_switch u_AXIM_3to1_switch
     .m_axi_bready       ( io_ddrMasters_0_b_ready ),
     .m_axi_bvalid       ( io_ddrMasters_0_b_valid ),
     .m_axi_bresp        ( io_ddrMasters_0_b_payload_resp ),
-    .m_axi_buser        ( 3'h0 ),
-    .m_axi_bid          ( {4'h0, io_ddrMasters_0_b_payload_id} ),
+    .m_axi_buser        ( 3'b0 ),
+    .m_axi_bid          ( {4'b0, io_ddrMasters_0_b_payload_id} ),
     .m_axi_arvalid      ( io_ddrMasters_0_ar_valid ),
     .m_axi_arready      ( io_ddrMasters_0_ar_ready ),
     .m_axi_arid         ( io_ddrMasters_0_ar_payload_id ),
@@ -527,17 +576,18 @@ gAXIM_3to1_switch u_AXIM_3to1_switch
     .m_axi_arqos        ( io_ddrMasters_0_ar_payload_qos ),
     .m_axi_aruser       ( ),
     .m_axi_arregion     ( io_ddrMasters_0_ar_payload_region ),
-    .m_axi_ruser        ( 3'h0),
+    .m_axi_ruser        ( 3'b0),
     .m_axi_rvalid       ( io_ddrMasters_0_r_valid ),
     .m_axi_rready       ( io_ddrMasters_0_r_ready ),
-    .m_axi_rid          ( 8'h0 ),
+    .m_axi_rid          ( 8'b0 ),
     .m_axi_rdata        ( io_ddrMasters_0_r_payload_data ),
     .m_axi_rresp        ( io_ddrMasters_0_r_payload_resp ),
     .m_axi_rlast        ( io_ddrMasters_0_r_payload_last ),
-    .s_axi_awvalid      ( gAXIM_s_awvalid ),
+    
+	.s_axi_awvalid      ( gAXIM_s_awvalid ),
     .s_axi_awready      ( gAXIM_s_awready ),
     .s_axi_awaddr       ( gAXIM_s_awaddr ),
-    .s_axi_awid         ( {AXIM_DEV{8'h00}} ),
+    .s_axi_awid         ( {AXIM_DEV{8'b0}} ),
     .s_axi_awburst      ( gAXIM_s_awburst ),
     .s_axi_awlen        ( gAXIM_s_awlen ),
     .s_axi_awsize       ( gAXIM_s_awsize ),
@@ -545,14 +595,14 @@ gAXIM_3to1_switch u_AXIM_3to1_switch
     .s_axi_awlock       ( gAXIM_s_awlock ),
     .s_axi_awcache      ( gAXIM_s_awcache ),
     .s_axi_awqos        ( gAXIM_s_awqos ),
-    .s_axi_awuser       ( {AXIM_DEV{3'h0}} ),
+    .s_axi_awuser       ( {AXIM_DEV{3'b0}} ),
     .s_axi_wvalid       ( gAXIM_s_wvalid ),
     .s_axi_wready       ( gAXIM_s_wready ),
-    .s_axi_wid          ( {AXIM_DEV{8'h00}} ),
+    .s_axi_wid          ( {AXIM_DEV{8'b0}} ),
     .s_axi_wdata        ( gAXIM_s_wdata ),
     .s_axi_wlast        ( gAXIM_s_wlast ),
     .s_axi_wstrb        ( gAXIM_s_wstrb ),
-    .s_axi_wuser        ( {AXIM_DEV{3'h0}} ),
+    .s_axi_wuser        ( {AXIM_DEV{3'b0}} ),
     .s_axi_bvalid       ( gAXIM_s_bvalid ),
     .s_axi_bready       ( gAXIM_s_bready ),
     .s_axi_bresp        ( gAXIM_s_bresp ),
@@ -561,15 +611,15 @@ gAXIM_3to1_switch u_AXIM_3to1_switch
     .s_axi_arvalid      ( gAXIM_s_arvalid ),
     .s_axi_arready      ( gAXIM_s_arready ),
     .s_axi_araddr       ( gAXIM_s_araddr ),
-    .s_axi_arid         ( {AXIM_DEV{8'h00}} ),
+    .s_axi_arid         ( {AXIM_DEV{8'b0}} ),
     .s_axi_arburst      ( gAXIM_s_arburst ),
     .s_axi_arlen        ( gAXIM_s_arlen ),
     .s_axi_arsize       ( gAXIM_s_arsize ),
-    .s_axi_arprot       ( gAXIM_s_axiA_arprot ),
-    .s_axi_arlock       ( gAXIM_s_axiA_arlock ),
+    .s_axi_arprot       ( gAXIM_s_arprot ),
+    .s_axi_arlock       ( gAXIM_s_arlock ),
     .s_axi_arcache      ( gAXIM_s_arcache ),
     .s_axi_arqos        ( gAXIM_s_arqos ),
-    .s_axi_aruser       ( {AXIM_DEV{3'h0}} ),
+    .s_axi_aruser       ( {AXIM_DEV{3'b0}} ),
     .s_axi_rready       ( gAXIM_s_rready ),
     .s_axi_rvalid       ( gAXIM_s_rvalid ),
     .s_axi_rdata        ( gAXIM_s_rdata ),
@@ -580,7 +630,7 @@ gAXIM_3to1_switch u_AXIM_3to1_switch
 );
 
 assign sd_rst                       = io_peripheralReset;
-assign gAXIS_m_rlast[SDHC*1 +: 1]   = 1'b1;
+assign spAXIS_m_rlast[SDHC*1 +: 1]  = 1'b1;
 assign sd_dat_oe                    = {4{sd_dat_oe_i}};
 assign userInterruptF               = sd_int;
 
@@ -591,25 +641,27 @@ gSDHC u_gSDHC
     .sd_int             ( sd_int ),
     .sd_cd_n            ( sd_cd_n ),
     .sd_wp              ( sd_wp ),
+
     .s_axi_aclk         ( io_peripheralClk ),
-    .s_axi_awaddr       ( gAXIS_m_awaddr[SDHC*32 +: 32] ),
-    .s_axi_awready      ( gAXIS_m_awready[SDHC*1 +: 1] ),
-    .s_axi_awvalid      ( gAXIS_m_awvalid[SDHC*1 +: 1] ),
-    .s_axi_wstrb        ( gAXIS_m_wstrb[SDHC*4 +: 4]),
-    .s_axi_wdata        ( gAXIS_m_wdata[SDHC*32 +: 32] ),
-    .s_axi_wready       ( gAXIS_m_wready[SDHC*1 +: 1] ),
-    .s_axi_wvalid       ( gAXIS_m_wvalid[SDHC*1 +: 1] ),
-    .s_axi_bresp        ( gAXIS_m_bresp[SDHC*2 +: 2] ),
-    .s_axi_bvalid       ( gAXIS_m_bvalid[SDHC*1 +: 1] ),
-    .s_axi_araddr       ( gAXIS_m_araddr[SDHC*32 +: 32] ),
-    .s_axi_bready       ( gAXIS_m_bready[SDHC*1 +: 1] ),
-    .s_axi_arready      ( gAXIS_m_arready[SDHC*1 +: 1] ),
-    .s_axi_arvalid      ( gAXIS_m_arvalid[SDHC*1 +: 1] ),
-    .s_axi_rresp        ( gAXIS_m_rresp[SDHC*2 +: 2] ),
-    .s_axi_rdata        ( gAXIS_m_rdata[SDHC*32 +: 32]),
-    .s_axi_rvalid       ( gAXIS_m_rvalid[SDHC*1 +: 1] ),
-    .s_axi_rready       ( gAXIS_m_rready[SDHC*1 +: 1] ),
-    .m_axi_clk          ( io_ddrMasters_0_clk ),
+    .s_axi_awaddr       ( spAXIS_m_awaddr[SDHC*32 +: 32] ),
+    .s_axi_awready      ( spAXIS_m_awready[SDHC*1 +: 1] ),
+    .s_axi_awvalid      ( spAXIS_m_awvalid[SDHC*1 +: 1] ),
+    .s_axi_wstrb        ( spAXIS_m_wstrb[SDHC*4 +: 4]),
+    .s_axi_wdata        ( spAXIS_m_wdata[SDHC*32 +: 32] ),
+    .s_axi_wready       ( spAXIS_m_wready[SDHC*1 +: 1] ),
+    .s_axi_wvalid       ( spAXIS_m_wvalid[SDHC*1 +: 1] ),
+    .s_axi_bresp        ( spAXIS_m_bresp[SDHC*2 +: 2] ),
+    .s_axi_bvalid       ( spAXIS_m_bvalid[SDHC*1 +: 1] ),
+    .s_axi_araddr       ( spAXIS_m_araddr[SDHC*32 +: 32] ),
+    .s_axi_bready       ( spAXIS_m_bready[SDHC*1 +: 1] ),
+    .s_axi_arready      ( spAXIS_m_arready[SDHC*1 +: 1] ),
+    .s_axi_arvalid      ( spAXIS_m_arvalid[SDHC*1 +: 1] ),
+    .s_axi_rresp        ( spAXIS_m_rresp[SDHC*2 +: 2] ),
+    .s_axi_rdata        ( spAXIS_m_rdata[SDHC*32 +: 32]),
+    .s_axi_rvalid       ( spAXIS_m_rvalid[SDHC*1 +: 1] ),
+    .s_axi_rready       ( spAXIS_m_rready[SDHC*1 +: 1] ),
+
+	.m_axi_clk          ( io_ddrMasters_0_clk ),
     .m_axi_awaddr       ( gAXIM_s_awaddr[MSDHC*32 +: 32] ),
     .m_axi_awvalid      ( gAXIM_s_awvalid[MSDHC*1 +: 1] ),
     .m_axi_awlen        ( gAXIM_s_awlen[MSDHC*8 +: 8] ),
@@ -641,6 +693,7 @@ gSDHC u_gSDHC
     .m_axi_rlast        ( gAXIM_s_rlast[MSDHC*1 +: 1] ),
     .m_axi_rresp        ( gAXIM_s_rresp[MSDHC*2 +: 2] ),
     .m_axi_rready       ( gAXIM_s_rready[MSDHC*1 +: 1] ),
+
     .sd_clk_hi          ( sd_clk_hi ),
     .sd_clk_lo          ( sd_clk_lo ),
     .sd_cmd_i           ( sd_cmd_i ),
@@ -686,25 +739,27 @@ tseCore u_tseCore (
     .phy_mdo                 ( phy_mdo ),
     .phy_mdo_en              ( phy_mdo_en ),
     .phy_mdc                 ( phy_mdc ), 
-    .s_axi_awaddr            ( gAXIS_m_awaddr[TSE*32 +: 32] ),   
-    .s_axi_awvalid           ( gAXIS_m_awvalid[TSE*1 +: 1] ),  
-    .s_axi_awready           ( gAXIS_m_awready[TSE*1 +: 1] ),  
-    .s_axi_wdata             ( gAXIS_m_wdata[TSE*32 +: 32] ),    
-    .s_axi_wstrb             ( gAXIS_m_wstrb[TSE*4 +: 4] ),
-    .s_axi_wlast             ( gAXIS_m_wlast[TSE*1 +: 1] ),
-    .s_axi_wvalid            ( gAXIS_m_wvalid[TSE*1 +: 1] ),   
-    .s_axi_wready            ( gAXIS_m_wready[TSE*1 +: 1] ),   
-    .s_axi_bresp             ( gAXIS_m_bresp[TSE*2 +: 2] ),    
-    .s_axi_bvalid            ( gAXIS_m_bvalid[TSE*1 +: 1] ),   
-    .s_axi_bready            ( gAXIS_m_bready[TSE*1 +: 1] ),   
-    .s_axi_araddr            ( gAXIS_m_araddr[TSE*32 +: 32] ),   
-    .s_axi_arvalid           ( gAXIS_m_arvalid[TSE*1 +: 1] ),  
-    .s_axi_arready           ( gAXIS_m_arready[TSE*1 +: 1] ),  
-    .s_axi_rresp             ( gAXIS_m_rresp[TSE*2 +: 2] ),    
-    .s_axi_rdata             ( gAXIS_m_rdata[TSE*32 +: 32] ),    
-    .s_axi_rlast             ( gAXIS_m_rlast[TSE*1 +: 1] ),
-    .s_axi_rvalid            ( gAXIS_m_rvalid[TSE*1 +: 1] ),   
-    .s_axi_rready            ( gAXIS_m_rready[TSE*1 +: 1] ),
+
+    .s_axi_awaddr            ( spAXIS_m_awaddr[TSE*32 +: 32] ),
+    .s_axi_awvalid           ( spAXIS_m_awvalid[TSE*1 +: 1] ),
+    .s_axi_awready           ( spAXIS_m_awready[TSE*1 +: 1] ),
+    .s_axi_wdata             ( spAXIS_m_wdata[TSE*32 +: 32] ), 
+    .s_axi_wstrb             ( spAXIS_m_wstrb[TSE*4 +: 4] ),
+    .s_axi_wlast             ( spAXIS_m_wlast[TSE*1 +: 1] ),
+    .s_axi_wvalid            ( spAXIS_m_wvalid[TSE*1 +: 1] ),
+    .s_axi_wready            ( spAXIS_m_wready[TSE*1 +: 1] ),
+    .s_axi_bresp             ( spAXIS_m_bresp[TSE*2 +: 2] ),
+    .s_axi_bvalid            ( spAXIS_m_bvalid[TSE*1 +: 1] ),
+    .s_axi_bready            ( spAXIS_m_bready[TSE*1 +: 1] ),
+    .s_axi_araddr            ( spAXIS_m_araddr[TSE*32 +: 32] ),
+    .s_axi_arvalid           ( spAXIS_m_arvalid[TSE*1 +: 1] ),
+    .s_axi_arready           ( spAXIS_m_arready[TSE*1 +: 1] ),
+    .s_axi_rresp             ( spAXIS_m_rresp[TSE*2 +: 2] ),
+    .s_axi_rdata             ( spAXIS_m_rdata[TSE*32 +: 32] ),
+    .s_axi_rlast             ( spAXIS_m_rlast[TSE*1 +: 1] ),
+    .s_axi_rvalid            ( spAXIS_m_rvalid[TSE*1 +: 1] ),
+    .s_axi_rready            ( spAXIS_m_rready[TSE*1 +: 1] ),
+
     .s_eth_tx_tvalid         ( s_eth_tx_tvalid ),
     .s_eth_tx_tready         ( s_eth_tx_tready ),
     .s_eth_tx_tdata          ( s_eth_tx_tdata  ),
@@ -714,7 +769,7 @@ tseCore u_tseCore (
     .m_eth_rx_tvalid         ( m_eth_rx_tvalid ),
     .m_eth_rx_tready         ( m_eth_rx_tready ),
     .m_eth_rx_tdata          ( m_eth_rx_tdata  ),
-    .m_eth_rx_tstrb          ( m_eth_rx_tstrb  ),
+    .m_eth_rx_tstrb          (  ),
     .m_eth_rx_tlast          ( m_eth_rx_tlast  )
 );
 
@@ -852,14 +907,14 @@ custom_instruction_tea cpu3_custom_instruction_tea_inst(
 
 //axi4 bridge to various I/O
 EfxSapphireHpSoc_slb u_top_peripherals(
-	.io_apbSlave_0_PADDR                    ( dma_apb3_paddr ),
-	.io_apbSlave_0_PENABLE                  ( dma_apb3_penable ),
-	.io_apbSlave_0_PRDATA                   ( dma_apb3_prdata ),
-	.io_apbSlave_0_PREADY                   ( dma_apb3_pready ),
-	.io_apbSlave_0_PSEL                     ( dma_apb3_psel ),
-	.io_apbSlave_0_PSLVERROR                ( dma_apb3_pslverror ),
-	.io_apbSlave_0_PWDATA                   ( dma_apb3_pwdata ),
-	.io_apbSlave_0_PWRITE                   ( dma_apb3_pwrite ),
+	.io_apbSlave_0_PADDR                    (  ),
+	.io_apbSlave_0_PENABLE                  (  ),
+	.io_apbSlave_0_PRDATA                   (  ),
+	.io_apbSlave_0_PREADY                   (  ),
+	.io_apbSlave_0_PSEL                     (  ),
+	.io_apbSlave_0_PSLVERROR                (  ),
+	.io_apbSlave_0_PWDATA                   (  ),
+	.io_apbSlave_0_PWRITE                   (  ),
 
 	.system_spi_0_io_sclk_write             (  ),
 	.system_spi_0_io_data_0_writeEnable     (  ),
@@ -966,36 +1021,36 @@ EfxSapphireHpSoc_slb u_top_peripherals(
 	.userInterruptK 						(  ),
 	.userInterruptL 						(  ),
 
-	.axiA_awvalid                           ( gAXIS_m_awvalid[SLB*1 +: 1] ),
-	.axiA_awready                           ( gAXIS_m_awready[SLB*1 +: 1] ),
-	.axiA_awaddr                            ( gAXIS_m_awaddr[SLB*32 +: 32] ),
-	.axiA_awlen                             ( gAXIS_m_awlen[SLB*8 +: 8] ),
-	.axiA_awburst                           ( gAXIS_m_awburst[SLB*2 +: 2] ),
-	.axiA_awsize                            ( gAXIS_m_awsize[SLB*3 +: 3] ),
-	.axiA_awcache                           ( gAXIS_m_awcache[SLB*4 +: 4] ),
-	.axiA_awprot                            ( gAXIS_m_awprot[SLB*3 +: 3] ),
-	.axiA_wvalid                            ( gAXIS_m_wvalid[SLB*1 +: 1] ),
-	.axiA_wready                            ( gAXIS_m_wready[SLB*1 +: 1] ),
-	.axiA_wdata                             ( gAXIS_m_wdata[SLB*32 +: 32] ),
-	.axiA_wstrb                             ( gAXIS_m_wstrb[SLB*4 +: 4] ),
-	.axiA_wlast                             ( gAXIS_m_wlast[SLB*1 +: 1] ),
-	.axiA_bvalid                            ( gAXIS_m_bvalid[SLB*1 +: 1] ),
-	.axiA_bready                            ( gAXIS_m_bready[SLB*1 +: 1] ),
-	.axiA_bresp                             ( gAXIS_m_bresp[SLB*2 +: 2] ),
-	.axiA_arvalid                           ( gAXIS_m_arvalid[SLB*1 +: 1] ),
-	.axiA_arready                           ( gAXIS_m_arready[SLB*1 +: 1] ),
-	.axiA_araddr                            ( gAXIS_m_araddr[SLB*32 +: 32] ),
-	.axiA_arlen                             ( gAXIS_m_arlen[SLB*8 +: 8] ),
-	.axiA_arburst                           ( gAXIS_m_arburst[SLB*2 +: 2]),
-	.axiA_arsize                            ( gAXIS_m_arsize[SLB*3 +: 3] ),
-	.axiA_arcache                           ( gAXIS_m_arcache[SLB*4 +: 4] ),
-	.axiA_arprot                            ( gAXIS_m_arprot[SLB*3 +: 3] ),
-	.axiA_rvalid                            ( gAXIS_m_rvalid[SLB*1 +: 1] ),
-	.axiA_rready                            ( gAXIS_m_rready[SLB*1 +: 1] ),
-	.axiA_rdata                             ( gAXIS_m_rdata[SLB*32 +: 32] ),
-	.axiA_rresp                             ( gAXIS_m_rresp[SLB*2 +: 2] ),
-	.axiA_rlast                             ( gAXIS_m_rlast[SLB*1 +: 1] ),
-	.axiAInterrupt                          ( axiAInterrupt ),
+	.axiA_awvalid                           (  ),
+	.axiA_awready                           (  ),
+	.axiA_awaddr                            (  ),
+	.axiA_awlen                             (  ),
+	.axiA_awburst                           (  ),
+	.axiA_awsize                            (  ),
+	.axiA_awcache                           (  ),
+	.axiA_awprot                            (  ),
+	.axiA_wvalid                            (  ),
+	.axiA_wready                            (  ),
+	.axiA_wdata                             (  ),
+	.axiA_wstrb                             (  ),
+	.axiA_wlast                             (  ),
+	.axiA_bvalid                            (  ),
+	.axiA_bready                            (  ),
+	.axiA_bresp                             (  ),
+	.axiA_arvalid                           (  ),
+	.axiA_arready                           (  ),
+	.axiA_araddr                            (  ),
+	.axiA_arlen                             (  ),
+	.axiA_arburst                           (  ),
+	.axiA_arsize                            (  ),
+	.axiA_arcache                           (  ),
+	.axiA_arprot                            (  ),
+	.axiA_rvalid                            (  ),
+	.axiA_rready                            (  ),
+	.axiA_rdata                             (  ),
+	.axiA_rresp                             (  ),
+	.axiA_rlast                             (  ),
+	.axiAInterrupt                          (  ),
 
 	.cfg_done                               ( cfg_done ),
 	.cfg_start                              ( cfg_start ),
@@ -1009,9 +1064,14 @@ EfxSapphireHpSoc_slb u_top_peripherals(
 	.pll_system_locked                      ( pll_system_locked )
 );
 
+assign fcu_asyncReset = fcu_watchdogReset | io_asyncReset;
+assign fcu_spi_io_sclk_write = fcu_spi_0_io_sclk_write | fcu_spi_1_io_sclk_write;
+assign sys_spi_0_io_sclk_write = fcu_spi_io_sclk_write;
+assign sys_spi_1_io_sclk_write = fcu_spi_io_sclk_write;
+
 EfxSapphireFCU u_EfxSapphireFCU
 (
-	.io_asyncReset 							( io_asyncReset ),
+	.io_asyncReset 							( fcu_asyncReset ),
 	.io_systemClk 							( io_peripheralClk ),
 	.io_systemReset 						(  ),
 	.io_memoryClk 							( io_ddrMasters_0_clk ),
@@ -1021,6 +1081,15 @@ EfxSapphireFCU u_EfxSapphireFCU
 	.io_jtag_tms 							( sys_jtag_io_tms ),
 	.io_jtag_tdi 							( sys_jtag_io_tdi ),
 	.io_jtag_tdo 							( sys_jtag_io_tdo ),
+
+	.io_apbSlave_0_PADDR                    ( dma_apb3_paddr ),
+	.io_apbSlave_0_PENABLE                  ( dma_apb3_penable ),
+	.io_apbSlave_0_PRDATA                   ( dma_apb3_prdata ),
+	.io_apbSlave_0_PREADY                   ( dma_apb3_pready ),
+	.io_apbSlave_0_PSEL                     ( dma_apb3_psel ),
+	.io_apbSlave_0_PSLVERROR                ( dma_apb3_pslverror ),
+	.io_apbSlave_0_PWDATA                   ( dma_apb3_pwdata ),
+	.io_apbSlave_0_PWRITE                   ( dma_apb3_pwrite ),
 
 	.io_ddrA_aw_payload_addr 				( gAXIM_s_awaddr[MFCU*32 +: 32] ),
 	.io_ddrA_aw_valid 						( gAXIM_s_awvalid[MFCU*1 +: 1] ),
@@ -1062,7 +1131,55 @@ EfxSapphireFCU u_EfxSapphireFCU
 	.io_ddrA_r_ready	 					( gAXIM_s_rready[MFCU*1 +: 1] ),
 	.io_ddrA_r_payload_id 					(  ),
 
-	.userInterruptA 						( userInterruptA ),
+    .axiA_awvalid      						( sp_m_axi_awvalid ),
+    .axiA_awready      						( sp_m_axi_awready ),
+    .axiA_awid         						( ),
+    .axiA_awaddr       						( sp_m_axi_awaddr ),
+    .axiA_awburst      						( sp_m_axi_awburst ),
+    .axiA_awlen        						( sp_m_axi_awlen ),
+    .axiA_awsize       						( sp_m_axi_awsize ),
+    .axiA_awcache      						( sp_m_axi_awcache ),
+    .axiA_awqos        						( sp_m_axi_awqos ),
+    .axiA_awprot       						( sp_m_axi_awprot ),
+    .axiA_awlock       						( sp_m_axi_awlock ),
+    .axiA_awregion     						( sp_m_axi_awregion ),
+    .axiA_wvalid       						( sp_m_axi_wvalid ),
+    .axiA_wready       						( sp_m_axi_wready ),
+    .axiA_wdata        						( sp_m_axi_wdata ),
+    .axiA_wstrb        						( sp_m_axi_wstrb ),
+    .axiA_wlast        						( sp_m_axi_wlast ),
+    .axiA_bready       						( sp_m_axi_bready ),
+    .axiA_bvalid       						( sp_m_axi_bvalid ),
+    .axiA_bresp        						( sp_m_axi_bresp ),
+    .axiA_bid          						( 8'b0 ),
+    .axiA_arvalid      						( sp_m_axi_arvalid ),
+    .axiA_arready      						( sp_m_axi_arready ),
+    .axiA_arid         						( sp_m_axi_arid ),
+    .axiA_araddr       						( sp_m_axi_araddr ),
+    .axiA_arburst      						( sp_m_axi_arburst ),
+    .axiA_arlen        						( sp_m_axi_arlen ),
+    .axiA_arsize       						( sp_m_axi_arsize ),
+    .axiA_arlock       						( sp_m_axi_arlock ),
+    .axiA_arprot       						( sp_m_axi_arprot ),
+    .axiA_arcache      						( sp_m_axi_arcache ),
+    .axiA_arqos        						( sp_m_axi_arqos ),
+    .axiA_arregion     						( sp_m_axi_arregion ),
+    .axiA_rvalid       						( sp_m_axi_rvalid ),
+    .axiA_rready       						( sp_m_axi_rready ),
+    .axiA_rid          						( 8'b0 ),
+    .axiA_rdata        						( sp_m_axi_rdata ),
+    .axiA_rresp        						( sp_m_axi_rresp ),
+    .axiA_rlast        						( sp_m_axi_rlast ),
+	.axiAInterrupt     						( axiAInterrupt ),
+
+	.userInterruptA 						(  ),
+	.userInterruptB 						(  ),
+	.userInterruptC 						(  ),
+	.userInterruptD 						(  ),
+	.userInterruptE 						(  ),
+	.userInterruptF 						( sd_int ),				/*	SDHC interrupt 				*/
+	.userInterruptG 						( dma_interrupts[0] ),	/*	DMA SG RX channel interrupt */
+	.userInterruptH 						( dma_interrupts[1] ),	/*	DMA SG TX channel interrupt */
 	
 	.system_spi_0_io_ss 					( sys_spi_0_io_ss[0] ),
 	.system_spi_0_io_data_0_read 			( sys_spi_0_io_data_0_read ),
@@ -1077,7 +1194,7 @@ EfxSapphireFCU u_EfxSapphireFCU
 	.system_spi_0_io_data_3_read 			( sys_spi_0_io_data_3_read ),
 	.system_spi_0_io_data_3_write 			( sys_spi_0_io_data_3_write ),
 	.system_spi_0_io_data_3_writeEnable 	( sys_spi_0_io_data_3_writeEnable ),
-	.system_spi_0_io_sclk_write 			( sys_spi_0_io_sclk_write ),
+	.system_spi_0_io_sclk_write 			( fcu_spi_0_io_sclk_write ),
 
 	.system_spi_1_io_ss 					( sys_spi_1_io_ss[0] ),
 	.system_spi_1_io_data_0_read 			( sys_spi_1_io_data_0_read ),
@@ -1092,7 +1209,7 @@ EfxSapphireFCU u_EfxSapphireFCU
 	.system_spi_1_io_data_3_read 			( sys_spi_1_io_data_3_read ),
 	.system_spi_1_io_data_3_write 			( sys_spi_1_io_data_3_write ),
 	.system_spi_1_io_data_3_writeEnable 	( sys_spi_1_io_data_3_writeEnable ),
-	.system_spi_1_io_sclk_write 			( sys_spi_1_io_sclk_write ),
+	.system_spi_1_io_sclk_write 			( fcu_spi_1_io_sclk_write ),
 
 	.system_spi_2_io_ss 					( sys_spi_2_io_ss[0] ),
 	.system_spi_2_io_data_0_read 			( sys_spi_2_io_data_0_read ),
@@ -1131,15 +1248,11 @@ EfxSapphireFCU u_EfxSapphireFCU
 	.system_i2c_2_io_sda_write 				( sys_i2c_2_io_sda_write ),
 	.system_i2c_2_io_sda_read 				( sys_i2c_2_io_sda_read ),
 
-	.system_gpio_0_io_read 					( sys_gpio_0_io_read ),
-	.system_gpio_0_io_write 				( sys_gpio_0_io_write ),
-	.system_gpio_0_io_writeEnable 			( sys_gpio_0_io_writeEnable ),
+	.system_gpio_0_io_read 					( {26'b0, sys_gpio_0_io_read} ),
+	.system_gpio_0_io_write 				( sys_gpio_0_io_write[5:0] ),
+	.system_gpio_0_io_writeEnable 			( sys_gpio_0_io_writeEnable[5:0] ),
 
-	.system_gpio_1_io_read 					(  ),
-	.system_gpio_1_io_write 				(  ),
-	.system_gpio_1_io_writeEnable 			(  ),
-
-	.system_watchdog_hardPanic 				(  )
+	.system_watchdog_hardPanic 				( fcu_watchdogReset )
 );
 
 endmodule

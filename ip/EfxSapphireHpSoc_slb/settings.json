@@ -3,7 +3,7 @@
         "-o",
         "EfxSapphireHpSoc_slb",
         "--base_path",
-        "D:\\Projects\\fpga\\efinix\\project\\fpga\\efx_ti375c529_oob_v2.1\\efx_ti375_oob_v2_1\\bsp\\TI375C529_DK\\ip",
+        "D:\\Projects\\fpga\\efinix\\project\\fpga\\ti375_oob\\ip",
         "--vlnv",
         {
             "vendor": "efinixinc.com",
@@ -68,7 +68,7 @@
         "PERI_APB_4_SIZE": "4096",
         "PERI_FREQ": "200",
         "APP_OVERWRITE": "1'b0",
-        "APP_OVERWRITE_PATH": "\"Bitstream/Bootloader/bootloader.hex\"",
+        "APP_OVERWRITE_PATH": "\"Bitstream/NuttX/hp/boot/boot.hex\"",
         "INTF_JTAG_TAP_SEL": "8",
         "INTF_AXIS": "1'b1",
         "PERI_PIN_ASSIGN": "1'b1",
@@ -100,8 +100,8 @@
         "PERI_SDHC": "1'b0",
         "PERI_TSEMAC": "1'b0",
         "SW_FTDI_CH_NUM": "6011",
-        "SW_APP_SIZE": "324",
-        "SW_APP_SIZE_CUSTOM": "0",
+        "SW_APP_SIZE": "124",
+        "SW_APP_SIZE_CUSTOM": "16",
         "SW_STACK_SIZE": "4",
         "SW_STACK_SIZE_CUSTOM": "0",
         "SW_BOARD": "\"Ti375C529 Development Kit\"",
@@ -121,8 +121,8 @@
         "external_source_source": [
             "EfxSapphireHpSoc_slb\\EfxSapphireHpSoc_slb_define.vh",
             "EfxSapphireHpSoc_slb\\EfxSapphireHpSoc_slb_tmpl.v",
-            "EfxSapphireHpSoc_slb\\EfxSapphireHpSoc_slb.v",
-            "EfxSapphireHpSoc_slb\\EfxSapphireHpSoc_slb_tmpl.vhd"
+            "EfxSapphireHpSoc_slb\\EfxSapphireHpSoc_slb_tmpl.vhd",
+            "EfxSapphireHpSoc_slb\\EfxSapphireHpSoc_slb.v"
         ],
         "external_script_PT_Configuration": [],
         "external_script_Peripheral_Post_Script": [],
@@ -130,5 +130,5 @@
     },
     "ooc_synthesis": {},
     "sw_version": "2025.1.110.5.9",
-    "generated_date": "2025-09-27T16:46:16.496708+00:00"
+    "generated_date": "2025-11-01T04:53:08.494682+00:00"
 }

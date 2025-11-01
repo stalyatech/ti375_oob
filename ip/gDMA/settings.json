@@ -3,7 +3,7 @@
         "-o",
         "gDMA",
         "--base_path",
-        "D:\\Projects\\fpga\\efinix\\project\\fpga\\efx_ti375c529_oob_v2.1\\efx_ti375_oob_v2_1\\bsp\\TI375C529_DK\\ip",
+        "D:\\Projects\\fpga\\efinix\\project\\fpga\\ti375_oob\\ip",
         "--vlnv",
         {
             "vendor": "efinixinc.com",
@@ -122,5 +122,5 @@
     },
     "ooc_synthesis": {},
     "sw_version": "2025.1.110.5.9",
-    "generated_date": "2025-09-27T16:47:31.226949+00:00"
+    "generated_date": "2025-11-01T04:53:17.892255+00:00"
 }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<efx:project name="ti375_oob" description="" last_change="1759033189" sw_version="2025.1.110.5.9" last_run_state="pass" last_run_flow="bitstream" config_result_in_sync="true" design_ood="sync" place_ood="sync" route_ood="sync" xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
+<efx:project name="ti375_oob" description="" last_change="1761973563" sw_version="2025.1.110.5.9" last_run_state="pass" last_run_flow="bitstream" config_result_in_sync="true" design_ood="sync" place_ood="sync" route_ood="sync" xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
     <efx:device_info>
         <efx:family name="Titanium"/>
         <efx:device name="Ti375C529"/>
@@ -40,14 +40,14 @@
         <efx:ip instance_name="gTSE_core_fifo_ctrl" path="ip/gTSE_core_fifo_ctrl/settings.json" ooc="false">
             <efx:ip_src_file name="gTSE_core_fifo_ctrl.sv"/>
         </efx:ip>
-        <efx:ip instance_name="gAXIS_1to3_switch" path="ip/gAXIS_1to3_switch/settings.json" ooc="false">
-            <efx:ip_src_file name="gAXIS_1to3_switch.v"/>
-        </efx:ip>
         <efx:ip instance_name="EfxSapphireFCU" path="ip/EfxSapphireFCU/settings.json" ooc="false">
             <efx:ip_src_file name="EfxSapphireFCU.v"/>
         </efx:ip>
         <efx:ip instance_name="gAXIM_3to1_switch" path="ip/gAXIM_3to1_switch/settings.json" ooc="false">
             <efx:ip_src_file name="gAXIM_3to1_switch.v"/>
+        </efx:ip>
+        <efx:ip instance_name="gAXIS_1to2_switch" path="ip/gAXIS_1to2_switch/settings.json" ooc="false">
+            <efx:ip_src_file name="gAXIS_1to2_switch.v"/>
         </efx:ip>
     </efx:ip_info>
     <efx:synthesis tool_name="efx_map">
@@ -97,9 +97,9 @@
         <efx:param name="include" value="ip/gDMA" value_type="e_string"/>
         <efx:param name="include" value="ip/gTSE_core_fifo_data" value_type="e_string"/>
         <efx:param name="include" value="ip/gTSE_core_fifo_ctrl" value_type="e_string"/>
-        <efx:param name="include" value="ip/gAXIS_1to3_switch" value_type="e_string"/>
         <efx:param name="include" value="ip/EfxSapphireFCU" value_type="e_string"/>
         <efx:param name="include" value="ip/gAXIM_3to1_switch" value_type="e_string"/>
+        <efx:param name="include" value="ip/gAXIS_1to2_switch" value_type="e_string"/>
     </efx:synthesis>
     <efx:place_and_route tool_name="efx_pnr">
         <efx:param name="work_dir" value="work_pnr" value_type="e_string"/>

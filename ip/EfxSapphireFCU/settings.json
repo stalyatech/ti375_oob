@@ -3,13 +3,13 @@
         "-o",
         "EfxSapphireFCU",
         "--base_path",
-        "D:\\Projects\\fpga\\efinix\\project\\fpga\\ti375_oob\\ip",
+        "E:\\Projects\\fpga\\efinix\\project\\fpga\\ti375_oob\\ip",
         "--vlnv",
         {
             "vendor": "efinixinc.com",
             "library": "soc",
             "name": "efx_soc",
-            "version": "3.2.3"
+            "version": "3.3.0"
         }
     ],
     "conf": {
@@ -17,13 +17,14 @@
         "HexFile_Path": "\"Bitstream/NuttX/x3/boot/boot.hex\"",
         "APBSlave0_Size": "65536",
         "DEVKIT_CUSTOM": "\"sapphireBoard_rev0\"",
-        "LDSize": "124",
+        "LDSize": "1020",
         "LDStackSize": "4",
         "DEVKIT": "16",
         "DEBUG": "1'b1",
         "IDE_SEL": "1'b0",
         "RISCV_DEBUG_PRIV": "1'b0",
         "HARD_BREAKPOINT": "0",
+        "CO_DEBUG": "1'b0",
         "SOFT_TAP": "1'b1",
         "TAP_MODE": "1'b0",
         "TAP_COUNT": "1",
@@ -134,7 +135,7 @@
         "I2C0": "1'b1",
         "AXIMasterWidth_1": "32",
         "AXIMaster_1": "1'b0",
-        "AXIMasterWidth": "32",
+        "AXIMasterWidth": "128",
         "AXIMaster": "1'b0",
         "USER_TIMER0": "1'b1",
         "USER_TIMER0_CNT_WIDTH": "32",
@@ -168,15 +169,15 @@
     "output": {
         "external_script_generator": [],
         "external_source_source": [
-            "EfxSapphireFCU\\EfxSapphireFCU_tmpl.v",
-            "EfxSapphireFCU\\EfxSapphireFCU.v",
             "EfxSapphireFCU\\EfxSapphireFCU_tmpl.vhd",
+            "EfxSapphireFCU\\EfxSapphireFCU.v",
+            "EfxSapphireFCU\\EfxSapphireFCU_tmpl.v",
             "EfxSapphireFCU\\EfxSapphireFCU_define.vh"
         ],
         "external_script_script": [],
         "external_script_embedded_sw": []
     },
     "ooc_synthesis": {},
-    "sw_version": "2025.1.110.5.9",
-    "generated_date": "2025-11-01T04:54:20.503224+00:00"
+    "sw_version": "2025.2.288",
+    "generated_date": "2026-06-25T12:06:54.947661+00:00"
 }

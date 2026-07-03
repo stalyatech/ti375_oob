@@ -6,14 +6,14 @@ io_jtag_tdi sampled by io_jtag_tck
 io_jtag_tms sampled by io_jtag_tck
 io_jtag_tdo clocked by io_jtag_tck
 io_jtag_tck sampled by 
-userInterruptH sampled by 
 userInterruptE sampled by 
-userInterruptD sampled by 
-userInterruptB sampled by 
-userInterruptG sampled by 
-userInterruptC sampled by 
 userInterruptA sampled by 
+userInterruptG sampled by 
+userInterruptB sampled by 
 userInterruptF sampled by 
+userInterruptD sampled by 
+userInterruptC sampled by 
+userInterruptH sampled by 
 io_systemReset clocked by io_systemClk
 io_ddrA_ar_valid clocked by io_memoryClk
 io_ddrA_ar_ready sampled by io_memoryClk
@@ -94,10 +94,10 @@ axiA_bready clocked by io_systemClk
 axiA_bid sampled by 
 axiA_bresp sampled by io_systemClk
 axiAInterrupt sampled by io_systemClk
-system_uart_0_io_txd clocked by io_systemClk
-system_uart_0_io_rxd sampled by 
 system_uart_2_io_txd clocked by io_systemClk
 system_uart_2_io_rxd sampled by 
+system_uart_0_io_txd clocked by io_systemClk
+system_uart_0_io_rxd sampled by 
 system_uart_1_io_txd clocked by io_systemClk
 system_uart_1_io_rxd sampled by 
 system_i2c_0_io_sda_write clocked by io_systemClk
@@ -123,34 +123,6 @@ io_apbSlave_0_PWRITE clocked by io_systemClk
 io_apbSlave_0_PWDATA clocked by io_systemClk
 io_apbSlave_0_PRDATA sampled by io_systemClk
 io_apbSlave_0_PSLVERROR sampled by io_systemClk
-system_spi_0_io_sclk_write clocked by io_systemClk
-system_spi_0_io_data_0_writeEnable clocked by io_systemClk
-system_spi_0_io_data_0_read sampled by io_systemClk
-system_spi_0_io_data_0_write clocked by io_systemClk
-system_spi_0_io_data_1_writeEnable clocked by io_systemClk
-system_spi_0_io_data_1_read sampled by io_systemClk
-system_spi_0_io_data_1_write clocked by io_systemClk
-system_spi_0_io_data_2_writeEnable clocked by io_systemClk
-system_spi_0_io_data_2_read sampled by io_systemClk
-system_spi_0_io_data_2_write clocked by io_systemClk
-system_spi_0_io_data_3_writeEnable clocked by io_systemClk
-system_spi_0_io_data_3_read sampled by io_systemClk
-system_spi_0_io_data_3_write clocked by io_systemClk
-system_spi_0_io_ss clocked by io_systemClk
-system_spi_2_io_sclk_write clocked by io_systemClk
-system_spi_2_io_data_0_writeEnable clocked by io_systemClk
-system_spi_2_io_data_0_read sampled by io_systemClk
-system_spi_2_io_data_0_write clocked by io_systemClk
-system_spi_2_io_data_1_writeEnable clocked by io_systemClk
-system_spi_2_io_data_1_read sampled by io_systemClk
-system_spi_2_io_data_1_write clocked by io_systemClk
-system_spi_2_io_data_2_writeEnable clocked by io_systemClk
-system_spi_2_io_data_2_read sampled by io_systemClk
-system_spi_2_io_data_2_write clocked by io_systemClk
-system_spi_2_io_data_3_writeEnable clocked by io_systemClk
-system_spi_2_io_data_3_read sampled by io_systemClk
-system_spi_2_io_data_3_write clocked by io_systemClk
-system_spi_2_io_ss clocked by io_systemClk
 system_spi_1_io_sclk_write clocked by io_systemClk
 system_spi_1_io_data_0_writeEnable clocked by io_systemClk
 system_spi_1_io_data_0_read sampled by io_systemClk
@@ -165,4 +137,32 @@ system_spi_1_io_data_3_writeEnable clocked by io_systemClk
 system_spi_1_io_data_3_read sampled by io_systemClk
 system_spi_1_io_data_3_write clocked by io_systemClk
 system_spi_1_io_ss clocked by io_systemClk
+system_spi_2_io_sclk_write clocked by io_systemClk
+system_spi_2_io_data_0_writeEnable clocked by io_systemClk
+system_spi_2_io_data_0_read sampled by io_systemClk
+system_spi_2_io_data_0_write clocked by io_systemClk
+system_spi_2_io_data_1_writeEnable clocked by io_systemClk
+system_spi_2_io_data_1_read sampled by io_systemClk
+system_spi_2_io_data_1_write clocked by io_systemClk
+system_spi_2_io_data_2_writeEnable clocked by io_systemClk
+system_spi_2_io_data_2_read sampled by io_systemClk
+system_spi_2_io_data_2_write clocked by io_systemClk
+system_spi_2_io_data_3_writeEnable clocked by io_systemClk
+system_spi_2_io_data_3_read sampled by io_systemClk
+system_spi_2_io_data_3_write clocked by io_systemClk
+system_spi_2_io_ss clocked by io_systemClk
+system_spi_0_io_sclk_write clocked by io_systemClk
+system_spi_0_io_data_0_writeEnable clocked by io_systemClk
+system_spi_0_io_data_0_read sampled by io_systemClk
+system_spi_0_io_data_0_write clocked by io_systemClk
+system_spi_0_io_data_1_writeEnable clocked by io_systemClk
+system_spi_0_io_data_1_read sampled by io_systemClk
+system_spi_0_io_data_1_write clocked by io_systemClk
+system_spi_0_io_data_2_writeEnable clocked by io_systemClk
+system_spi_0_io_data_2_read sampled by io_systemClk
+system_spi_0_io_data_2_write clocked by io_systemClk
+system_spi_0_io_data_3_writeEnable clocked by io_systemClk
+system_spi_0_io_data_3_read sampled by io_systemClk
+system_spi_0_io_data_3_write clocked by io_systemClk
+system_spi_0_io_ss clocked by io_systemClk
 system_watchdog_hardPanic clocked by io_systemClk

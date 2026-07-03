@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<efxpt:design_db name="ti375_oob" device_def="Ti375C529" version="2025.1.110.5.9" db_version="20252006" last_change_date="Sat Nov  1 07:53:06 2025" xmlns:efxpt="http://www.efinixinc.com/peri_design_db" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/peri_design_db peri_design_db.xsd ">
+<efxpt:design_db name="ti375_oob" device_def="Ti375C529" version="2025.2.288" db_version="20252999" last_change_date="Thu Jun 25 15:01:46 2026" xmlns:efxpt="http://www.efinixinc.com/peri_design_db" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/peri_design_db peri_design_db.xsd ">
     <efxpt:device_info>
         <efxpt:iobank_info>
             <efxpt:iobank name="2A" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="2A_MODE_SEL"/>
@@ -776,15 +776,16 @@
             <efxpt:gen_param>
                 <efxpt:param name="AXI_MASTER_EN" value="true" value_type="bool"/>
                 <efxpt:param name="AXI_SLAVE_EN" value="true" value_type="bool"/>
-                <efxpt:param name="CUSTOM_INSTRUCTION_0_EN" value="true" value_type="bool"/>
-                <efxpt:param name="CUSTOM_INSTRUCTION_1_EN" value="true" value_type="bool"/>
-                <efxpt:param name="CUSTOM_INSTRUCTION_2_EN" value="true" value_type="bool"/>
-                <efxpt:param name="CUSTOM_INSTRUCTION_3_EN" value="true" value_type="bool"/>
+                <efxpt:param name="CUSTOM_INSTRUCTION_0_EN" value="false" value_type="bool"/>
+                <efxpt:param name="CUSTOM_INSTRUCTION_1_EN" value="false" value_type="bool"/>
+                <efxpt:param name="CUSTOM_INSTRUCTION_2_EN" value="false" value_type="bool"/>
+                <efxpt:param name="CUSTOM_INSTRUCTION_3_EN" value="false" value_type="bool"/>
                 <efxpt:param name="JTAG_TYPE" value="FPGA" value_type="str"/>
                 <efxpt:param name="MEM_CLK_SOURCE" value="Clock 0" value_type="str"/>
                 <efxpt:param name="OCR_FILE_PATH" value="" value_type="str"/>
                 <efxpt:param name="PIPELINE_SOC_AXI_MEM_INTERFACE_EN" value="false" value_type="bool"/>
                 <efxpt:param name="SYS_CLK_SOURCE" value="Clock 0" value_type="str"/>
+                <efxpt:param name="WRITEBUFFER_SOC_AXI_INTERFACE_EN" value="false" value_type="bool"/>
             </efxpt:gen_param>
             <efxpt:gen_pin>
                 <efxpt:pin name="axiAInterrupt" type_name="AXIAINTERRUPT" is_bus="false"/>
@@ -823,41 +824,41 @@
                 <efxpt:pin name="axiA_wready" type_name="AXIA_WREADY" is_bus="false"/>
                 <efxpt:pin name="axiA_wstrb" type_name="AXIA_WSTRB" is_bus="true"/>
                 <efxpt:pin name="axiA_wvalid" type_name="AXIA_WVALID" is_bus="false"/>
-                <efxpt:pin name="cpu0_customInstruction_cmd_ready" type_name="CPU0_CUSTOMINSTRUCTION_CMD_READY" is_bus="false"/>
-                <efxpt:pin name="cpu0_customInstruction_cmd_valid" type_name="CPU0_CUSTOMINSTRUCTION_CMD_VALID" is_bus="false"/>
-                <efxpt:pin name="cpu0_customInstruction_function_id" type_name="CPU0_CUSTOMINSTRUCTION_FUNCTION_ID" is_bus="true"/>
-                <efxpt:pin name="cpu0_customInstruction_inputs_0" type_name="CPU0_CUSTOMINSTRUCTION_INPUTS_0" is_bus="true"/>
-                <efxpt:pin name="cpu0_customInstruction_inputs_1" type_name="CPU0_CUSTOMINSTRUCTION_INPUTS_1" is_bus="true"/>
-                <efxpt:pin name="cpu0_customInstruction_outputs_0" type_name="CPU0_CUSTOMINSTRUCTION_OUTPUTS_0" is_bus="true"/>
-                <efxpt:pin name="cpu0_customInstruction_rsp_ready" type_name="CPU0_CUSTOMINSTRUCTION_RSP_READY" is_bus="false"/>
-                <efxpt:pin name="cpu0_customInstruction_rsp_valid" type_name="CPU0_CUSTOMINSTRUCTION_RSP_VALID" is_bus="false"/>
-                <efxpt:pin name="cpu1_customInstruction_cmd_ready" type_name="CPU1_CUSTOMINSTRUCTION_CMD_READY" is_bus="false"/>
-                <efxpt:pin name="cpu1_customInstruction_cmd_valid" type_name="CPU1_CUSTOMINSTRUCTION_CMD_VALID" is_bus="false"/>
-                <efxpt:pin name="cpu1_customInstruction_function_id" type_name="CPU1_CUSTOMINSTRUCTION_FUNCTION_ID" is_bus="true"/>
-                <efxpt:pin name="cpu1_customInstruction_inputs_0" type_name="CPU1_CUSTOMINSTRUCTION_INPUTS_0" is_bus="true"/>
-                <efxpt:pin name="cpu1_customInstruction_inputs_1" type_name="CPU1_CUSTOMINSTRUCTION_INPUTS_1" is_bus="true"/>
-                <efxpt:pin name="cpu1_customInstruction_outputs_0" type_name="CPU1_CUSTOMINSTRUCTION_OUTPUTS_0" is_bus="true"/>
-                <efxpt:pin name="cpu1_customInstruction_rsp_ready" type_name="CPU1_CUSTOMINSTRUCTION_RSP_READY" is_bus="false"/>
-                <efxpt:pin name="cpu1_customInstruction_rsp_valid" type_name="CPU1_CUSTOMINSTRUCTION_RSP_VALID" is_bus="false"/>
-                <efxpt:pin name="cpu2_customInstruction_cmd_ready" type_name="CPU2_CUSTOMINSTRUCTION_CMD_READY" is_bus="false"/>
-                <efxpt:pin name="cpu2_customInstruction_cmd_valid" type_name="CPU2_CUSTOMINSTRUCTION_CMD_VALID" is_bus="false"/>
-                <efxpt:pin name="cpu2_customInstruction_function_id" type_name="CPU2_CUSTOMINSTRUCTION_FUNCTION_ID" is_bus="true"/>
-                <efxpt:pin name="cpu2_customInstruction_inputs_0" type_name="CPU2_CUSTOMINSTRUCTION_INPUTS_0" is_bus="true"/>
-                <efxpt:pin name="cpu2_customInstruction_inputs_1" type_name="CPU2_CUSTOMINSTRUCTION_INPUTS_1" is_bus="true"/>
-                <efxpt:pin name="cpu2_customInstruction_outputs_0" type_name="CPU2_CUSTOMINSTRUCTION_OUTPUTS_0" is_bus="true"/>
-                <efxpt:pin name="cpu2_customInstruction_rsp_ready" type_name="CPU2_CUSTOMINSTRUCTION_RSP_READY" is_bus="false"/>
-                <efxpt:pin name="cpu2_customInstruction_rsp_valid" type_name="CPU2_CUSTOMINSTRUCTION_RSP_VALID" is_bus="false"/>
-                <efxpt:pin name="cpu3_customInstruction_cmd_ready" type_name="CPU3_CUSTOMINSTRUCTION_CMD_READY" is_bus="false"/>
-                <efxpt:pin name="cpu3_customInstruction_cmd_valid" type_name="CPU3_CUSTOMINSTRUCTION_CMD_VALID" is_bus="false"/>
-                <efxpt:pin name="cpu3_customInstruction_function_id" type_name="CPU3_CUSTOMINSTRUCTION_FUNCTION_ID" is_bus="true"/>
-                <efxpt:pin name="cpu3_customInstruction_inputs_0" type_name="CPU3_CUSTOMINSTRUCTION_INPUTS_0" is_bus="true"/>
-                <efxpt:pin name="cpu3_customInstruction_inputs_1" type_name="CPU3_CUSTOMINSTRUCTION_INPUTS_1" is_bus="true"/>
-                <efxpt:pin name="cpu3_customInstruction_outputs_0" type_name="CPU3_CUSTOMINSTRUCTION_OUTPUTS_0" is_bus="true"/>
-                <efxpt:pin name="cpu3_customInstruction_rsp_ready" type_name="CPU3_CUSTOMINSTRUCTION_RSP_READY" is_bus="false"/>
-                <efxpt:pin name="cpu3_customInstruction_rsp_valid" type_name="CPU3_CUSTOMINSTRUCTION_RSP_VALID" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU0_CUSTOMINSTRUCTION_CMD_READY" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU0_CUSTOMINSTRUCTION_CMD_VALID" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU0_CUSTOMINSTRUCTION_FUNCTION_ID" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU0_CUSTOMINSTRUCTION_INPUTS_0" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU0_CUSTOMINSTRUCTION_INPUTS_1" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU0_CUSTOMINSTRUCTION_OUTPUTS_0" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU0_CUSTOMINSTRUCTION_RSP_READY" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU0_CUSTOMINSTRUCTION_RSP_VALID" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU1_CUSTOMINSTRUCTION_CMD_READY" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU1_CUSTOMINSTRUCTION_CMD_VALID" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU1_CUSTOMINSTRUCTION_FUNCTION_ID" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU1_CUSTOMINSTRUCTION_INPUTS_0" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU1_CUSTOMINSTRUCTION_INPUTS_1" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU1_CUSTOMINSTRUCTION_OUTPUTS_0" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU1_CUSTOMINSTRUCTION_RSP_READY" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU1_CUSTOMINSTRUCTION_RSP_VALID" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU2_CUSTOMINSTRUCTION_CMD_READY" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU2_CUSTOMINSTRUCTION_CMD_VALID" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU2_CUSTOMINSTRUCTION_FUNCTION_ID" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU2_CUSTOMINSTRUCTION_INPUTS_0" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU2_CUSTOMINSTRUCTION_INPUTS_1" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU2_CUSTOMINSTRUCTION_OUTPUTS_0" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU2_CUSTOMINSTRUCTION_RSP_READY" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU2_CUSTOMINSTRUCTION_RSP_VALID" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU3_CUSTOMINSTRUCTION_CMD_READY" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU3_CUSTOMINSTRUCTION_CMD_VALID" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU3_CUSTOMINSTRUCTION_FUNCTION_ID" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU3_CUSTOMINSTRUCTION_INPUTS_0" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU3_CUSTOMINSTRUCTION_INPUTS_1" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU3_CUSTOMINSTRUCTION_OUTPUTS_0" is_bus="true"/>
+                <efxpt:pin name="" type_name="CPU3_CUSTOMINSTRUCTION_RSP_READY" is_bus="false"/>
+                <efxpt:pin name="" type_name="CPU3_CUSTOMINSTRUCTION_RSP_VALID" is_bus="false"/>
                 <efxpt:pin name="io_asyncReset" type_name="IO_ASYNCRESET" is_bus="false"/>
-                <efxpt:pin name="io_cfuClk" type_name="IO_CFUCLK" is_bus="false" is_clk="true" is_clk_invert="false"/>
-                <efxpt:pin name="io_cfuReset" type_name="IO_CFURESET" is_bus="false"/>
+                <efxpt:pin name="" type_name="IO_CFUCLK" is_bus="false" is_clk="true" is_clk_invert="false"/>
+                <efxpt:pin name="" type_name="IO_CFURESET" is_bus="false"/>
                 <efxpt:pin name="io_ddrMasters_0_ar_payload_addr" type_name="IO_DDRMASTERS_0_AR_PAYLOAD_ADDR" is_bus="true"/>
                 <efxpt:pin name="io_ddrMasters_0_ar_payload_burst" type_name="IO_DDRMASTERS_0_AR_PAYLOAD_BURST" is_bus="true"/>
                 <efxpt:pin name="io_ddrMasters_0_ar_payload_cache" type_name="IO_DDRMASTERS_0_AR_PAYLOAD_CACHE" is_bus="true"/>

@@ -14,7 +14,7 @@ module tseCore #(
     output                      dma_tx_rst,
     input                       dma_tx_descriptorUpdate,
     output [1:0]                dma_interrupts,
-    output  [2:0]               eth_speed,
+    output [2:0]                eth_speed,
 
     // MAC RGMII Interface
     output  [3:0]               rgmii_txd_HI,
@@ -62,8 +62,8 @@ module tseCore #(
     input                       s_eth_tx_tlast,
     output                      m_eth_rx_tvalid,
     input                       m_eth_rx_tready,
-    output    [7:0]             m_eth_rx_tdata,
-    output    [0:0]             m_eth_rx_tstrb,
+    output   [7:0]              m_eth_rx_tdata,
+    output   [0:0]              m_eth_rx_tstrb,
     output                      m_eth_rx_tlast
 );
 ////////////////////////////////////////////////////////////////////////////////////////////

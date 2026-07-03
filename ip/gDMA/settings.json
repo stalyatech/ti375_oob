@@ -3,13 +3,13 @@
         "-o",
         "gDMA",
         "--base_path",
-        "D:\\Projects\\fpga\\efinix\\project\\fpga\\ti375_oob\\ip",
+        "E:\\Projects\\fpga\\efinix\\project\\fpga\\ti375_oob\\ip",
         "--vlnv",
         {
             "vendor": "efinixinc.com",
             "library": "bridges_and_adaptors",
             "name": "efx_dma",
-            "version": "6.4.1"
+            "version": "6.4.2"
         }
     ],
     "conf": {
@@ -113,14 +113,14 @@
     "output": {
         "external_script_generator": [],
         "external_source_source": [
-            "gDMA\\gDMA_define.vh",
-            "gDMA\\gDMA_tmpl.v",
             "gDMA\\gDMA_tmpl.vhd",
-            "gDMA\\gDMA.v"
+            "gDMA\\gDMA.v",
+            "gDMA\\gDMA_tmpl.v",
+            "gDMA\\gDMA_define.vh"
         ],
         "external_script_script": []
     },
     "ooc_synthesis": {},
-    "sw_version": "2025.1.110.5.9",
-    "generated_date": "2025-11-01T04:53:17.892255+00:00"
+    "sw_version": "2025.2.288",
+    "generated_date": "2026-06-25T12:05:04.083660+00:00"
 }

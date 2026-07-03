@@ -43,7 +43,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-`define IP_UUID _82609939f2f64738ad5a9dc93dfc3d6f
+`define IP_UUID _6e1328d3c26d4d26a1c7080002397ce5
 `define IP_NAME_CONCAT(a,b) a``b
 `define IP_MODULE_NAME(name) `IP_NAME_CONCAT(name,`IP_UUID)
 module gAXIS_1to2_switch

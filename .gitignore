@@ -9,3 +9,11 @@ outflow/
 work_*/
 
 docs/wiki
+# DNN integration helper outputs
+scratch_*.log
+RUNPNR_*
+.pydeps-openeye/
+sim/openeye/sim_build/
+sim/openeye/stim/demo/
+*.fst
+ip/EfxSapphireHpSoc_slb/EfxSapphireHpSoc_wrapper_bak*.v

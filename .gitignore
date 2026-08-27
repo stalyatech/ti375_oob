@@ -17,3 +17,5 @@ sim/openeye/sim_build/
 sim/openeye/stim/demo/
 *.fst
 ip/EfxSapphireHpSoc_slb/EfxSapphireHpSoc_wrapper_bak*.v
+__pycache__/
+sim/openeye/sim_build*/

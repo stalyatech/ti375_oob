@@ -52,7 +52,7 @@
         "PERI_GPIO_0": "1'b1",
         "PERI_GPIO_1": "1'b0",
         "PERI_WDT_0": "1'b1",
-        "PERI_APB_0": "1'b0",
+        "PERI_APB_0": "1'b1",
         "PERI_APB_1": "1'b0",
         "PERI_APB_2": "1'b0",
         "PERI_APB_3": "1'b0",
@@ -124,10 +124,10 @@
     "output": {
         "external_script_Peripheral_Generator": [],
         "external_source_source": [
-            "EfxSapphireHpSoc_slb\\EfxSapphireHpSoc_slb_tmpl.vhd",
-            "EfxSapphireHpSoc_slb\\EfxSapphireHpSoc_slb.v",
+            "EfxSapphireHpSoc_slb\\EfxSapphireHpSoc_slb_define.vh",
             "EfxSapphireHpSoc_slb\\EfxSapphireHpSoc_slb_tmpl.v",
-            "EfxSapphireHpSoc_slb\\EfxSapphireHpSoc_slb_define.vh"
+            "EfxSapphireHpSoc_slb\\EfxSapphireHpSoc_slb_tmpl.vhd",
+            "EfxSapphireHpSoc_slb\\EfxSapphireHpSoc_slb.v"
         ],
         "external_script_PT_Configuration": [],
         "external_script_Peripheral_Post_Script": [],
@@ -135,5 +135,5 @@
     },
     "ooc_synthesis": {},
     "sw_version": "2025.2.288",
-    "generated_date": "2026-06-25T12:01:50.075735+00:00"
+    "generated_date": "2026-07-06T06:33:46.626926+00:00"
 }

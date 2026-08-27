@@ -171,6 +171,14 @@ port (
     userInterruptJ : out std_logic;
     userInterruptK : out std_logic;
     userInterruptL : out std_logic;
+    io_apbSlave_0_PADDR : out std_logic_vector(31 downto 0);
+    io_apbSlave_0_PENABLE : out std_logic;
+    io_apbSlave_0_PRDATA : in std_logic_vector(31 downto 0);
+    io_apbSlave_0_PREADY : in std_logic;
+    io_apbSlave_0_PSEL : out std_logic;
+    io_apbSlave_0_PSLVERROR : in std_logic;
+    io_apbSlave_0_PWDATA : out std_logic_vector(31 downto 0);
+    io_apbSlave_0_PWRITE : out std_logic;
     system_i2c_2_io_sda_write : out std_logic;
     system_i2c_2_io_sda_writeEnable : out std_logic;
     system_i2c_2_io_scl_writeEnable : out std_logic;
@@ -320,6 +328,14 @@ port map (
     userInterruptJ => userInterruptJ,
     userInterruptK => userInterruptK,
     userInterruptL => userInterruptL,
+    io_apbSlave_0_PADDR => io_apbSlave_0_PADDR,
+    io_apbSlave_0_PENABLE => io_apbSlave_0_PENABLE,
+    io_apbSlave_0_PRDATA => io_apbSlave_0_PRDATA,
+    io_apbSlave_0_PREADY => io_apbSlave_0_PREADY,
+    io_apbSlave_0_PSEL => io_apbSlave_0_PSEL,
+    io_apbSlave_0_PSLVERROR => io_apbSlave_0_PSLVERROR,
+    io_apbSlave_0_PWDATA => io_apbSlave_0_PWDATA,
+    io_apbSlave_0_PWRITE => io_apbSlave_0_PWRITE,
     system_i2c_2_io_sda_write => system_i2c_2_io_sda_write,
     system_i2c_2_io_sda_writeEnable => system_i2c_2_io_sda_writeEnable,
     system_i2c_2_io_scl_writeEnable => system_i2c_2_io_scl_writeEnable,

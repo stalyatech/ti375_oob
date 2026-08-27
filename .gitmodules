@@ -1,3 +1,4 @@
 [submodule "ip/OpenEye"]
 	path = ip/OpenEye
-	url = https://github.com/Learning-Chips-Lab/OpenEye.git
+	url = https://github.com/stalyatech/OpenEye.git
+	branch = stalya

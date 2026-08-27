@@ -95,11 +95,14 @@ içinde RTL instantiation ile eşleştirilmiştir; değiştirirken ikisini birli
 
 ## OpenEye submodule yerel yamaları
 
-`ip/OpenEye` (Learning-Chips-Lab/OpenEye, SHL-2.1, pin: `ca5a7dc`) içinde 5 dosya yamalı ve
-2 dosya üretilmiştir. Tamamı commit edilmemiş submodule durumudur; yedek:
-[`patches/openeye-local-patches.diff`](patches/openeye-local-patches.diff) ve
-[`patches/generated/`](patches/generated/). `git submodule update --checkout` bu yamaları siler;
-geri almak için diff'i `git -C ip/OpenEye apply` ile uygula ve generated dosyaları kopyala.
+`ip/OpenEye` submodule'ü stalyatech fork'unun **`stalya`** dalını izler
+(`origin` = stalyatech/OpenEye, `upstream` = Learning-Chips-Lab/OpenEye, SHL-2.1). Dal,
+upstream `ca5a7dc` üzerine tek bir commit ile 5 yamalı dosyayı ve 2 üretilmiş dosyayı taşır;
+yedek kopya [`patches/openeye-local-patches.diff`](patches/openeye-local-patches.diff) ve
+[`patches/generated/`](patches/generated/) altındadır. Fork `main` upstream `main` ile
+güncel tutulur (2026-08-27: `fe2f5ed`, 79 commit ileride, `OpenEye_FPGA.v` yeniden yazılmış);
+`stalya` dalını oraya taşımak yamaların yeniden portlanmasını, dma_storage yeniden üretimini ve
+sim + sentez + timing tekrarını gerektirir, ayrı iş olarak planlanmalıdır.
 
 | Dosya | Yama |
 |-------|------|

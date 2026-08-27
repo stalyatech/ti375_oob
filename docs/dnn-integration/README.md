@@ -154,6 +154,34 @@ Ortam: `C:\Programs\Efinity\2025.2\bin\setup.bat`. `peri.xml` değişirse önce 
   kur, vektör 1 stimulus'unu DDR'dan akıt, sonucu DDR'dan oku ve `dma_golden.hex` ile karşılaştır,
   PLIC ID 9 kesmesini doğrula.
 
+## Upstream durumu ve geçiş denemesi (2026-08-27)
+
+Upstream `main` (`fe2f5ed`, 2026-08-20) üzerine tam bir port yapıldı (dal: fork'ta
+`stalya-upstream`, commit `21db525`; ana repoda `stalya-fmu_v1.1-upstream-wip`). Sentez zinciri
+geçiyor (map PASS, pnr PASS, timing kapalı, RAM10 %79) ama fonksiyonel simülasyon geçmiyor:
+çekirdek akışı kabul edip yalnız bias değerlerini geri basıyor. Upstream'in kendi cocotb
+testbench'i Windows'ta çalışır hale getirildi (cocotb 2.0.1 + Icarus VPI; sürücü betikleri
+`docs/dnn-integration/upstream-issue.md` içinde anlatılıyor) ve yalın upstream kopyası da aynı
+testte düşüyor; sorun bizim değişikliklerimizde değil.
+
+Bisect sonucu (upstream harness, 1x1/32-bit Makefile konfigürasyonu, 4x2x4 katman):
+
+| Commit | Tarih | Sonuç |
+|--------|-------|-------|
+| `ca5a7dc` | 2025 | PASS, üretim tabanımız (`stalya`) |
+| `d19314a` | 2026-07-20 | 1. regresyon: `PSUM_GET_RESULTS` girişindeki `psum_enable_i_reg <= 0` kaldırıldı; geri konunca geçiyor |
+| `1f29695`/`00893e0` | 2026-07-23 | `raw_wght` bayrağı yanlış bite taşındı; upstream `7abd08c`/`6611d1f` ile düzeltti |
+| `8350a00` | 2026-07-20 | kırılma değil, Makefile katmanı 4→16 genişliğe çıkarıldı (kapasite sınırı) |
+| `3531eb3` | 2026-07-24 | son sağlam durum (yukarıdaki tek satır düzeltmesiyle) |
+| `ff4f99f` | 2026-07-24 | 2. regresyon: PE.v yeniden yazımı; `fe2f5ed`'e kadar tüm sonraki commit'ler FAIL |
+
+Çok-cluster (2x2) ve 64-bit DMA yolu ise `3531eb3`+düzeltme ile bile bias geri basıyor; upstream
+bu yolu `ca5a7dc` sonrasında test etmemiş (2x2 pytest matrisi eksik env yüzünden çalışmıyor).
+
+Karar: üretimde `stalya` (`ca5a7dc` + yamalar) kalır. Upstream'e geçiş, upstream FPGA seviyesi
+testi tekrar geçirene veya PE yeniden yazımı burada ayıklanana kadar `stalya-upstream` dalında
+bekler. WIP dalındaki değerli parçalar: Efinity uyumluluk yamaları, cocotb harness sürücüleri,
+gelişmiş `tb_openeye_core.v` (FSM izi, DUT parametreleri), `gen_stimulus.py` env override'ları.
 ## Kaynak riski
 
 OpenEye BRAM-yoğun (RAM10 894/2688, %33). Geometri büyütülürse (`CLUSTER_*`, `RAM_CELLS`,

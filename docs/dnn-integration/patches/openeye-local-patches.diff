@@ -1,0 +1,130 @@
+diff --git a/fpga/hdl/open_eye_axi_v1_0.v b/fpga/hdl/open_eye_axi_v1_0.v
+index 54491f2..2bbe5d4 100644
+--- a/fpga/hdl/open_eye_axi_v1_0.v
++++ b/fpga/hdl/open_eye_axi_v1_0.v
+@@ -12,6 +12,7 @@
+ 		parameter integer RAM_CELLS     = 8,
+ 		parameter integer BUFFER_WIDTH  = 10,
+ 		parameter integer BRANCHES     	= 1,
++		parameter integer QUANT_AMOUNT  = 32,	// local patch: declare param used below (matches OpenEye_FPGA default)
+ 
+ 		// User parameters ends
+ 		// Do not modify the parameters beyond this line
+@@ -115,7 +116,6 @@
+ 	.RAM_CELLS(RAM_CELLS),
+ 	.BUFFER_WIDTH(BUFFER_WIDTH),
+ 	.BRANCHES(BRANCHES),
+-    .BUFFER_WIDTH(BUFFER_WIDTH),
+     .QUANT_AMOUNT(QUANT_AMOUNT)
+ 	
+     ) open_eye_wrapper_inst (
+diff --git a/hdl/OpenEye_FPGA.v b/hdl/OpenEye_FPGA.v
+index 7479367..d6480ec 100644
+--- a/hdl/OpenEye_FPGA.v
++++ b/hdl/OpenEye_FPGA.v
+@@ -93,6 +93,11 @@
+ ///   last_data_o            - Signals the last output data word
+ ///                 
+ 
++// local patch: force internal parameter defaults (repo ships no parameters.vh).
++// Guard sits at the head of this module file so it is compile-order independent.
++`ifndef USE_INTERNAL_PARAMS
++`define USE_INTERNAL_PARAMS
++`endif
+ module OpenEye_FPGA #(
+     //Set parameters
+   `ifdef USE_INTERNAL_PARAMS
+@@ -1210,7 +1215,11 @@ reg [1023:0] fst_path;
+         end
+       end
+     end
+-    temp_var = 0;
++    // local patch: removed stray `temp_var = 0;` here. It sat outside the
++    // if/else of a (posedge clk_i, negedge rst_n) block, so it was assigned on
++    // both edges -> Efinity VERI-1466 "assignment under multiple clock edges".
++    // temp_var is a blocking scratch var, always re-assigned before use, so
++    // dropping this hygiene clear is functionally safe.
+   end
+ 
+   // --- DMA output staging registers (main FSM Process 6) ---
+@@ -1479,7 +1488,8 @@ reg [1023:0] fst_path;
+       bano_cluster_mode_reg                 <= 0;
+       af_cluster_mode_reg                   <= 0;
+       compute_mask_reg                      <= 0;
+-      psum_data_i_reg                       <= 0;
++      // local patch: psum_data_i_reg is owned/driven by the PSUM FSM (Process further
++      // below); resetting it here too makes it a multi-driver net (Efinity VDB-1000).
+       ready_dma_o                           <= 0;
+       iact_buffer_SP_en_r                   <= 0;
+       iact_buffer_SP_en_w                   <= 0;
+diff --git a/src/open_eye/conv_mapper.py b/src/open_eye/conv_mapper.py
+index b6c51b0..1dccf1e 100644
+--- a/src/open_eye/conv_mapper.py
++++ b/src/open_eye/conv_mapper.py
+@@ -261,7 +261,9 @@ class ConvMapper(LayerMapper):
+         """
+         dma_line = 0
+         dma_storage = []
+-        for f in range(math.ceil(1024/2)):
++        # Local patch: the loop bound follows QUANT_AMOUNT instead of the
++        # hardcoded 1024 so reduced hardware geometries get a matching stream.
++        for f in range(math.ceil(params.QUANT_AMOUNT/2)):
+             dma_line = 0
+             dma_line = dma_line + (layer_params.quantize[2*f][0] << 0)
+             dma_line = dma_line + (layer_params.quantize[2*f][1] << 25)
+@@ -288,7 +290,8 @@ class ConvMapper(LayerMapper):
+         """
+         dma_line = 0
+         dma_storage = []
+-        for f in range(math.ceil(1024/8)):
++        # Local patch: same QUANT_AMOUNT scaling as write_quantize.
++        for f in range(math.ceil(params.QUANT_AMOUNT/8)):
+             dma_line = 0
+             dma_line = dma_line + (layer_params.offset[8*f] << 0)
+             dma_line = dma_line + (layer_params.offset[8*f+1] << 8)
+diff --git a/src/open_eye/dense_mapper.py b/src/open_eye/dense_mapper.py
+index 757fa8c..0172c1f 100644
+--- a/src/open_eye/dense_mapper.py
++++ b/src/open_eye/dense_mapper.py
+@@ -256,7 +256,9 @@ class DenseMapper(LayerMapper):
+ 
+         # Pack quantization parameters: 2 parameter pairs per DMA word
+         # Each parameter is [scale_factor, zero_point] for quantization
+-        for f in range(math.ceil(512)):
++        # Local patch: the loop bound follows QUANT_AMOUNT instead of the
++        # hardcoded 512 so reduced hardware geometries get a matching stream.
++        for f in range(math.ceil(params.QUANT_AMOUNT/2)):
+             dma_line = 0
+             # First quantization pair: scale and zero-point
+             dma_line = dma_line + (layer_params.quantize[2*f][0] << 0)      # bits 0-24: first scale factor
+@@ -285,7 +287,8 @@ class DenseMapper(LayerMapper):
+         """
+         dma_line = 0
+         dma_storage = []
+-        for f in range(math.ceil(1024/8)):
++        # Local patch: same QUANT_AMOUNT scaling as write_quantize.
++        for f in range(math.ceil(params.QUANT_AMOUNT/8)):
+             dma_line = 0
+             dma_line = dma_line + (layer_params.offset[8*f] << 0)
+             dma_line = dma_line + (layer_params.offset[8*f+1] << 8)
+diff --git a/src/open_eye/generator.py b/src/open_eye/generator.py
+index f103e14..d78ab07 100644
+--- a/src/open_eye/generator.py
++++ b/src/open_eye/generator.py
+@@ -375,10 +375,14 @@ def create_regmap_params_vh_file(regmap_yaml_path, output_vh_path=None, output_v
+         dv.write(f"    input  wire [DMA_BITWIDTH-1:0] dma_data_i,  // Packed 64-bit data\n")
+ 
+         # Output ports (one per register)
++        # local patch: build the list and join, so there is no trailing comma.
++        # The previous dv.seek(dv.tell()-2) trick is unreliable in text mode on
++        # Windows (\n is written as \r\n), which left a superfluous comma.
++        port_lines = []
+         for regs in transmissions:
+             for reg in regs:
+-                dv.write(f"    output reg [{reg['width']-1}:0] {reg['name']},\n")
+-        dv.seek(dv.tell()-2)  # Remove last comma
++                port_lines.append(f"    output reg [{reg['width']-1}:0] {reg['name']}")
++        dv.write(",\n".join(port_lines))
+         dv.write("\n);\n\n")
+ 
+         # Sequential logic

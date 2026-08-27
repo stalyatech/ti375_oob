@@ -1,0 +1,3 @@
+[submodule "ip/OpenEye"]
+	path = ip/OpenEye
+	url = https://github.com/Learning-Chips-Lab/OpenEye.git

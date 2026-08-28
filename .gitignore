@@ -27,3 +27,4 @@ sim/stalyanpu/stim/*
 ip/stalyanpu/py/build/
 ip/stalyanpu/py/*.egg-info/
 .pytest_cache/
+.data/

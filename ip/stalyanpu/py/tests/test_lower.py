@@ -27,7 +27,8 @@ def make_demo_model():
     nodes = []
     nodes.append(_conv("c0", "img", 3, 64, 3, 2, inits))
     nodes += _silu("a0", "c0")
-    nodes.append(helper.make_node("Split", ["a0"], ["s0", "s1"], name="split", axis=1, split=[32, 32]))
+    inits.append(numpy_helper.from_array(np.array([32, 32], np.int64), "split_sizes"))
+    nodes.append(helper.make_node("Split", ["a0", "split_sizes"], ["s0", "s1"], name="split", axis=1))
     nodes.append(_conv("c1", "s1", 32, 32, 3, 1, inits))
     nodes += _silu("a1", "c1")
     nodes.append(helper.make_node("Add", ["a1", "s1"], ["r1"], name="add"))
@@ -76,11 +77,9 @@ def test_lowering_partitions_and_fuses():
 def test_concat_alignment_is_enforced():
     model = make_demo_model()
     # Change the split to 16/48: the concat offsets are no longer 32 aligned.
-    for node in model.graph.node:
-        if node.op_type == "Split":
-            for a in node.attribute:
-                if a.name == "split":
-                    a.ints[:] = [16, 48]
+    for init in model.graph.initializer:
+        if init.name == "split_sizes":
+            init.CopyFrom(numpy_helper.from_array(np.array([16, 48], np.int64), "split_sizes"))
     g, rep = lower_onnx(model)
     assert not rep.ok
     assert any("multiple of 32" in r for _, r in rep.frontier_failures)
@@ -88,5 +87,5 @@ def test_concat_alignment_is_enforced():
 
 def test_explicit_cut():
     g, rep = lower_onnx(make_demo_model(), cut_tensors=["a2"])
-    assert g.outputs == ["c2"]
+    assert g.outputs == ["a2"]
     assert "Resize" in rep.cpu_counts

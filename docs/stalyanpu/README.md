@@ -1,9 +1,10 @@
 # StalyaNPU: YOLOv8s için INT8 CNN hızlandırıcısı
 
-> **DURUM (2026-08-28): M0 tamamlandı.** Dal `stalya-fmu_v2.0-npu`. OpenEye yerine sıfırdan
-> tasarlanan hızlandırıcının karar kaydı, mimarisi, ISA taslağı, performans modeli, ONNX
-> ön yüzü ve ilk RTL adımı (DSP48 DUAL sarmalayıcı + kaskad zinciri, Efinix sim modeliyle
-> bit bit doğrulandı) hazır. Sonraki adım M1 (nicemleme + referans model + mAP).
+> **DURUM (2026-08-28): M0 ve M1 tamamlandı.** Dal `stalya-fmu_v2.0-npu`. Karar kaydı,
+> mimari, ISA taslağı, performans modeli, ONNX ön yüzü, ilk RTL adımı (DSP48 DUAL sarmalayıcı +
+> kaskad zinciri, Efinix sim modeliyle bit bit) ve nicemleme hattı (kalibrasyon, bit-kesin
+> referans model, COCO mAP) hazır. **INT8 mAP50-95 düşüşü 0,78 puan (kapı 2,0)**, bkz.
+> [accuracy-report.md](accuracy-report.md). Sonraki adım M2 (emitter, tiler, blob, interp).
 > Üst seviye tasarım (`ti375_oob_top.v`) henüz değişmedi; OpenEye bitstream'i bozulmadı.
 
 Hedef: **YOLOv8s, 1080p kaynaktan 640×384 letterbox, 30 fps, INT8**, Efinix Titanium
@@ -19,6 +20,7 @@ Ti375C529 üzerinde. Gerek 8,6 GMAC/kare → 258 GMAC/s sürekli.
 | [toolchain-guide.md](toolchain-guide.md) | Python paketi kurulumu ve komutları, nicemleme semantiği, perf modeli |
 | [verification-guide.md](verification-guide.md) | Sim ağacı, `run_sim.py`, test listesi, PASS ölçütleri |
 | [bringup-guide.md](bringup-guide.md) | Board üzerinde doğrulama akışı (M8) |
+| [accuracy-report.md](accuracy-report.md) | INT8 PTQ kalibrasyon taraması ve COCO mAP sonuçları (M1) |
 
 ## Dizin yapısı
 
@@ -47,6 +49,10 @@ python -m venv .venv-stalyanpu
 # ISA header
 .venv-stalyanpu\Scripts\python -m stalyanpu gen-header --check
 
+# Nicemleme ve mAP (veri: .data/, bkz. toolchain-guide.md)
+.venv-stalyanpu\Scripts\python -m stalyanpu calibrate .data/yolov8s_640x384.onnx --images .data/coco/val2017 --ann .data/coco/annotations/instances_val2017.json --out .data/build/q_mse
+.venv-stalyanpu\Scripts\python -m stalyanpu eval --qgraph .data/build/q_mse --images .data/coco/val2017 --ann .data/coco/annotations/instances_val2017.json --n 500
+
 # Birim testleri
 .venv-stalyanpu\Scripts\python -m pytest ip/stalyanpu/py -q
 .venv-stalyanpu\Scripts\python sim/stalyanpu/run_sim.py unit -j 3
@@ -57,7 +63,7 @@ python -m venv .venv-stalyanpu
 | M | Teslimat | Kapı | Durum |
 |---|----------|------|-------|
 | M0 | Dal, ağaç, karar kaydı, mimari, ISA, perf modeli, ONNX lowering, DSP sarmalayıcı + zincir RTL/TB | perf ≥ 30 fps; lowering 0 desteklenmeyen op; TB `efx_dsp48.v` ile bit-kesin | **tamam** (perf 32,9 fps @2,4 GB/s, marj ince; bkz. architecture.md) |
-| M1 | Kalibrasyon, nicemleme, bit-kesin refmodel, mAP | INT8 mAP50-95 düşüşü ≤ 2,0 | |
+| M1 | Kalibrasyon, nicemleme, bit-kesin refmodel, mAP | INT8 mAP50-95 düşüşü ≤ 2,0 | **tamam** (MSE aralığı: 44,86 → 44,07, düşüş 0,78) |
 | M2 | Emitter, blob, tiler, allocator, `interp.py`, altın üretici | interp ≡ runner tüm ağ | |
 | M3 | Dizi + acc + ibuf + wfifo + epilog RTL, birim TB'ler, AXI bellek modeli | tümü PASS | |
 | M4 | DMA, seq, csr, `snpu_top`; katman testleri | PASS, çevrim ±%15 | |

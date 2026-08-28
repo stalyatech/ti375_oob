@@ -122,13 +122,11 @@ def lower_onnx(path_or_model, cut_tensors=None):
         if node.op_type == "Sigmoid":
             silu_of[node.input[0]] = (node, silu_pair(m, node))
 
-    tensor_alias: dict[str, str] = {}   # replaced tensor -> surviving tensor
-
-    def resolve(name):
-        while name in tensor_alias:
-            name = tensor_alias[name]
-        return name
-
+    # Fused ops keep the ONNX name of their final output tensor, so every IR
+    # tensor name means the same values as the ONNX tensor of that name.
+    # The intermediate names survive in the attrs (preact, preadd) because
+    # calibration needs their ranges too.
+    fused_mul_outputs = set()
     for node in npu_nodes:
         if node.op_type in ("Sigmoid", "Mul"):
             continue
@@ -137,35 +135,39 @@ def lower_onnx(path_or_model, cut_tensors=None):
             w = m.shape(node.input[1])
             k = as_int_list(attr(node, "kernel_shape", list(w[2:])))[0]
             s = as_int_list(attr(node, "strides", [1, 1]))[0]
-            out = node.output[0]
+            raw = node.output[0]
+            out = raw
             silu = False
-            if out in silu_of:
-                sig, mul = silu_of[out]
-                cons = m.consumers.get(out, [])
+            preact = None
+            if raw in silu_of:
+                sig, mul = silu_of[raw]
+                cons = m.consumers.get(raw, [])
                 if len(cons) == 2 and {id(c) for c in cons} == {id(sig), id(mul)}:
                     silu = True
-                    tensor_alias[mul.output[0]] = out
-                    g.tensors[out] = TensorInfo(out, m.shape(mul.output[0]))
+                    preact = raw
+                    out = mul.output[0]
+                    fused_mul_outputs.add(out)
+                    g.tensors[out] = TensorInfo(out, m.shape(out))
                     rep.fused_silu += 1
-            g.ops.append(Op("CONV", name, [resolve(node.input[0])], [out], {
+            g.ops.append(Op("CONV", name, [node.input[0]], [out], {
                 "k": k, "s": s, "pad": k // 2, "ic": w[1], "oc": w[0],
-                "silu": silu, "residual": None,
+                "silu": silu, "preact": preact, "residual": None, "preadd": None,
                 "weight": node.input[1],
                 "bias": node.input[2] if len(node.input) > 2 else None,
             }))
         elif node.op_type == "MaxPool":
-            g.ops.append(Op("MAXPOOL5", name, [resolve(node.input[0])], [node.output[0]], {"k": 5, "s": 1, "pad": 2}))
+            g.ops.append(Op("MAXPOOL5", name, [node.input[0]], [node.output[0]], {"k": 5, "s": 1, "pad": 2}))
         elif node.op_type == "Resize":
-            g.ops.append(Op("UPSAMPLE2", name, [resolve(node.input[0])], [node.output[0]], {"mode": "nearest"}))
+            g.ops.append(Op("UPSAMPLE2", name, [node.input[0]], [node.output[0]], {"mode": "nearest"}))
         elif node.op_type == "Concat":
-            g.ops.append(Op("CONCAT", name, [resolve(i) for i in node.input], [node.output[0]], {"axis": 1}))
+            g.ops.append(Op("CONCAT", name, [i for i in node.input], [node.output[0]], {"axis": 1}))
         elif node.op_type == "Split":
             sizes = as_int_list(attr(node, "split"))
             if not sizes and len(node.input) > 1:
                 sizes = as_int_list(m.const(node.input[1]))
-            g.ops.append(Op("SPLIT", name, [resolve(node.input[0])], list(node.output), {"axis": 1, "sizes": sizes}))
+            g.ops.append(Op("SPLIT", name, [node.input[0]], list(node.output), {"axis": 1, "sizes": sizes}))
         elif node.op_type == "Add":
-            a, b = (resolve(i) for i in node.input)
+            a, b = node.input[0], node.input[1]
             fused = False
             # The consumer count is taken on the ONNX tensor that feeds the
             # Add (the SiLU output when fused), not on the raw conv output.
@@ -174,8 +176,9 @@ def lower_onnx(path_or_model, cut_tensors=None):
                 if prod is not None and prod.kind == "CONV" and prod.attrs["residual"] is None \
                         and len(m.consumers.get(orig, [])) == 1:
                     prod.attrs["residual"] = other
-                    tensor_alias[node.output[0]] = conv_t
-                    g.tensors[conv_t] = TensorInfo(conv_t, m.shape(node.output[0]))
+                    prod.attrs["preadd"] = conv_t
+                    prod.outputs = [node.output[0]]
+                    g.tensors[node.output[0]] = TensorInfo(node.output[0], m.shape(node.output[0]))
                     rep.fused_residual += 1
                     fused = True
                     break
@@ -184,19 +187,21 @@ def lower_onnx(path_or_model, cut_tensors=None):
 
     # Sigmoid and Mul that did not fuse become explicit SILU ops.
     for node in npu_nodes:
-        if node.op_type == "Sigmoid" and node.input[0] not in tensor_alias.values():
+        if node.op_type == "Sigmoid":
             sig, mul = silu_of[node.input[0]]
-            if mul.output[0] not in tensor_alias:
-                g.ops.append(Op("SILU", node.name or node.output[0], [resolve(node.input[0])], [mul.output[0]], {}))
+            if mul.output[0] not in fused_mul_outputs:
+                g.ops.append(Op("SILU", node.name or node.output[0], [node.input[0]], [mul.output[0]], {}))
 
     # NPU outputs: NPU tensors consumed by CPU nodes or graph outputs.
+    produced = {o for op in g.ops for o in op.outputs}
     outputs = []
     for node in npu_nodes:
         for o in node.output:
-            o_res = resolve(o)
+            if o not in produced:
+                continue
             consumed_by_cpu = any(id(c) in cpu_nodes for c in m.consumers.get(o, []))
-            if (consumed_by_cpu or o in m.graph_outputs or o in cut) and o_res not in outputs:
-                outputs.append(o_res)
+            if (consumed_by_cpu or o in m.graph_outputs or o in cut) and o not in outputs:
+                outputs.append(o)
     g.outputs = outputs
     for o in outputs:
         if o not in g.tensors:

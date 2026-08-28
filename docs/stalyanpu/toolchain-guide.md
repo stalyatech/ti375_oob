@@ -25,7 +25,8 @@ için gerekir; M1'de kurulur.
 | `python -m stalyanpu calibrate model.onnx --images val2017/ --ann instances_val2017.json --out build/q [--ncalib 256] [--method mse\|minmax\|percentile] [--percentile 99.99] [--outputs-method minmax] [--seed 0]` | Lowering + kalibrasyon + nicemleme; `qgraph.json/npz` ve `calib_stats.json` yazar | M1 |
 | `python -m stalyanpu eval --qgraph build/q --images val2017/ --ann ... [--n 500] [--seed 1] [--report r.json]` | Aynı numpy tail ile FP32 (onnxruntime) ve INT8 (referans model) mAP | M1 |
 | `python -m stalyanpu check-tail model.onnx image.jpg` | numpy DFL/decode çıktısını ONNX head çıktısıyla karşılaştırır | M1 |
-| `compile`, `golden`, `check`, `sens` | Blob emitter, altın vektör, interp≡runner, duyarlılık | M2 |
+| `python -m stalyanpu compile --qgraph build/q --out build/prog [--hwcfg full2048] [--base 0x20000000 --scratch 0x28000000] [--check] [--image x.jpg]` | Descriptor + blob (`frame.bin`, `alloc.json`); `--check` yorumlayıcıyı referans model ile bit bit karşılaştırır | M2 |
+| `python -m stalyanpu golden --qgraph build/q --out vec/ [--layer N] [--dump-all] [--image x.jpg]` | Sim vektörleri: `mem.hex` (blob + giriş, 128-bit `$readmemh`), `golden.hex`, `golden.json` (bölgeler, CRC32, descriptor adresi) | M2 |
 
 Veri: `.data/` (gitignore) altında `yolov8s.pt`, `yolov8s_640x384.onnx`, `coco/annotations/instances_val2017.json`
 ve `coco/val2017/` (yalnız kullanılan 739 görüntü: kalibrasyon seed 0 ilk 256, değerlendirme seed 1 ilk 500;
@@ -45,6 +46,14 @@ tam zip gerekmez.
   ölçeği, zp katlanmış int32 bias, u16 mult/shift, SiLU LUT, residual parametreleri),
   `qgraph.py` (kaydet/yükle).
 
+## Backend (`backend/`)
+
+- `layout.py` NC32HW paketleme/açma ve plane okuma/yazma; `weightpack.py` ağırlık/param/LUT
+  paketleme (bkz. isa-descriptor.md); `tiler.py` döşeme seçimi (perf modeli de bunu kullanır);
+  `alloc.py` sıfır kopya yerleşim + first-fit; `emit.py` descriptor/blob; `interp.py` descriptor
+  yorumlayıcı (sayfalı seyrek bellek); `compile.py` derleme + kontrol; `golden/` hex ve vektörler.
+- Kapı (M2): YOLOv8s tam ağda `interp == runner` bit bit (gerçek COCO görüntüsü), 546 pytest.
+
 ## Paket düzeni
 
 ```
@@ -59,11 +68,13 @@ stalyanpu/
   frontend/graph.py         NpuGraph IR
   backend/isa.py            descriptor/CSR/blob tanımı (tek kaynak)
   backend/gen_header.py     C başlığı üretici
+  backend/{layout,weightpack,tiler,alloc,emit,interp,compile}.py  derleyici arka ucu
+  golden/{hexfmt,vectors}.py   sim vektörleri
   refmodel/fixedpoint.py    requant (u16 çarpan, yarım yukarı), quantize_multiplier, SiLU LUT
   refmodel/{intops,runner,tail}.py   bit-kesin op'lar, yürütücü, DFL/NMS kuyruğu
   quant/{calib,ranges,params,qgraph}.py  istatistik, aralık seçimi, tamsayı parametreler, kayıt
   eval/{preprocess,coco}.py  letterbox, COCO mAP
-tests/                      pytest (539 test)
+tests/                      pytest (546 test)
 ```
 
 ## Nicemleme semantiği (M1'de uygulandı)

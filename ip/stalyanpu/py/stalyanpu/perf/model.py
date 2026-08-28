@@ -57,15 +57,8 @@ class LayerEstimate:
 
 def choose_rows(layer: Layer, hw: HwConfig, ic_pad: int) -> int:
     """Largest whole row count per tile that fits the accumulator and ibuf."""
-    rows = max(1, hw.p_max // layer.out_w)
-    rows = min(rows, layer.out_h)
-    budget = hw.ibuf_bytes // 2
-    while rows > 1:
-        rows_in = rows * layer.s + layer.k - 1
-        if rows_in * layer.in_w * ic_pad <= budget:
-            break
-        rows -= 1
-    return rows
+    from ..backend.tiler import choose_rows as _choose
+    return _choose(layer.out_h, layer.out_w, layer.in_w, layer.k, layer.s, ic_pad, hw)
 
 
 def layer_cycles(layer: Layer, hw: HwConfig) -> LayerEstimate:

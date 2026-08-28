@@ -8,6 +8,8 @@ Commands:
     calibrate   lower, calibrate on COCO images and write the quantized graph
     eval        COCO mAP of the FP32 model and of the INT8 reference model
     check-tail  compare the numpy detection tail with the ONNX model output
+    compile     emit the descriptor blob (frame.bin, alloc.json), optionally check it
+    golden      write simulation vectors for the whole net or one descriptor
 """
 
 from __future__ import annotations
@@ -150,6 +152,67 @@ def cmd_eval(args):
     return 0
 
 
+def _load_input(args, qg):
+    """Input image as CHW int8 for the quantized graph."""
+    import numpy as np
+
+    from .refmodel.runner import QRunner
+
+    name = qg.graph.inputs[0]
+    c, h, w = qg.graph.tensors[name].shape[1:]
+    runner = QRunner(qg)
+    if args.image:
+        from PIL import Image
+
+        from .eval.preprocess import preprocess
+        x = preprocess(Image.open(args.image), h, w)[0][0]
+    else:
+        rng = np.random.default_rng(args.seed)
+        x = rng.random((c, h, w), dtype=np.float32)
+    return runner.quantize_input(name, x)
+
+
+def cmd_compile(args):
+    from .backend.compile import check, load_program, write_build
+    from .hwcfg import load
+    from .quant.qgraph import QGraph
+
+    qg = QGraph.load(args.qgraph)
+    hw = load(args.hwcfg)
+    prog = load_program(qg, hw, args.base, args.scratch)
+    write_build(prog, args.out)
+    print(f"descriptors {len(prog.descriptors)}, blob {prog.size / 1e6:.2f} MB "
+          f"(params {len(prog.params) / 1e6:.2f} MB), scratch {prog.alloc.scratch_size / 1e6:.2f} MB, "
+          f"buffers {len(prog.alloc.buffers)}, virtual concats {len(prog.alloc.virtual_concat)}")
+    print("wrote " + args.out)
+    if args.check:
+        ok, diff = check(qg, hw, prog, _load_input(args, qg))
+        bad = {k: v for k, v in diff.items() if v}
+        print("interp == runner: " + ("OK" if ok else f"MISMATCH {bad}"))
+        return 0 if ok else 1
+    return 0
+
+
+def cmd_golden(args):
+    from .backend.compile import load_program, make_memory
+    from .golden.vectors import write_layer_vectors, write_net_vectors
+    from .hwcfg import load
+    from .quant.qgraph import QGraph
+
+    qg = QGraph.load(args.qgraph)
+    hw = load(args.hwcfg)
+    prog = load_program(qg, hw, args.base, args.scratch)
+    x = _load_input(args, qg)
+    mem = make_memory(prog, x, qg.tq[prog.input_name].zp)
+    if args.layer is None:
+        meta = write_net_vectors(prog, hw, mem, args.out, dump_all=args.dump_all)
+    else:
+        meta = write_layer_vectors(prog, hw, mem, args.layer, args.out)
+    print(json.dumps(meta))
+    print("wrote " + args.out)
+    return 0
+
+
 def cmd_check_tail(args):
     """Feed one image through the ONNX model and compare the boxes decoded by
     the numpy tail from the six cut tensors with the model's own output."""
@@ -247,6 +310,28 @@ def main(argv=None) -> int:
     p.add_argument("--skip-fp32", action="store_true")
     p.add_argument("--report", default=None, help="write results as JSON")
     p.set_defaults(func=cmd_eval)
+
+    def addr_args(p):
+        p.add_argument("--hwcfg", default="full2048")
+        p.add_argument("--base", type=lambda v: int(v, 0), default=0x20000000, help="blob load address")
+        p.add_argument("--scratch", type=lambda v: int(v, 0), default=0x28000000, help="activation scratch address")
+        p.add_argument("--image", default=None, help="input image, random data when omitted")
+        p.add_argument("--seed", type=int, default=0)
+
+    p = sub.add_parser("compile", help="emit the descriptor blob from a quantized graph")
+    p.add_argument("--qgraph", required=True)
+    p.add_argument("--out", required=True)
+    p.add_argument("--check", action="store_true", help="run the interpreter against the reference runner")
+    addr_args(p)
+    p.set_defaults(func=cmd_compile)
+
+    p = sub.add_parser("golden", help="write simulation vectors (mem.hex, golden.hex, golden.json)")
+    p.add_argument("--qgraph", required=True)
+    p.add_argument("--out", required=True)
+    p.add_argument("--layer", type=int, default=None, help="descriptor index for a single layer set")
+    p.add_argument("--dump-all", action="store_true", help="net set: add every descriptor output as a region")
+    addr_args(p)
+    p.set_defaults(func=cmd_golden)
 
     p = sub.add_parser("check-tail", help="compare the numpy tail with the ONNX head output")
     p.add_argument("model")

@@ -1,10 +1,11 @@
 # StalyaNPU: YOLOv8s için INT8 CNN hızlandırıcısı
 
-> **DURUM (2026-08-28): M0 ve M1 tamamlandı.** Dal `stalya-fmu_v2.0-npu`. Karar kaydı,
+> **DURUM (2026-08-28): M0, M1 ve M2 tamamlandı.** Dal `stalya-fmu_v2.0-npu`. Karar kaydı,
 > mimari, ISA taslağı, performans modeli, ONNX ön yüzü, ilk RTL adımı (DSP48 DUAL sarmalayıcı +
 > kaskad zinciri, Efinix sim modeliyle bit bit) ve nicemleme hattı (kalibrasyon, bit-kesin
 > referans model, COCO mAP) hazır. **INT8 mAP50-95 düşüşü 0,78 puan (kapı 2,0)**, bkz.
-> [accuracy-report.md](accuracy-report.md). Sonraki adım M2 (emitter, tiler, blob, interp).
+> [accuracy-report.md](accuracy-report.md). Derleyici arka ucu (descriptor/blob, yerleşim, yorumlayıcı)
+> YOLOv8s tam ağda referans modelle bit bit eşleşiyor. Sonraki adım M3 (dizi, acc, ibuf, epilog RTL).
 > Üst seviye tasarım (`ti375_oob_top.v`) henüz değişmedi; OpenEye bitstream'i bozulmadı.
 
 Hedef: **YOLOv8s, 1080p kaynaktan 640×384 letterbox, 30 fps, INT8**, Efinix Titanium
@@ -53,6 +54,10 @@ python -m venv .venv-stalyanpu
 .venv-stalyanpu\Scripts\python -m stalyanpu calibrate .data/yolov8s_640x384.onnx --images .data/coco/val2017 --ann .data/coco/annotations/instances_val2017.json --out .data/build/q_mse
 .venv-stalyanpu\Scripts\python -m stalyanpu eval --qgraph .data/build/q_mse --images .data/coco/val2017 --ann .data/coco/annotations/instances_val2017.json --n 500
 
+# Derleme ve altın vektörler
+.venv-stalyanpu\Scripts\python -m stalyanpu compile --qgraph .data/build/q_mse --out .data/build/prog --check --image img.jpg
+.venv-stalyanpu\Scripts\python -m stalyanpu golden --qgraph .data/build/q_mse --out .data/build/golden_net --image img.jpg
+
 # Birim testleri
 .venv-stalyanpu\Scripts\python -m pytest ip/stalyanpu/py -q
 .venv-stalyanpu\Scripts\python sim/stalyanpu/run_sim.py unit -j 3
@@ -64,7 +69,7 @@ python -m venv .venv-stalyanpu
 |---|----------|------|-------|
 | M0 | Dal, ağaç, karar kaydı, mimari, ISA, perf modeli, ONNX lowering, DSP sarmalayıcı + zincir RTL/TB | perf ≥ 30 fps; lowering 0 desteklenmeyen op; TB `efx_dsp48.v` ile bit-kesin | **tamam** (perf 32,9 fps @2,4 GB/s, marj ince; bkz. architecture.md) |
 | M1 | Kalibrasyon, nicemleme, bit-kesin refmodel, mAP | INT8 mAP50-95 düşüşü ≤ 2,0 | **tamam** (MSE aralığı: 44,86 → 44,07, düşüş 0,78) |
-| M2 | Emitter, blob, tiler, allocator, `interp.py`, altın üretici | interp ≡ runner tüm ağ | |
+| M2 | Emitter, blob, tiler, allocator, `interp.py`, altın üretici | interp ≡ runner tüm ağ | **tamam** (66 descriptor, bit bit OK) |
 | M3 | Dizi + acc + ibuf + wfifo + epilog RTL, birim TB'ler, AXI bellek modeli | tümü PASS | |
 | M4 | DMA, seq, csr, `snpu_top`; katman testleri | PASS, çevrim ±%15 | |
 | M5 | Dizi-tek Efinity sentezi | 250 MHz pozitif slack | |

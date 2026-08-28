@@ -19,3 +19,11 @@ sim/openeye/stim/demo/
 ip/EfxSapphireHpSoc_slb/EfxSapphireHpSoc_wrapper_bak*.v
 __pycache__/
 sim/openeye/sim_build*/
+# StalyaNPU
+.venv-stalyanpu/
+sim/stalyanpu/sim_build/
+sim/stalyanpu/stim/*
+!sim/stalyanpu/stim/unit/
+ip/stalyanpu/py/build/
+ip/stalyanpu/py/*.egg-info/
+.pytest_cache/

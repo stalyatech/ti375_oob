@@ -1,5 +1,11 @@
 # DNN (OpenEye) + H.264/H.265 Codec Pipeline: Entegrasyon Devri
 
+> ⏸️ **2026-08-28: OpenEye hattı durduruldu.** Hedef (YOLOv8s 640×384 @30 fps) OpenEye'ın
+> mimari tavanının çok üstünde; yerine `docs/stalyanpu/` altında belgelenen StalyaNPU
+> tasarlanıyor (dal `stalya-fmu_v2.0-npu`). Bu sayfa OpenEye entegrasyonunun son durumunu
+> tarihsel referans olarak korur.
+
+
 > ✅ **DURUM (2026-08-27): Donanım entegrasyonu + fonksiyonel simülasyon + kesme yolu TAMAM.**
 > Tasarım Ti375C529'a sığıyor, route ediliyor ve timing kapanıyor (setup slack:
 > io_peripheralClk +0.147 ns, io_ddrMasters_0_clk +0.191 ns, io_dnnClk +1.234 ns; hold temiz;

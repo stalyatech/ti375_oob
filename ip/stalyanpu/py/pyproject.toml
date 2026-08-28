@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stalyanpu"
+version = "0.1.0"
+description = "Toolchain, reference model and performance model of the StalyaNPU accelerator"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "onnx>=1.15",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "onnxruntime>=1.17", "pillow>=10"]
+export = ["torch>=2.2", "ultralytics>=8.1", "pycocotools>=2.0.7"]
+
+[project.scripts]
+stalyanpu = "stalyanpu.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["stalyanpu*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

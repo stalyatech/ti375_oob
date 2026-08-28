@@ -86,6 +86,16 @@ PRESETS = {
         ibuf_bytes=64 * 1024,
         wfifo_bytes=8 * 1024,
     ),
+    # Reduced geometry of the RTL simulations: 16 chains of 16 blocks, so
+    # one output channel tile is exactly one 32 channel plane.
+    "small512": HwConfig(
+        name="small512",
+        n_chain=16,
+        chain_len=16,
+        p_max=256,
+        ibuf_bytes=64 * 1024,
+        wfifo_bytes=8 * 1024,
+    ),
 }
 
 

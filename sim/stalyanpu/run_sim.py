@@ -38,6 +38,7 @@ DSP_MODEL = os.environ.get(
     r"C:/Programs/Efinity/2025.2/sim_models/verilog/efx_dsp48.v",
 )
 BUILD = os.path.join(HERE, "sim_build")
+PYTHON = os.environ.get("SNPU_PYTHON", sys.executable)
 
 
 def tool(name):
@@ -68,6 +69,13 @@ def run_one(name, args):
 
     t0 = time.time()
     with open(log, "w") as fh:
+        if spec.get("gen"):
+            gen = [PYTHON] + spec["gen"]
+            fh.write("$ " + " ".join(gen) + "\n")
+            fh.flush()
+            rc = subprocess.run(gen, stdout=fh, stderr=subprocess.STDOUT, cwd=ROOT).returncode
+            if rc != 0:
+                return name, False, time.time() - t0, "vector generation failed, see " + log
         fh.write("$ " + " ".join(cmd) + "\n")
         fh.flush()
         rc = subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT, cwd=ROOT).returncode

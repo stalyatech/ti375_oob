@@ -54,6 +54,21 @@ ağırlık latch'i. `SNPU_SIM_BEHAV` ile davranışsal ikiz. Gecikme: x örnekle
 kenarında örneklenen vektörden itibaren tüm zincirde geçerlidir; yeni dolum son DSP
 latch'ledikten (s + CHAIN_LEN - 1) sonra başlayabilir.
 
+## Konvolüsyon motoru (M3'te yazıldı ve doğrulandı)
+
+`snpu_conv_unit`: agen → ibuf (1 çevrim) → zp kapısı → dizi → acc → epilog. Kontrol
+kuralları (M3'te hata ayıklamayla sabitlendi):
+
+- Dizi yan bandı (valid/first/last/tile_end/p) veriyle aynı gecikmede (CHAIN_LEN+2) taşınır.
+- `tile_end` diziden geçerken (`end_pending`) bir sonraki döşeme başlatılmaz; bank ancak
+  biriktiricideki `tile_done` sonrası değişir.
+- Epilog, bank release'ini son sözcüğü stage 2'ye aldığı kenarda verir (`drain_open`), böylece
+  duraklarda `rd_bank` değişimi uçuştaki veriyi bozamaz; RAM okuması epilog duraklarında tutulur.
+- Residual sözcüğü gelmeyince hat durur ama tüketilen çıkış sözcüğü tekrar sunulmaz.
+- Ağırlık akışı döşeme başına tekrar tüketilir (DMA tekrar okur, perf modeliyle uyumlu).
+- Geçiş başına ek yük: agen 3 çevrim + gölge dolumu (N_CHAIN·WORDS_PER_CHAIN çevrim, önceki
+  geçişle örtüşür; P küçükse `shadow_ready` bekler).
+
 ## On-chip bellek planı
 
 | Tampon | Düzen | Boyut | RAM10 |
@@ -109,11 +124,13 @@ katman füzyonu M9'a eklendi.
 | `snpu_skew.v` | üçgen gecikme hattı | M0 ✔ |
 | `snpu_wshadow.v` | gölge ağırlık | M0 ✔ |
 | `snpu_pe_chain.v` | 32 DSP kaskad zinciri | M0 ✔ |
-| `snpu_pe_array.v` | 32 zincir, skew ×4, valid/first/last hattı | M3 |
-| `snpu_acc.v` | 2 bank 32-bit biriktirici | M3 |
-| `snpu_ibuf.v`, `snpu_ibuf_agen.v`, `snpu_ibuf_ctl.v` | giriş halkası, adres üretimi, satır yerleşimi | M3 |
-| `snpu_wfifo.v` | ağırlık FIFO ve gölge dolum sıralayıcı | M3 |
-| `snpu_requant.v`, `snpu_silu_lut.v`, `snpu_resadd.v`, `snpu_epilogue.v` | epilog | M3 |
+| `snpu_pe_array.v` | N_CHAIN zincir, paylaşımlı skew hatları (SKEW_COPIES), yan bant gecikme hattı (LAT+1) | M3 ✔ |
+| `snpu_acc.v` | 2 bank × P_MAX × N_OC × 32 bit RMW biriktirici; okuma portu dizi/epilog paylaşımlı, epilog okuma-etkin (`ep_re`) | M3 ✔ |
+| `snpu_ibuf.v` | IBUF_WORDS × 256 bit basit çift portlu RAM | M3 ✔ |
+| `snpu_agen.v` | Döngü yapısı (tile → oct → icg → tap → piksel), zp kapısı, latch, tile kuyruğu; giriş satırları ibuf'ta hazır varsayılır (halka yönetimi M4) | M3 ✔ |
+| `snpu_wfifo.v` | Ağırlık FIFO + gölge dolum sıralayıcısı (latch sonrası CHAIN_LEN+1 bekleme) | M3 ✔ |
+| `snpu_epilogue.v` | 32 lane: bias, u16 çarpan, yuvarla/kaydır/doyur, LUT, residual, 256-bit paketleme; tek `adv` etkin hattı | M3 ✔ |
+| `snpu_conv_unit.v` | Yukarıdakilerin birleşimi; DMA/sequencer/CSR olmadan tam katman motoru | M3 ✔ |
 | `snpu_rd_dma.v`, `snpu_wr_dma.v` | AXI4 master'lar | M4 |
 | `snpu_seq.v`, `snpu_csr.v`, `snpu_top.v` | sequencer, CSR (APB + CDC), üst seviye | M4 |
 | `snpu_maxpool5.v` | SPPF | M4 |

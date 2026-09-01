@@ -1,13 +1,14 @@
 # StalyaNPU: YOLOv8s için INT8 CNN hızlandırıcısı
 
-> **DURUM (2026-08-28): M0, M1, M2 ve M3 tamamlandı.** Dal `stalya-fmu_v2.0-npu`. Karar kaydı,
+> **DURUM (2026-08-28): M0'dan M4'e kadar tamamlandı.** Dal `stalya-fmu_v2.0-npu`. Karar kaydı,
 > mimari, ISA taslağı, performans modeli, ONNX ön yüzü, ilk RTL adımı (DSP48 DUAL sarmalayıcı +
 > kaskad zinciri, Efinix sim modeliyle bit bit) ve nicemleme hattı (kalibrasyon, bit-kesin
 > referans model, COCO mAP) hazır. **INT8 mAP50-95 düşüşü 0,78 puan (kapı 2,0)**, bkz.
 > [accuracy-report.md](accuracy-report.md). Derleyici arka ucu (descriptor/blob, yerleşim, yorumlayıcı)
 > YOLOv8s tam ağda referans modelle bit bit eşleşiyor. Konvolüsyon motoru RTL'i
 > (`snpu_conv_unit`: dizi, biriktirici, ibuf, agen, wfifo, epilog) 7 katman testinde Python altınıyla
-> bit bit, tam 1024 DSP geometrisi dahil. Sonraki adım M4 (DMA, sequencer, CSR, `snpu_top`).
+> bit bit, tam 1024 DSP geometrisi dahil. `snpu_top` (DMA, sequencer, CSR, maxpool) demo ağının
+> 5 descriptor'ını uçtan uca yorumlayıcıyla bit bit koşuyor. Sonraki adım M5 (Efinity sentez, 250 MHz).
 > Üst seviye tasarım (`ti375_oob_top.v`) henüz değişmedi; OpenEye bitstream'i bozulmadı.
 
 Hedef: **YOLOv8s, 1080p kaynaktan 640×384 letterbox, 30 fps, INT8**, Efinix Titanium
@@ -73,7 +74,7 @@ python -m venv .venv-stalyanpu
 | M1 | Kalibrasyon, nicemleme, bit-kesin refmodel, mAP | INT8 mAP50-95 düşüşü ≤ 2,0 | **tamam** (MSE aralığı: 44,86 → 44,07, düşüş 0,78) |
 | M2 | Emitter, blob, tiler, allocator, `interp.py`, altın üretici | interp ≡ runner tüm ağ | **tamam** (66 descriptor, bit bit OK) |
 | M3 | Dizi + acc + ibuf + wfifo + epilog RTL, katman TB'leri | tümü PASS | **tamam** (7/7, vendor DSP modeli + ikiz) |
-| M4 | DMA, seq, csr, `snpu_top`, AXI bellek modeli; descriptor tabanlı katman testleri | PASS, çevrim ±%15 | |
+| M4 | DMA, seq, csr, maxpool5, `snpu_top`, AXI bellek modeli; descriptor tabanlı testler | PASS | **tamam** (4/4 net testi, demo ağı uçtan uca) |
 | M5 | Dizi-tek Efinity sentezi | 250 MHz pozitif slack | |
 | M6 | YOLOv8s katman-katman + tam ağ sim | %100 PASS | |
 | M7 | `ti375_oob_top.v` entegrasyonu (OpenEye çıkar) | map/pnr/pgm PASS | |

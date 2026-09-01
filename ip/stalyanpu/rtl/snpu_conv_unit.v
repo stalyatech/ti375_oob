@@ -39,6 +39,10 @@ module snpu_conv_unit #(
     input  wire [15:0]          cfg_n_tiles_i,
     input  wire [IBUF_AW-1:0]   cfg_ibuf_base_i,
     input  wire [IBUF_AW-1:0]   cfg_plane_words_i,
+    input  wire [15:0]          cfg_row_base_i,
+    input  wire [15:0]          cfg_tile0_i,
+    input  wire [15:0]          cfg_oy0_i,
+    input  wire [15:0]          cfg_out_rows_i,
     input  wire                 cfg_silu_i,
     input  wire                 cfg_residual_i,
     input  wire [7:0]           cfg_zp_out_i,
@@ -71,6 +75,9 @@ module snpu_conv_unit #(
     input  wire                 res_valid_i,
     input  wire [255:0]         res_data_i,
     output wire                 res_ready_o,
+    // drain start of an output channel tile (residual fetch trigger)
+    output wire                 drain_start_o,
+    output wire [7:0]           drain_oct_o,
     // output stream
     output wire                 out_valid_o,
     output wire [255:0]         out_data_o,
@@ -88,22 +95,25 @@ module snpu_conv_unit #(
     wire [IBUF_AW-1:0] ag_addr;
     wire ag_gate, ag_v, ag_first, ag_last, ag_end, ag_latch, ag_busy, ag_done;
     wire [P_W-1:0] ag_p;
+    wire [7:0] ag_sub;
     wire shadow_ready, bank_free;
     wire tile_start;
     wire [15:0] tile_px, tile_idx;
     wire [7:0] tile_oct;
 
-    snpu_agen #(.AW(IBUF_AW), .P_W(P_W)) u_agen (
+    snpu_agen #(.AW(IBUF_AW), .P_W(P_W), .CHAIN_LEN(CHAIN_LEN)) u_agen (
         .clk(clk), .rst(rst),
         .cfg_in_h_i(cfg_in_h_i), .cfg_in_w_i(cfg_in_w_i), .cfg_out_h_i(cfg_out_h_i), .cfg_out_w_i(cfg_out_w_i),
         .cfg_n_icg_i(cfg_n_icg_i), .cfg_n_oct_i(cfg_n_oct_i), .cfg_k_i(cfg_k_i), .cfg_stride_i(cfg_stride_i),
         .cfg_pad_i(cfg_pad_i), .cfg_tile_rows_i(cfg_tile_rows_i), .cfg_n_tiles_i(cfg_n_tiles_i),
         .cfg_ibuf_base_i(cfg_ibuf_base_i), .cfg_plane_words_i(cfg_plane_words_i),
+        .cfg_row_base_i(cfg_row_base_i), .cfg_tile0_i(cfg_tile0_i),
+        .cfg_oy0_i(cfg_oy0_i), .cfg_out_rows_i(cfg_out_rows_i),
         .start_i(start_i), .busy_o(ag_busy), .done_o(ag_done),
         .shadow_ready_i(shadow_ready), .bank_free_i(bank_free),
         .tile_start_o(tile_start), .tile_px_o(tile_px), .tile_oct_o(tile_oct), .tile_idx_o(tile_idx),
         .addr_o(ag_addr), .gate_o(ag_gate), .v_o(ag_v), .first_o(ag_first), .last_o(ag_last),
-        .tile_end_o(ag_end), .p_o(ag_p), .latch_o(ag_latch)
+        .tile_end_o(ag_end), .p_o(ag_p), .latch_o(ag_latch), .sub_o(ag_sub)
     );
 
     // ---- input buffer, one cycle of read latency; side band delayed to match
@@ -115,17 +125,20 @@ module snpu_conv_unit #(
 
     reg d_gate, d_v, d_first, d_last, d_end, d_latch;
     reg [P_W-1:0] d_p;
+    reg [7:0] d_sub;
     always @(posedge clk) begin
         if (rst) begin
             d_gate <= 1'b0; d_v <= 1'b0; d_first <= 1'b0; d_last <= 1'b0; d_end <= 1'b0; d_latch <= 1'b0;
-            d_p <= {P_W{1'b0}};
+            d_p <= {P_W{1'b0}}; d_sub <= 8'd0;
         end else begin
             d_gate <= ag_gate; d_v <= ag_v; d_first <= ag_first; d_last <= ag_last; d_end <= ag_end;
-            d_latch <= ag_latch; d_p <= ag_p;
+            d_latch <= ag_latch; d_p <= ag_p; d_sub <= ag_sub;
         end
     end
 
-    wire [CHAIN_LEN*8-1:0] x_vec = d_gate ? {CHAIN_LEN{cfg_zp_in_i}} : ib_data[CHAIN_LEN*8-1:0];
+    // A 32 channel ibuf word feeds 32 / CHAIN_LEN input groups.
+    wire [CHAIN_LEN*8-1:0] x_word = ib_data[d_sub * CHAIN_LEN * 8 +: CHAIN_LEN*8];
+    wire [CHAIN_LEN*8-1:0] x_vec = d_gate ? {CHAIN_LEN{cfg_zp_in_i}} : x_word;
 
     // ---- weights
     wire fill_we;
@@ -193,6 +206,7 @@ module snpu_conv_unit #(
         .tile_start_i(tile_start), .tile_px_i(tile_px), .tile_oct_i(tile_oct), .tile_idx_i(tile_idx),
         .bank_full_i(bank_full), .ep_addr_o(ep_addr), .ep_re_o(ep_re), .ep_data_i(ep_data), .ep_release_o(ep_release),
         .res_valid_i(res_valid_i), .res_data_i(res_data_i), .res_ready_o(res_ready_o),
+        .drain_start_o(drain_start_o), .drain_oct_o(drain_oct_o),
         .out_valid_o(out_valid_o), .out_data_o(out_data_o), .out_plane_o(out_plane_o), .out_px_o(out_px_o),
         .out_tile_o(out_tile_o), .out_last_o(out_last_o), .out_ready_i(out_ready_i), .busy_o(ep_busy)
     );

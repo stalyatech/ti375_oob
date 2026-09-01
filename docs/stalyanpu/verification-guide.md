@@ -37,13 +37,21 @@ davranışsal DSP ikizini seçer (vendor modelsiz, hızlı); nihai kanıt vendor
 | L5 | `tb_conv_conv_pad80` | aynı | 1×1, 48→80 (3 plane, dolgu kanalları) | PASS |
 | L6 | `tb_conv_conv_tiles` | aynı | 3×3, 6 döşeme (tile_rows=2) | PASS |
 | L7 | `tb_conv_full` | tam geometri 32×32 (1024 DSP) | 3×3, 40→96, SiLU | PASS |
-| U3..U8 | rd/wr DMA, maxpool5, sequencer, AXI bellek modeli | | M4 | |
-| N1/N2 | `tb_npu_layer`/`tb_npu_net`: descriptor tabanlı, `interp.py` altınıyla | `snpu_top` | bit bit, çevrim ±%15 | M4/M6 |
+| N1 | `tb_layer_demo0/1/3` | `snpu_top` + `axi4_mem_model` (small512) | Demo ağının tek descriptor'ı: stem (3 döşeme), residual conv (split kaynak), maxpool5 (upsample görünüm); descriptor CRC, param/LUT yükleme, DMA, yazma adresleri; `interp.py` altınıyla bölge karşılaştırması | PASS |
+| N2 | `tb_net_demo` | aynı | Demo ağının 5 descriptor'ı zincirleme, descriptor başına dump bölgeleri dahil 6 bölge bit bit | PASS |
+| Y1 | `tb_yolo_l65`, `tb_yolo_l26` (`group=yolo`, `all` dışı, `.data/build/q_mse` ister) | tam geometri 32×32, 16 MB pencereler | Gerçek YOLOv8s descriptor'ları (head 1×1 128→80; SPPF maxpool 20×12×256) gerçek ağırlıklarla | PASS (l65 286 s, l26 366 s) |
 
 Katman testleri (`group=layer`) vektörlerini `stalyanpu.golden.unit` üretir (`tests.py` `gen`
 kancası; `sim/stalyanpu/stim/<case>/` altında `cfg/ibuf/w/prm/lut/res/golden.hex`). Ağırlık,
 residual ve çıkış akışlarında rastgele boşluk/durak (`+BACKPRESSURE=1`); etiketler (tile, plane,
 px) yayın sırasıyla karşılaştırılır. `+DEBUG=1..4` iç izler, `+WATCHDOG=n` bekçi süresi.
+
+Descriptor testleri (`group=net`) vektörlerini `stalyanpu.golden.demo` (demo ağı, small512) ve
+`python -m stalyanpu golden` (YOLOv8s) üretir: `mem.hex` (blob + giriş), `golden.hex`,
+`regions.txt` (base bayt), `run.txt` (`+DESC_BASE/+DESC_COUNT`). `tb_npu_net` belleği
+`$fgets/$sscanf` ile iki pencereye (blob, scratch) yükler, APB ile CSR programlar,
+`done`/`error` kesmesini bekler ve bölgeleri bayt bayt karşılaştırır. `+BP=0` AXI duraklarını
+kapatır, `+DEBUG=1..5` sequencer/bank/DMA izleri, `+DUMP_REGION=<dosya>` üretilen bölgeleri döker.
 
 Mutasyon denetimi (M0): `snpu_dsp_mac2` içinde iki ağırlık lane'i yer değiştirilince
 `tb_pe_chain` ilk vektörde FAIL verir; TB'nin gerçekten karşılaştırdığı doğrulandı.
@@ -57,7 +65,7 @@ Mutasyon denetimi (M0): `snpu_dsp_mac2` içinde iki ağırlık lane'i yer deği�
 ```
 
 Süre (host, vendor modeli): U1 1,1 s, U2 4,8 s, U2b 1,7 s; L1..L6 4 ile 40 s arası; L7 (1024 DSP,
-2304 ağırlık sözcüğü) ≈ 100 s. Tam kare (≈7,6 M
+2304 ağırlık sözcüğü) ≈ 100 s; N1 90 ile 120 s; N2 (5 descriptor, 215 k çevrim) ≈ 400 s. Tam kare (≈7,6 M
 çevrim, 1024 DSP) için iverilog saatler sürecektir; katman-katman paralel koşum ve
 `small256` geometrisi asıl kaldıraçtır (M4'te ölçülür).
 

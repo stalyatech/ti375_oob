@@ -54,8 +54,8 @@ def conv_unit_vectors(out_dir: str, hw: HwConfig, x: np.ndarray, w_q: np.ndarray
     n_oct = _ceil_div(oc, hw.n_oc)
     n_planes = _ceil_div(oc, 32)
     ic_planes = _ceil_div(ic, 32)
-    # The ibuf holds one 32 byte word per (pixel, input group); a reduced
-    # array with n_ic < 32 uses only the low n_ic bytes of each word.
+    # The ibuf holds one 32 byte word per (pixel, plane); a reduced array
+    # with n_ic < 32 reads 32 / n_ic input groups out of each word.
 
     # Expected output.
     acc = intops.conv2d_int(x, w_q, stride, pad, zp_in)
@@ -74,15 +74,9 @@ def conv_unit_vectors(out_dir: str, hw: HwConfig, x: np.ndarray, w_q: np.ndarray
         tile_rows = t.tile_rows
     n_tiles = _ceil_div(out_h, tile_rows)
 
-    # ibuf image: plane major, rows, columns; padded channels carry zp_in.
-    xin = np.full((n_icg * hw.n_ic, in_h, in_w), zp_in, dtype=np.int8)
-    xin[:ic] = x
-    words = bytearray()
-    for p in range(n_icg):
-        plane = xin[p * hw.n_ic:(p + 1) * hw.n_ic]
-        wbytes = np.zeros((in_h, in_w, 32), dtype=np.int8)
-        wbytes[:, :, :hw.n_ic] = plane.transpose(1, 2, 0)
-        words += wbytes.tobytes()
+    # ibuf image: one 32 channel plane after another (the DDR layout), rows,
+    # columns; padded channels carry zp_in.
+    words = bytearray(layout.pack(x, zp_in))
     plane_words = in_h * in_w
 
     # The weight stream is consumed once per spatial tile (the DMA replays

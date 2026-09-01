@@ -69,6 +69,28 @@ kuralları (M3'te hata ayıklamayla sabitlendi):
 - Geçiş başına ek yük: agen 3 çevrim + gölge dolumu (N_CHAIN·WORDS_PER_CHAIN çevrim, önceki
   geçişle örtüşür; P küçükse `shadow_ready` bekler).
 
+## Sequencer ve DMA akışı (M4'te yazıldı ve doğrulandı)
+
+Descriptor başına: fetch (128 B, kanal 0) → bit-seri CRC32 (992 çevrim) → sürüm/opcode
+denetimi → param bloğu (`n_oct·N_OC·8` B) → LUT (SILU) → döşeme döngüsü. Döşeme başına:
+giriş satır aralığı `[r_lo, r_hi)` hesaplanır, kaynak 0 (ve `TWO_SRC` ile kaynak 1) plane'leri
+ibuf'a doldurulur (upsample kaynakta satır başına komut, her sözcük iki kez yazılır), ağırlık
+akışı kanal 1'den başlatılır (`w_bytes_per_oct · n_oct`, döşeme başına tekrar), motor
+`cfg_oy0/cfg_out_rows/cfg_row_base/cfg_tile0` ile bir döşeme için çalıştırılır; epilog bir OC
+döşemesini boşaltmaya başlayınca (`drain_start`) o döşemenin residual sözcükleri yayın
+sırasında (satır, sütun, plane) tek DMA komutuyla çekilir. Çıkış sözcükleri
+`out_base + oy0·rs + plane·ps + row·rs + col·32` adresine yazılır (piksel etiketi
+değişince sütun/satır sayaçları ilerler). `LAST` bayrağı veya sayaç bitince `done` kesmesi.
+
+Küçük geometri desteği: ibuf sözcüğü 32 kanallık DDR plane'idir; `CHAIN_LEN < 32` ise agen
+sözcükten `32/CHAIN_LEN` alt grup okur (`sub_o`), böylece DMA dolumu her geometride aynıdır.
+
+v1 sınırları (fonksiyonel doğru, performans için M5+ işleri):
+- Yazma DMA'sı sözcük başına 32 baytlık AXI işlemi (birleştirme yok); DDR verimi düşük.
+- Döşemeler sıralı: bir sonraki döşemenin ibuf dolumu motor boşalınca başlar (çift tampon yok).
+- Okuma DMA'sı kanal 0'da tek komut sırayla; residual okuması epilog boşaltmasıyla eş zamanlı.
+- Bellek modeli tek burst uçuşta; gerçek DDR gecikmesi M7'de ölçülür.
+
 ## On-chip bellek planı
 
 | Tampon | Düzen | Boyut | RAM10 |
@@ -131,9 +153,12 @@ katman füzyonu M9'a eklendi.
 | `snpu_wfifo.v` | Ağırlık FIFO + gölge dolum sıralayıcısı (latch sonrası CHAIN_LEN+1 bekleme) | M3 ✔ |
 | `snpu_epilogue.v` | 32 lane: bias, u16 çarpan, yuvarla/kaydır/doyur, LUT, residual, 256-bit paketleme; tek `adv` etkin hattı | M3 ✔ |
 | `snpu_conv_unit.v` | Yukarıdakilerin birleşimi; DMA/sequencer/CSR olmadan tam katman motoru | M3 ✔ |
-| `snpu_rd_dma.v`, `snpu_wr_dma.v` | AXI4 master'lar | M4 |
-| `snpu_seq.v`, `snpu_csr.v`, `snpu_top.v` | sequencer, CSR (APB + CDC), üst seviye | M4 |
-| `snpu_maxpool5.v` | SPPF | M4 |
+| `snpu_rd_dma.v` | AXI4 okuma master'ı, 2 kanal (bulk / ağırlık), 3 seviyeli döngü komutu, kanal başına 4 outstanding burst, RID ile yönlendirme | M4 ✔ |
+| `snpu_wr_dma.v` | AXI4 yazma master'ı, sözcük başına bir 32 baytlık işlem, B yanıt sayacı (`idle`) | M4 ✔ |
+| `snpu_seq.v` | Descriptor yürütme: fetch, bit-seri CRC32, param/LUT yükleme, döşeme başına ibuf dolumu (kaynak 0/1, upsample satır başına çift yazım), ağırlık akışı, motor başlatma, epilog `drain_start`'ta residual okuma, MAXPOOL5 akışı | M4 ✔ |
+| `snpu_csr.v` | APB3 CSR (ID, GEOMETRY, CTRL, STATUS, DESC_BASE/COUNT, IRQ W1C, sayaçlar) | M4 ✔ |
+| `snpu_maxpool5.v` | 5×5 s1 p2 akış motoru, 5 satırlık tampon, sütun başına 5 okuma | M4 ✔ |
+| `snpu_top.v` | Yükleyiciler (descriptor, param 4 giriş/sözcük, LUT 32 bayt/sözcük, ibuf ± çift yazım, residual FIFO, maxpool ± çift yazım), çıkış adres üretimi, tek AXI4 master | M4 ✔ |
 | `ti375_oob_top.v` yaması | OpenEye/gDMA_dnn çıkar, `snpu_top` bağla | M7 |
 
 Her adımın kendi iverilog TB'si vardır; M5'te dizi + acc tek başına Efinity map/pnr kapısı

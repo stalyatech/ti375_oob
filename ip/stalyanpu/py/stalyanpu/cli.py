@@ -208,6 +208,8 @@ def cmd_golden(args):
         meta = write_net_vectors(prog, hw, mem, args.out, dump_all=args.dump_all)
     else:
         meta = write_layer_vectors(prog, hw, mem, args.layer, args.out)
+    from .golden.demo import write_regions
+    write_regions(args.out)
     print(json.dumps(meta))
     print("wrote " + args.out)
     return 0

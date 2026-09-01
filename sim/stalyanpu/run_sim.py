@@ -86,6 +86,9 @@ def run_one(name, args):
             run.append("-fst")
         run.append(f"+SEED={args.seed}")
         run += spec.get("plusargs", [])
+        if spec.get("plusargs_file"):
+            with open(os.path.join(ROOT, spec["plusargs_file"])) as pf:
+                run += pf.read().split()
         run += args.plusargs
         fh.write("$ " + " ".join(run) + "\n")
         fh.flush()
@@ -119,7 +122,7 @@ def main():
     selected = []
     for t in args.tests:
         if t == "all":
-            selected += list(TESTS)
+            selected += [n for n, s in TESTS.items() if not s.get("optional")]
         elif t in TESTS:
             selected.append(t)
         else:

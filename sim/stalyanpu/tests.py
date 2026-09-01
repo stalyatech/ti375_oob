@@ -15,6 +15,11 @@ CONV_FILES = [
             f"{RTL}/snpu_agen.v", f"{RTL}/snpu_epilogue.v", f"{RTL}/snpu_conv_unit.v", f"{UNIT}/tb_conv_unit.sv",
         ]
 
+TOP_FILES = CONV_FILES[:-1] + [
+            f"{RTL}/snpu_rd_dma.v", f"{RTL}/snpu_wr_dma.v", f"{RTL}/snpu_maxpool5.v", f"{RTL}/snpu_csr.v",
+            f"{RTL}/snpu_seq.v", f"{RTL}/snpu_top.v", f"{COMMON}/axi4_mem_model.sv", f"{UNIT}/tb_npu_net.sv",
+        ]
+
 TESTS = {
     "tb_dsp_mac": {
         "top": "tb_dsp_mac",
@@ -103,5 +108,69 @@ TESTS = {
         "group": "layer_full",
         "gen": ["-m", "stalyanpu.golden.unit", "conv_full", "sim/stalyanpu/stim/conv_full"],
         "plusargs": ["+VEC=sim/stalyanpu/stim/conv_full", "+BACKPRESSURE=1"],
+    },
+    "tb_net_demo": {
+        "top": "tb_npu_net",
+        "files": TOP_FILES,
+        "needs_dsp_model": True,
+        "group": "net",
+        "gen": ["-m", "stalyanpu.golden.demo", "net", "sim/stalyanpu/stim/demo_net"],
+        "plusargs": ["+VEC=sim/stalyanpu/stim/demo_net"],
+        "plusargs_file": "sim/stalyanpu/stim/demo_net/run.txt",
+    },
+    "tb_layer_demo0": {
+        "top": "tb_npu_net",
+        "files": TOP_FILES,
+        "needs_dsp_model": True,
+        "group": "net",
+        "gen": ["-m", "stalyanpu.golden.demo", "layer", "sim/stalyanpu/stim/demo_l0", "0"],
+        "plusargs": ["+VEC=sim/stalyanpu/stim/demo_l0"],
+        "plusargs_file": "sim/stalyanpu/stim/demo_l0/run.txt",
+    },
+    "tb_layer_demo1": {
+        "top": "tb_npu_net",
+        "files": TOP_FILES,
+        "needs_dsp_model": True,
+        "group": "net",
+        "gen": ["-m", "stalyanpu.golden.demo", "layer", "sim/stalyanpu/stim/demo_l1", "1"],
+        "plusargs": ["+VEC=sim/stalyanpu/stim/demo_l1"],
+        "plusargs_file": "sim/stalyanpu/stim/demo_l1/run.txt",
+    },
+    "tb_layer_demo3": {
+        "top": "tb_npu_net",
+        "files": TOP_FILES,
+        "needs_dsp_model": True,
+        "group": "net",
+        "gen": ["-m", "stalyanpu.golden.demo", "layer", "sim/stalyanpu/stim/demo_l3", "3"],
+        "plusargs": ["+VEC=sim/stalyanpu/stim/demo_l3"],
+        "plusargs_file": "sim/stalyanpu/stim/demo_l3/run.txt",
+    },
+    # Real YOLOv8s descriptors at the full geometry. They need .data/build/q_mse
+    # (calibrated graph, not in git) and take long, so "all" skips them.
+    "tb_yolo_l65": {
+        "top": "tb_npu_net",
+        "files": TOP_FILES,
+        "params": {"N_CHAIN": 32, "CHAIN_LEN": 32, "P_MAX": 1024, "P_W": 10, "IBUF_WORDS": 16384, "IBUF_AW": 14,
+                   "WFIFO_WORDS": 1024, "WFIFO_AW": 10, "WIN0_WORDS": 1 << 20, "WIN1_WORDS": 1 << 20,
+                   "MP_MAX_W": 128, "MP_W_AW": 7},
+        "needs_dsp_model": True,
+        "group": "yolo",
+        "optional": True,
+        "gen": ["-m", "stalyanpu", "golden", "--qgraph", ".data/build/q_mse", "--out", "sim/stalyanpu/stim/yolo_l65", "--layer", "65"],
+        "plusargs": ["+VEC=sim/stalyanpu/stim/yolo_l65", "+WATCHDOG=4000000"],
+        "plusargs_file": "sim/stalyanpu/stim/yolo_l65/run.txt",
+    },
+    "tb_yolo_l26": {
+        "top": "tb_npu_net",
+        "files": TOP_FILES,
+        "params": {"N_CHAIN": 32, "CHAIN_LEN": 32, "P_MAX": 1024, "P_W": 10, "IBUF_WORDS": 16384, "IBUF_AW": 14,
+                   "WFIFO_WORDS": 1024, "WFIFO_AW": 10, "WIN0_WORDS": 1 << 20, "WIN1_WORDS": 1 << 20,
+                   "MP_MAX_W": 128, "MP_W_AW": 7},
+        "needs_dsp_model": True,
+        "group": "yolo",
+        "optional": True,
+        "gen": ["-m", "stalyanpu", "golden", "--qgraph", ".data/build/q_mse", "--out", "sim/stalyanpu/stim/yolo_l26", "--layer", "26"],
+        "plusargs": ["+VEC=sim/stalyanpu/stim/yolo_l26", "+WATCHDOG=4000000"],
+        "plusargs_file": "sim/stalyanpu/stim/yolo_l26/run.txt",
     },
 }

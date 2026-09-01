@@ -62,6 +62,9 @@ module snpu_epilogue #(
     input  wire                 res_valid_i,
     input  wire [255:0]         res_data_i,
     output wire                 res_ready_o,
+    // drain start notification (residual fetch of this tile)
+    output reg                  drain_start_o,
+    output reg  [7:0]           drain_oct_o,
     // output stream
     output reg                  out_valid_o,
     output reg  [255:0]         out_data_o,
@@ -163,6 +166,7 @@ module snpu_epilogue #(
     always @(posedge clk) begin
         if (rst) begin
             state <= S_IDLE; tq_wp <= 3'd0; tq_rp <= 3'd0; drain_open <= 1'b0;
+            drain_start_o <= 1'b0; drain_oct_o <= 8'd0;
             px <= 16'd0; tile_px <= 16'd0; tile_idx <= 16'd0; oct <= 8'd0; win <= 8'd0;
             ep_addr_o <= {P_W{1'b0}}; ep_release_o <= 1'b0;
             s0_v <= 1'b0; s1_v <= 1'b0; s2_v <= 1'b0; s3_v <= 1'b0; s4_v <= 1'b0;
@@ -178,6 +182,7 @@ module snpu_epilogue #(
             if (tile_start_i)
                 tq_wp <= tq_wp + 1'b1;
             ep_release_o <= 1'b0;
+            drain_start_o <= 1'b0;
             if (adv && s1_v && s1_last) begin
                 ep_release_o <= 1'b1;
                 drain_open <= 1'b0;
@@ -196,6 +201,8 @@ module snpu_epilogue #(
                             px <= 16'd0;
                             win <= 8'd0;
                             drain_open <= 1'b1;
+                            drain_start_o <= 1'b1;
+                            drain_oct_o <= tq[tq_rp[1:0]][23:16];
                             state <= S_RUN;
                         end
                     end

@@ -62,6 +62,7 @@ module tb_conv_unit;
         .cfg_k_i(cfg[6][3:0]), .cfg_stride_i(cfg[7][3:0]), .cfg_pad_i(cfg[8][3:0]), .cfg_zp_in_i(cfg[9][7:0]),
         .cfg_tile_rows_i(cfg[22][15:0]), .cfg_n_tiles_i(cfg[23][15:0]),
         .cfg_ibuf_base_i({IBUF_AW{1'b0}}), .cfg_plane_words_i(cfg[28][IBUF_AW-1:0]),
+        .cfg_row_base_i(16'd0), .cfg_tile0_i(16'd0), .cfg_oy0_i(16'd0), .cfg_out_rows_i(cfg[2][15:0]),
         .cfg_silu_i(cfg[13][0]), .cfg_residual_i(cfg[14][0]),
         .cfg_zp_out_i(cfg[15][7:0]), .cfg_zp_res_i(cfg[16][7:0]), .cfg_zp_out2_i(cfg[17][7:0]),
         .cfg_res_mult_a_i(cfg[18][15:0]), .cfg_res_shift_a_i(cfg[19][7:0]),

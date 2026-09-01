@@ -11,10 +11,11 @@
 // (valid, first pass, last pass, tile end, pixel index) and the weight latch
 // pulse at the first pixel of every pass.
 //
-// The input rows of the layer are assumed resident in the ibuf starting at
-// word cfg_ibuf_base_i, plane after plane, cfg_plane_words_i words per
-// plane, rows in image order (the ring management of the DMA is added in
-// the top level and offsets cfg_ibuf_base_i per tile).
+// The input rows [cfg_row_base_i, ...) of the run are resident in the ibuf
+// starting at word cfg_ibuf_base_i, plane after plane, cfg_plane_words_i
+// words per plane, rows in image order. The sequencer runs the generator
+// once per spatial tile (cfg_n_tiles_i = 1, cfg_tile0_i = tile index) after
+// filling the rows of that tile.
 //
 // A pass starts only when the weight shadow is ready and, for the first
 // pass of a tile, when the accumulator bank the array writes is free.
@@ -23,7 +24,8 @@
 
 module snpu_agen #(
     parameter AW  = 14,
-    parameter P_W = 10
+    parameter P_W = 10,
+    parameter CHAIN_LEN = 32
 )(
     input  wire          clk,
     input  wire          rst,
@@ -41,6 +43,10 @@ module snpu_agen #(
     input  wire [15:0]   cfg_n_tiles_i,
     input  wire [AW-1:0] cfg_ibuf_base_i,
     input  wire [AW-1:0] cfg_plane_words_i,
+    input  wire [15:0]   cfg_row_base_i,    // first input row resident in the ibuf
+    input  wire [15:0]   cfg_tile0_i,       // index of the first tile of this run
+    input  wire [15:0]   cfg_oy0_i,         // first output row of this run
+    input  wire [15:0]   cfg_out_rows_i,    // output rows covered by this run
     // control
     input  wire          start_i,
     output reg           busy_o,
@@ -59,8 +65,13 @@ module snpu_agen #(
     output reg           last_o,
     output reg           tile_end_o,
     output reg  [P_W-1:0] p_o,
-    output reg           latch_o
+    output reg           latch_o,
+    output reg  [7:0]    sub_o             // input group inside the 32 channel word
 );
+
+    // SUBGROUPS input groups share one ibuf word when the chain is shorter
+    // than 32 channels.
+    localparam SUBGROUPS = 32 / CHAIN_LEN;
 
     localparam S_IDLE = 3'd0, S_TILE = 3'd1, S_PASS_WAIT = 3'd2, S_RUN = 3'd3, S_NEXT = 3'd4, S_DONE = 3'd5;
     reg [2:0] state;
@@ -87,7 +98,8 @@ module snpu_agen #(
     wire signed [17:0] in_col_w = $signed({2'b0, ox}) * $signed({14'b0, cfg_stride_i}) + $signed({14'b0, kx}) - $signed({14'b0, cfg_pad_i});
     wire row_ok = (in_row_w >= 0) && (in_row_w < $signed({2'b0, cfg_in_h_i}));
     wire col_ok = (in_col_w >= 0) && (in_col_w < $signed({2'b0, cfg_in_w_i}));
-    wire [AW-1:0] addr_w = cfg_ibuf_base_i + plane_off + in_row_w[AW-1:0] * cfg_in_w_i + in_col_w[AW-1:0];
+    wire [15:0] in_row_local = in_row_w[15:0] - cfg_row_base_i;
+    wire [AW-1:0] addr_w = cfg_ibuf_base_i + plane_off + in_row_local[AW-1:0] * cfg_in_w_i + in_col_w[AW-1:0];
 
     always @(posedge clk) begin
         if (rst) begin
@@ -98,7 +110,7 @@ module snpu_agen #(
             tile_end_o <= 1'b0; p_o <= {P_W{1'b0}}; latch_o <= 1'b0;
             tile <= 16'd0; oct <= 8'd0; icg <= 8'd0; ky <= 4'd0; kx <= 4'd0;
             oy <= 16'd0; ox <= 16'd0; row_in_tile <= 16'd0; p <= {P_W{1'b0}};
-            tile_rows_cur <= 16'd0; rows_left <= 16'd0; plane_off <= {AW{1'b0}}; tile_px <= 16'd0;
+            tile_rows_cur <= 16'd0; rows_left <= 16'd0; plane_off <= {AW{1'b0}}; tile_px <= 16'd0; sub_o <= 8'd0;
         end else begin
             v_o <= 1'b0; latch_o <= 1'b0; tile_end_o <= 1'b0; done_o <= 1'b0; tile_start_o <= 1'b0;
             case (state)
@@ -106,7 +118,7 @@ module snpu_agen #(
                     if (start_i) begin
                         busy_o <= 1'b1;
                         tile <= 16'd0; oct <= 8'd0; icg <= 8'd0; ky <= 4'd0; kx <= 4'd0;
-                        rows_left <= cfg_out_h_i;
+                        rows_left <= cfg_out_rows_i;
                         oy <= 16'd0;
                         state <= S_TILE;
                     end
@@ -117,6 +129,7 @@ module snpu_agen #(
                     tile_px <= ((rows_left < cfg_tile_rows_i) ? rows_left : cfg_tile_rows_i) * cfg_out_w_i;
                     icg <= 8'd0; ky <= 4'd0; kx <= 4'd0;
                     plane_off <= {AW{1'b0}};
+                    sub_o <= 8'd0;
                     state <= S_PASS_WAIT;
                 end
                 S_PASS_WAIT: begin
@@ -125,10 +138,10 @@ module snpu_agen #(
                             tile_start_o <= 1'b1;
                             tile_px_o <= tile_px;
                             tile_oct_o <= oct;
-                            tile_idx_o <= tile;
+                            tile_idx_o <= cfg_tile0_i + tile;
                         end
                         ox <= 16'd0; row_in_tile <= 16'd0; p <= {P_W{1'b0}};
-                        oy <= tile * cfg_tile_rows_i;
+                        oy <= cfg_oy0_i + tile * cfg_tile_rows_i;
                         state <= S_RUN;
                         latch_o <= 1'b1;
                     end
@@ -162,11 +175,17 @@ module snpu_agen #(
                         state <= S_PASS_WAIT;
                     end else if (icg != cfg_n_icg_i - 1) begin
                         kx <= 4'd0; ky <= 4'd0; icg <= icg + 1'b1;
-                        plane_off <= plane_off + cfg_plane_words_i;
+                        if (sub_o == SUBGROUPS - 1) begin
+                            plane_off <= plane_off + cfg_plane_words_i;
+                            sub_o <= 8'd0;
+                        end else begin
+                            sub_o <= sub_o + 8'd1;
+                        end
                         state <= S_PASS_WAIT;
                     end else if (oct != cfg_n_oct_i - 1) begin
                         kx <= 4'd0; ky <= 4'd0; icg <= 8'd0; oct <= oct + 1'b1;
                         plane_off <= {AW{1'b0}};
+                        sub_o <= 8'd0;
                         state <= S_PASS_WAIT;
                     end else if (tile != cfg_n_tiles_i - 1) begin
                         oct <= 8'd0;

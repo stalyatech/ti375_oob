@@ -63,11 +63,16 @@ module snpu_acc #(
     reg              s1_bank;
     reg [DW-1:0]     rd0, rd1;
 
-    // Read addresses: the array owns wr_bank, the epilogue owns rd_bank.
-    // The array side reads with the stage 0 pixel index so the RAM data
-    // arrives together with the psum in stage 1.
-    wire [P_W-1:0] ra0 = (wr_bank == 1'b0) ? s0_p : ep_addr_i;
-    wire [P_W-1:0] ra1 = (wr_bank == 1'b1) ? s0_p : ep_addr_i;
+    // Read port ownership. The array owns its write bank only once that
+    // bank is no longer full: after a tile end the write bank may switch to
+    // a bank the epilogue is still draining, and the epilogue keeps the
+    // read port until it releases the bank. The array side reads with the
+    // stage 0 pixel index so the RAM data arrives together with the psum in
+    // stage 1.
+    wire arr0 = (wr_bank == 1'b0) && !full[0];
+    wire arr1 = (wr_bank == 1'b1) && !full[1];
+    wire [P_W-1:0] ra0 = arr0 ? s0_p : ep_addr_i;
+    wire [P_W-1:0] ra1 = arr1 ? s0_p : ep_addr_i;
 
     // Write data: sum or fresh psum.
     reg [DW-1:0] sum;
@@ -88,8 +93,8 @@ module snpu_acc #(
 
     // The read output of a bank owned by the epilogue only updates when
     // the epilogue advances, so stalls do not lose the word in flight.
-    wire re0 = (wr_bank == 1'b0) || ep_re_i;
-    wire re1 = (wr_bank == 1'b1) || ep_re_i;
+    wire re0 = arr0 || ep_re_i;
+    wire re1 = arr1 || ep_re_i;
 
     always @(posedge clk) begin
         if (we0) mem0[s1_p] <= sum;

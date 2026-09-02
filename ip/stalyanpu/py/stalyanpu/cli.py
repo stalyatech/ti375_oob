@@ -207,7 +207,7 @@ def cmd_golden(args):
     if args.layer is None:
         meta = write_net_vectors(prog, hw, mem, args.out, dump_all=args.dump_all)
     else:
-        meta = write_layer_vectors(prog, hw, mem, args.layer, args.out)
+        meta = write_layer_vectors(prog, hw, mem, args.layer, args.out, max_tiles=args.max_tiles)
     from .golden.demo import write_regions
     write_regions(args.out)
     print(json.dumps(meta))
@@ -331,6 +331,7 @@ def main(argv=None) -> int:
     p.add_argument("--qgraph", required=True)
     p.add_argument("--out", required=True)
     p.add_argument("--layer", type=int, default=None, help="descriptor index for a single layer set")
+    p.add_argument("--max-tiles", type=int, default=None, help="crop the layer to this many output tiles")
     p.add_argument("--dump-all", action="store_true", help="net set: add every descriptor output as a region")
     addr_args(p)
     p.set_defaults(func=cmd_golden)

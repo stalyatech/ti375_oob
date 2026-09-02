@@ -251,7 +251,19 @@ module tb_npu_net;
         if ($value$plusargs("BP=%d", bp)) ;
         if ($value$plusargs("DEBUG=%d", dbg)) ;
         i = $urandom(seed);
-        load_hex({vec, "/mem.hex"});
+        fd = $fopen({vec, "/mem0.hex"}, "r");
+        if (fd != 0) begin
+            $fclose(fd);
+            $readmemh({vec, "/mem0.hex"}, u_mem.win0);
+            fd = $fopen({vec, "/mem1.hex"}, "r");
+            if (fd != 0) begin
+                $fclose(fd);
+                $readmemh({vec, "/mem1.hex"}, u_mem.win1);
+            end
+            $display("loaded split window images");
+        end else begin
+            load_hex({vec, "/mem.hex"});
+        end
         load_golden(vec);
 
         repeat (4) @(posedge clk);

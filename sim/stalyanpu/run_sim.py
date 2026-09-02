@@ -45,11 +45,21 @@ def tool(name):
     return os.environ.get(name.upper(), name)
 
 
+def binary_path(name, args):
+    spec = TESTS[name]
+    b = spec.get("binary")
+    if not b:
+        return os.path.join(BUILD, name + ".vvp"), False
+    if args.behav:
+        b += "_behav"
+    return os.path.join(BUILD, b + ".vvp"), True
+
+
 def run_one(name, args):
     spec = TESTS[name]
     top = spec["top"]
     os.makedirs(BUILD, exist_ok=True)
-    vvp = os.path.join(BUILD, name + ".vvp")
+    vvp, shared = binary_path(name, args)
     log = os.path.join(BUILD, name + ".log")
 
     cmd = [tool("iverilog"), "-g2012", "-s", top, "-o", vvp,
@@ -76,11 +86,12 @@ def run_one(name, args):
             rc = subprocess.run(gen, stdout=fh, stderr=subprocess.STDOUT, cwd=ROOT).returncode
             if rc != 0:
                 return name, False, time.time() - t0, "vector generation failed, see " + log
-        fh.write("$ " + " ".join(cmd) + "\n")
-        fh.flush()
-        rc = subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT, cwd=ROOT).returncode
-        if rc != 0:
-            return name, False, time.time() - t0, "compile error, see " + log
+        if not (shared and os.path.isfile(vvp)):
+            fh.write("$ " + " ".join(cmd) + "\n")
+            fh.flush()
+            rc = subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT, cwd=ROOT).returncode
+            if rc != 0:
+                return name, False, time.time() - t0, "compile error, see " + log
         run = [tool("vvp"), vvp]
         if args.dump:
             run.append("-fst")
@@ -132,6 +143,39 @@ def main():
                 return 1
             selected += group
     selected = list(dict.fromkeys(selected))
+
+    # Shared binaries are compiled up front so parallel runs do not race on
+    # the same output file. A stale shared binary is removed first.
+    seen = set()
+    for n in selected:
+        vvp, shared = binary_path(n, args)
+        if shared and vvp not in seen:
+            seen.add(vvp)
+            if os.path.isfile(vvp):
+                os.remove(vvp)
+
+    for vvp in seen:
+        first = next(n for n in selected if binary_path(n, args)[0] == vvp)
+        spec = TESTS[first]
+        top = spec["top"]
+        cmd = [tool("iverilog"), "-g2012", "-s", top, "-o", vvp,
+               "-I", os.path.join(ROOT, "ip", "stalyanpu", "rtl"),
+               "-I", os.path.join(HERE, "common")]
+        for d in spec.get("defines", []):
+            cmd.append("-D" + d)
+        if args.behav:
+            cmd.append("-DSNPU_SIM_BEHAV")
+        for k, v in spec.get("params", {}).items():
+            cmd.append(f"-P{top}.{k}={v}")
+        if spec.get("needs_dsp_model") and not args.behav:
+            cmd.append(DSP_MODEL)
+        cmd += [os.path.join(ROOT, f) for f in spec["files"]]
+        t0 = time.time()
+        rc = subprocess.run(cmd, capture_output=True, cwd=ROOT).returncode
+        print(f"compiled {os.path.basename(vvp)} in {time.time() - t0:.0f}s rc={rc}", flush=True)
+        if rc != 0:
+            print("shared binary compile failed")
+            return 1
 
     results = []
     if args.j > 1:

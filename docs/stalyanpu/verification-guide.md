@@ -39,7 +39,8 @@ davranışsal DSP ikizini seçer (vendor modelsiz, hızlı); nihai kanıt vendor
 | L7 | `tb_conv_full` | tam geometri 32×32 (1024 DSP) | 3×3, 40→96, SiLU | PASS |
 | N1 | `tb_layer_demo0/1/3` | `snpu_top` + `axi4_mem_model` (small512) | Demo ağının tek descriptor'ı: stem (3 döşeme), residual conv (split kaynak), maxpool5 (upsample görünüm); descriptor CRC, param/LUT yükleme, DMA, yazma adresleri; `interp.py` altınıyla bölge karşılaştırması | PASS |
 | N2 | `tb_net_demo` | aynı | Demo ağının 5 descriptor'ı zincirleme, descriptor başına dump bölgeleri dahil 6 bölge bit bit | PASS |
-| Y1 | `tb_yolo_l65`, `tb_yolo_l26` (`group=yolo`, `all` dışı, `.data/build/q_mse` ister) | tam geometri 32×32, 16 MB pencereler | Gerçek YOLOv8s descriptor'ları (head 1×1 128→80; SPPF maxpool 20×12×256) gerçek ağırlıklarla | PASS (l65 286 s, l26 366 s) |
+| Y1 | `tb_yolo_l0` .. `tb_yolo_l65` (`group=yolo`, `all` dışı, `.data/build/q_mse` ister) | tam geometri 32×32, 16/32 MB pencereler | Derlenmiş YOLOv8s'in 66 descriptor'ının her biri tek başına, gerçek ağırlık ve gerçek girişle; üreteç yorumlayıcıyı k. descriptor'a kadar koşturur ve descriptor'ı ilk 2 döşemeye kırpar (`--max-tiles`); bellek imajı yalnız okunan sayfaları içerir, tezgah `mem0/mem1.hex` varsa `$readmemh` ile yükler; 66 test tek `yolo_layer` vvp derlemesini paylaşır | bkz. M6 raporu |
+| Y2 | `tb_yolo_net` (`group=yolo_net`) | tam geometri | 66 descriptor'lık listeyi sequencer uçtan uca yürütür, 6 head çıkışı karşılaştırılır | bkz. M6 raporu |
 
 Katman testleri (`group=layer`) vektörlerini `stalyanpu.golden.unit` üretir (`tests.py` `gen`
 kancası; `sim/stalyanpu/stim/<case>/` altında `cfg/ibuf/w/prm/lut/res/golden.hex`). Ağırlık,
@@ -55,6 +56,27 @@ kapatır, `+DEBUG=1..5` sequencer/bank/DMA izleri, `+DUMP_REGION=<dosya>` üreti
 
 Mutasyon denetimi (M0): `snpu_dsp_mac2` içinde iki ağırlık lane'i yer değiştirilince
 `tb_pe_chain` ilk vektörde FAIL verir; TB'nin gerçekten karşılaştırdığı doğrulandı.
+
+### Kırpılmış katman koşumları
+
+Tam 640×384 geometride bir katmanın simülasyonu saatler sürer (vendor DSP
+modeliyle ~80 çevrim/s). Bu yüzden katman testleri descriptor'ı ilk iki
+döşemeye kırpar: out_h ve in_h kırpılır (stride 2'de in = 2*out-1), n_tiles
+ve out_plane_stride yeniden yazılır, CRC güncellenir. Yorumlayıcı ve RTL
+aynı kırpılmış descriptor'ı yürüttüğü için karşılaştırma bit kesindir;
+gerçek ağırlıklar, gerçek giriş satırları ve gerçek kanal genişlikleri
+korunur. Tarama davranışsal DSP ikiziyle koşulur (~4x hız); vendor modeli
+temsilci bir alt kümede (stem, residual, maxpool, upsample+concat, head)
+ayrıca koşturulur. Kırpılmış geometri `golden.json` içindeki `run_dims`
+alanına yazılır ve perf_compare model kestirimini o boyutlarla yapar.
+
+## Performans karşılaştırması (M6)
+
+`sim/stalyanpu/perf_compare.py`, yolo katman loglarındaki `CYCLE_CNT`
+değerlerini performans modelinin katman kestirimleriyle karşılaştırır ve
+sapma tablosu basar (kapı: toplam ≤ %15). Model DDR trafiğini hesapla
+örtüşük sayar; v1 sequencer dolgu ve koşumu ardışık yürüttüğü için küçük
+katmanlarda sapma büyüktür, değerlendirme toplam üzerinden yapılır.
 
 ## Koşum
 

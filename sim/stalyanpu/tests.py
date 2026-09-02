@@ -174,3 +174,44 @@ TESTS = {
         "plusargs_file": "sim/stalyanpu/stim/yolo_l26/run.txt",
     },
 }
+
+# One test per descriptor of the compiled YOLOv8s at the full geometry (M6).
+# The generator runs the interpreter up to the descriptor, so the stim
+# directories under sim/stalyanpu/stim/ grow to a few gigabytes in total.
+YOLO_DESC_COUNT = 66
+
+_YOLO_PARAMS = {"N_CHAIN": 32, "CHAIN_LEN": 32, "P_MAX": 1024, "P_W": 10, "IBUF_WORDS": 16384, "IBUF_AW": 14,
+                "WFIFO_WORDS": 1024, "WFIFO_AW": 10, "WIN0_WORDS": 1 << 20, "WIN1_WORDS": 1 << 21,
+                "MP_MAX_W": 128, "MP_W_AW": 7}
+
+for _i in range(YOLO_DESC_COUNT):
+    _n = f"tb_yolo_l{_i}"
+    if _n in TESTS:
+        continue
+    TESTS[_n] = {
+        "top": "tb_npu_net",
+        "files": TOP_FILES,
+        "params": dict(_YOLO_PARAMS),
+        "needs_dsp_model": True,
+        "group": "yolo",
+        "optional": True,
+        "binary": "yolo_layer",
+        "gen": ["-m", "stalyanpu", "golden", "--qgraph", ".data/build/q_mse",
+                "--out", f"sim/stalyanpu/stim/yolo_l{_i}", "--layer", str(_i), "--max-tiles", "2"],
+        "plusargs": [f"+VEC=sim/stalyanpu/stim/yolo_l{_i}", "+WATCHDOG=30000000"],
+        "plusargs_file": f"sim/stalyanpu/stim/yolo_l{_i}/run.txt",
+    }
+
+# Full YOLOv8s network in one run (group yolo_net, several hours).
+TESTS["tb_yolo_net"] = {
+    "top": "tb_npu_net",
+    "files": TOP_FILES,
+    "params": dict(_YOLO_PARAMS),
+    "needs_dsp_model": True,
+    "group": "yolo_net",
+    "optional": True,
+    "gen": ["-m", "stalyanpu", "golden", "--qgraph", ".data/build/q_mse",
+            "--out", "sim/stalyanpu/stim/yolo_net"],
+    "plusargs": ["+VEC=sim/stalyanpu/stim/yolo_net", "+WATCHDOG=100000000"],
+    "plusargs_file": "sim/stalyanpu/stim/yolo_net/run.txt",
+}

@@ -26,6 +26,8 @@ class Memory:
 
     def __init__(self):
         self.pages = {}
+        self.track = False
+        self.reads = set()
 
     def _page(self, addr: int, create: bool) -> bytearray | None:
         p = addr // self.PAGE
@@ -46,6 +48,9 @@ class Memory:
             addr += n
 
     def read(self, addr: int, n: int) -> bytes:
+        if self.track and n > 0:
+            for pg in range(addr // self.PAGE, (addr + n - 1) // self.PAGE + 1):
+                self.reads.add(pg)
         out = bytearray()
         while n > 0:
             page = self._page(addr, False)

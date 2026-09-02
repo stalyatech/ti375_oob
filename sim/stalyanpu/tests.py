@@ -12,7 +12,7 @@ UNIT = "sim/stalyanpu/unit"
 CONV_FILES = [
             f"{RTL}/snpu_dsp_mac2.v", f"{RTL}/snpu_skew.v", f"{RTL}/snpu_wshadow.v", f"{RTL}/snpu_pe_chain.v",
             f"{RTL}/snpu_pe_array.v", f"{RTL}/snpu_acc.v", f"{RTL}/snpu_ibuf.v", f"{RTL}/snpu_wfifo.v",
-            f"{RTL}/snpu_agen.v", f"{RTL}/snpu_epilogue.v", f"{RTL}/snpu_conv_unit.v", f"{UNIT}/tb_conv_unit.sv",
+            f"{RTL}/snpu_agen.v", f"{RTL}/snpu_ep_lane.v", f"{RTL}/snpu_epilogue.v", f"{RTL}/snpu_conv_unit.v", f"{UNIT}/tb_conv_unit.sv",
         ]
 
 TOP_FILES = CONV_FILES[:-1] + [

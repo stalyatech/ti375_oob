@@ -49,8 +49,8 @@ module snpu_agen #(
     input  wire [15:0]   cfg_out_rows_i,    // output rows covered by this run
     // control
     input  wire          start_i,
-    output reg           busy_o,
-    output reg           done_o,
+    output wire          busy_o,
+    output wire          done_o,
     input  wire          shadow_ready_i,
     input  wire          bank_free_i,
     output reg           tile_start_o,     // one pulse per (tile, oct) at its first pass
@@ -84,6 +84,7 @@ module snpu_agen #(
     reg [15:0] row_in_tile;
     reg [P_W-1:0] p;
     reg [15:0] tile_px;
+    reg tphase;
 
     // Address pieces.
     reg signed [17:0] in_row, in_col;
@@ -99,24 +100,46 @@ module snpu_agen #(
     wire row_ok = (in_row_w >= 0) && (in_row_w < $signed({2'b0, cfg_in_h_i}));
     wire col_ok = (in_col_w >= 0) && (in_col_w < $signed({2'b0, cfg_in_w_i}));
     wire [15:0] in_row_local = in_row_w[15:0] - cfg_row_base_i;
-    wire [AW-1:0] addr_w = cfg_ibuf_base_i + plane_off + in_row_local[AW-1:0] * cfg_in_w_i + in_col_w[AW-1:0];
+
+    // Output pipeline. Stage a0 (written by the state machine) captures the
+    // row and column pieces, stage a1 holds the row product, the output
+    // stage sums the address. Every per pixel flag travels with its pieces
+    // so pass boundaries stay aligned; latch and sub ride along too.
+    reg        a0_v, a0_first, a0_last, a0_tend, a0_latch, a0_ok;
+    reg [P_W-1:0] a0_p;
+    reg [7:0]  a0_sub;
+    reg [AW-1:0] a0_poff;
+    reg [15:0] a0_rowloc;
+    reg [AW-1:0] a0_col;
+    reg        a1_v, a1_first, a1_last, a1_tend, a1_latch, a1_ok;
+    reg [P_W-1:0] a1_p;
+    reg [7:0]  a1_sub;
+    reg [AW-1:0] a1_poff;
+    reg [31:0] a1_rowmul;
+    reg [AW-1:0] a1_col;
+    reg        busy_q, done_q, d1_done, d2_done;
+    reg [7:0]  sub_q;
+
+    assign busy_o = busy_q || a0_v || a1_v || v_o;
+    assign done_o = d2_done;
 
     always @(posedge clk) begin
         if (rst) begin
             state <= S_IDLE;
-            busy_o <= 1'b0; done_o <= 1'b0;
+            busy_q <= 1'b0; done_q <= 1'b0;
             tile_start_o <= 1'b0; tile_px_o <= 16'd0; tile_oct_o <= 8'd0; tile_idx_o <= 16'd0;
-            addr_o <= {AW{1'b0}}; gate_o <= 1'b0; v_o <= 1'b0; first_o <= 1'b0; last_o <= 1'b0;
-            tile_end_o <= 1'b0; p_o <= {P_W{1'b0}}; latch_o <= 1'b0;
+            a0_v <= 1'b0; a0_first <= 1'b0; a0_last <= 1'b0; a0_tend <= 1'b0; a0_latch <= 1'b0; a0_ok <= 1'b0;
+            a0_p <= {P_W{1'b0}}; a0_sub <= 8'd0; a0_poff <= {AW{1'b0}}; a0_rowloc <= 16'd0; a0_col <= {AW{1'b0}};
             tile <= 16'd0; oct <= 8'd0; icg <= 8'd0; ky <= 4'd0; kx <= 4'd0;
             oy <= 16'd0; ox <= 16'd0; row_in_tile <= 16'd0; p <= {P_W{1'b0}};
-            tile_rows_cur <= 16'd0; rows_left <= 16'd0; plane_off <= {AW{1'b0}}; tile_px <= 16'd0; sub_o <= 8'd0;
+            tile_rows_cur <= 16'd0; rows_left <= 16'd0; plane_off <= {AW{1'b0}}; tile_px <= 16'd0; sub_q <= 8'd0;
+            tphase <= 1'b0;
         end else begin
-            v_o <= 1'b0; latch_o <= 1'b0; tile_end_o <= 1'b0; done_o <= 1'b0; tile_start_o <= 1'b0;
+            a0_v <= 1'b0; a0_latch <= 1'b0; a0_tend <= 1'b0; done_q <= 1'b0; tile_start_o <= 1'b0;
             case (state)
                 S_IDLE: begin
                     if (start_i) begin
-                        busy_o <= 1'b1;
+                        busy_q <= 1'b1;
                         tile <= 16'd0; oct <= 8'd0; icg <= 8'd0; ky <= 4'd0; kx <= 4'd0;
                         rows_left <= cfg_out_rows_i;
                         oy <= 16'd0;
@@ -124,16 +147,25 @@ module snpu_agen #(
                     end
                 end
                 S_TILE: begin
-                    // Size of this tile.
-                    tile_rows_cur <= (rows_left < cfg_tile_rows_i) ? rows_left : cfg_tile_rows_i;
-                    tile_px <= ((rows_left < cfg_tile_rows_i) ? rows_left : cfg_tile_rows_i) * cfg_out_w_i;
-                    icg <= 8'd0; ky <= 4'd0; kx <= 4'd0;
-                    plane_off <= {AW{1'b0}};
-                    sub_o <= 8'd0;
-                    state <= S_PASS_WAIT;
+                    // Size of this tile, in two steps so the pixel count is
+                    // a plain registered product.
+                    if (!tphase) begin
+                        tile_rows_cur <= (rows_left < cfg_tile_rows_i) ? rows_left : cfg_tile_rows_i;
+                        tphase <= 1'b1;
+                    end else begin
+                        tile_px <= tile_rows_cur * cfg_out_w_i;
+                        icg <= 8'd0; ky <= 4'd0; kx <= 4'd0;
+                        plane_off <= {AW{1'b0}};
+                        sub_q <= 8'd0;
+                        tphase <= 1'b0;
+                        state <= S_PASS_WAIT;
+                    end
                 end
                 S_PASS_WAIT: begin
-                    if (shadow_ready_i && (!first_pass || bank_free_i)) begin
+                    // A tile end still inside the output pipeline has not
+                    // reached the accumulator guard yet, so the first pass
+                    // of the next tile must also wait for it to leave.
+                    if (shadow_ready_i && (!first_pass || (bank_free_i && !a0_tend && !a1_tend && !tile_end_o))) begin
                         if (first_pass) begin
                             tile_start_o <= 1'b1;
                             tile_px_o <= tile_px;
@@ -143,17 +175,20 @@ module snpu_agen #(
                         ox <= 16'd0; row_in_tile <= 16'd0; p <= {P_W{1'b0}};
                         oy <= cfg_oy0_i + tile * cfg_tile_rows_i;
                         state <= S_RUN;
-                        latch_o <= 1'b1;
+                        a0_latch <= 1'b1;
                     end
                 end
                 S_RUN: begin
-                    v_o <= 1'b1;
-                    addr_o <= addr_w;
-                    gate_o <= !(row_ok && col_ok);
-                    first_o <= first_pass;
-                    last_o <= last_pass;
-                    p_o <= p;
-                    tile_end_o <= last_pass && last_px;
+                    a0_v <= 1'b1;
+                    a0_rowloc <= in_row_local;
+                    a0_col <= in_col_w[AW-1:0];
+                    a0_ok <= row_ok && col_ok;
+                    a0_first <= first_pass;
+                    a0_last <= last_pass;
+                    a0_p <= p;
+                    a0_tend <= last_pass && last_px;
+                    a0_poff <= plane_off;
+                    a0_sub <= sub_q;
                     p <= p + 1'b1;
                     if (ox == cfg_out_w_i - 1) begin
                         ox <= 16'd0;
@@ -175,17 +210,17 @@ module snpu_agen #(
                         state <= S_PASS_WAIT;
                     end else if (icg != cfg_n_icg_i - 1) begin
                         kx <= 4'd0; ky <= 4'd0; icg <= icg + 1'b1;
-                        if (sub_o == SUBGROUPS - 1) begin
+                        if (sub_q == SUBGROUPS - 1) begin
                             plane_off <= plane_off + cfg_plane_words_i;
-                            sub_o <= 8'd0;
+                            sub_q <= 8'd0;
                         end else begin
-                            sub_o <= sub_o + 8'd1;
+                            sub_q <= sub_q + 8'd1;
                         end
                         state <= S_PASS_WAIT;
                     end else if (oct != cfg_n_oct_i - 1) begin
                         kx <= 4'd0; ky <= 4'd0; icg <= 8'd0; oct <= oct + 1'b1;
                         plane_off <= {AW{1'b0}};
-                        sub_o <= 8'd0;
+                        sub_q <= 8'd0;
                         state <= S_PASS_WAIT;
                     end else if (tile != cfg_n_tiles_i - 1) begin
                         oct <= 8'd0;
@@ -197,12 +232,34 @@ module snpu_agen #(
                     end
                 end
                 S_DONE: begin
-                    busy_o <= 1'b0;
-                    done_o <= 1'b1;
+                    busy_q <= 1'b0;
+                    done_q <= 1'b1;
                     state <= S_IDLE;
                 end
                 default: state <= S_IDLE;
             endcase
+        end
+    end
+
+    // Stages a1 and output.
+    always @(posedge clk) begin
+        if (rst) begin
+            a1_v <= 1'b0; a1_first <= 1'b0; a1_last <= 1'b0; a1_tend <= 1'b0; a1_latch <= 1'b0; a1_ok <= 1'b0;
+            a1_p <= {P_W{1'b0}}; a1_sub <= 8'd0; a1_poff <= {AW{1'b0}}; a1_rowmul <= 32'd0; a1_col <= {AW{1'b0}};
+            addr_o <= {AW{1'b0}}; gate_o <= 1'b0; v_o <= 1'b0; first_o <= 1'b0; last_o <= 1'b0;
+            tile_end_o <= 1'b0; p_o <= {P_W{1'b0}}; latch_o <= 1'b0; sub_o <= 8'd0;
+            d1_done <= 1'b0; d2_done <= 1'b0;
+        end else begin
+            a1_v <= a0_v; a1_first <= a0_first; a1_last <= a0_last; a1_tend <= a0_tend;
+            a1_latch <= a0_latch; a1_ok <= a0_ok; a1_p <= a0_p; a1_sub <= a0_sub;
+            a1_poff <= a0_poff; a1_col <= a0_col;
+            a1_rowmul <= a0_rowloc * cfg_in_w_i;
+            v_o <= a1_v; first_o <= a1_first; last_o <= a1_last; tile_end_o <= a1_tend;
+            latch_o <= a1_latch; p_o <= a1_p; sub_o <= a1_sub;
+            gate_o <= !a1_ok;
+            addr_o <= cfg_ibuf_base_i + a1_poff + a1_rowmul[AW-1:0] + a1_col;
+            d1_done <= done_q;
+            d2_done <= d1_done;
         end
     end
 

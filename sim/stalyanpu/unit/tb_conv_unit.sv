@@ -213,7 +213,7 @@ module tb_conv_unit;
 
     always @(posedge clk) begin
         if (dbg == 4) begin
-            if (u_dut.u_acc.s2_end)
+            if (u_dut.u_acc.s3_end)
                 $display("DBG t=%0t acc tile_done: wr_bank=%0d full=%b", $time, u_dut.u_acc.wr_bank, u_dut.u_acc.full);
             if (u_dut.u_acc.ep_release_i)
                 $display("DBG t=%0t acc release: rd_bank=%0d full=%b", $time, u_dut.u_acc.rd_bank, u_dut.u_acc.full);

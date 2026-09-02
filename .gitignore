@@ -28,3 +28,8 @@ ip/stalyanpu/py/build/
 ip/stalyanpu/py/*.egg-info/
 .pytest_cache/
 .data/
+syn/stalyanpu/*/outflow/
+syn/stalyanpu/*/work_*/
+syn/stalyanpu/*/run_*.log
+syn/stalyanpu/*/*.isf
+syn/stalyanpu/*/*_template.v

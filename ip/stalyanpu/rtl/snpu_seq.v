@@ -142,9 +142,35 @@ module snpu_seq #(
     reg [7:0]  res_oct;
 
     // Helpers.
-    wire [15:0] oy_last = oy0 + rows - 16'd1;
+    // The input row range of a tile is derived in three registered steps
+    // (last output row, raw range, clamp) so no cycle holds a multiply and
+    // the compares together.
+    reg [15:0] oy_last_q;
+    reg signed [17:0] rls_q, rhs_q;
+    reg [2:0] rphase;
+    // Products used by the command addresses, registered continuously so no
+    // command issue cycle carries a multiplier. Every operand settles
+    // several cycles before its product is consumed.
+    reg [31:0] t_rl0, t_rl1, t_rlh0, t_rlh1, t_len0, t_len1, t_pw, t_ob, t_res_row, t_wlen, t_hw;
+    // Running terms of the fill addresses and the residual commands.
+    reg [31:0] f_pterm, f_rterm, res_term;
+    reg [15:0] res_left, oy0_run;
     wire signed [17:0] r_lo_s = $signed({2'b0, oy0}) * $signed({14'b0, stride}) - $signed({10'b0, pad});
-    wire signed [17:0] r_hi_s = $signed({2'b0, oy_last}) * $signed({14'b0, stride}) - $signed({10'b0, pad}) + $signed({14'b0, k});
+    wire signed [17:0] r_hi_s = $signed({2'b0, oy_last_q}) * $signed({14'b0, stride}) - $signed({10'b0, pad}) + $signed({14'b0, k});
+
+    always @(posedge clk) begin
+        t_rl0 <= r_lo * d[6];
+        t_rl1 <= r_lo * d[10];
+        t_rlh0 <= (r_lo >> 1) * d[6];
+        t_rlh1 <= (r_lo >> 1) * d[10];
+        t_len0 <= rows_in * d[6];
+        t_len1 <= rows_in * d[10];
+        t_pw <= rows_in * in_w;
+        t_ob <= oy0 * d[17];
+        t_res_row <= oy0 * d[20];
+        t_wlen <= d[12] * n_oct;
+        t_hw <= in_h * in_w;
+    end
 
     task set_cmd;
         input       ch;
@@ -175,6 +201,8 @@ module snpu_seq #(
             unit_start_o <= 1'b0; mp_start_o <= 1'b0; ibuf_fill_rst_o <= 1'b0;
             desc_addr <= 32'd0; idx <= 16'd0; fetch_words <= 2'd0; crc <= 32'hFFFFFFFF; crc_byte <= 7'd0; crc_bit <= 3'd0;
             tile <= 16'd0; oy0 <= 16'd0; rows <= 16'd0; r_lo <= 16'd0; r_hi <= 16'd0; rows_in <= 16'd0;
+            oy_last_q <= 16'd0; rls_q <= 18'sd0; rhs_q <= 18'sd0; rphase <= 3'd0;
+            f_pterm <= 32'd0; f_rterm <= 32'd0; res_term <= 32'd0; res_left <= 16'd0; oy0_run <= 16'd0;
             fill_plane <= 16'd0; fill_row <= 16'd0; fill_src <= 1'b0; fill_words <= 32'd0; fill_planes_total <= 16'd0;
             res_pending <= 1'b0; res_oct <= 8'd0;
             cfg_in_h_o <= 16'd0; cfg_in_w_o <= 16'd0; cfg_out_h_o <= 16'd0; cfg_out_w_o <= 16'd0;
@@ -200,9 +228,11 @@ module snpu_seq #(
             end
             if (res_pending && !cmd_valid_o[0] && cmd_ready_i[0] && (state == S_RUN_WAIT)) begin
                 // Words in emission order: rows, columns, planes of the oct.
-                set_cmd(1'b0, d[18] + (res_oct * (N_OC / 32)) * d[19] + oy0 * d[20], 32'd32,
-                        ((n_planes-res_oct * (N_OC / 32)) < (N_OC / 32)) ? (n_planes-res_oct * (N_OC / 32)) : (N_OC / 32), d[19],
+                set_cmd(1'b0, d[18] + res_term + t_res_row, 32'd32,
+                        (res_left < (N_OC / 32)) ? res_left : (N_OC / 32), d[19],
                         out_w, 32'd32, rows, d[20], DST_RES);
+                res_term <= res_term + (N_OC / 32) * d[19];
+                res_left <= res_left - (N_OC / 32);
                 res_pending <= 1'b0;
             end
             if (abort_i && state != S_IDLE) begin
@@ -295,26 +325,43 @@ module snpu_seq #(
                 S_LOAD_WAIT: begin
                     if (!cmd_valid_o[0] && cmd_ready_i[0] && loaders_idle_i) begin
                         tile <= 16'd0;
+                        oy0_run <= 16'd0;
                         state <= S_TILE;
                     end
                 end
                 S_TILE: begin
-                    // Geometry of the tile.
-                    oy0 <= tile * tile_rows;
-                    rows <= ((out_h-tile*tile_rows) < tile_rows) ? (out_h-tile*tile_rows) : tile_rows;
+                    // Geometry of the tile; oy0_run tracks tile * tile_rows.
+                    oy0 <= oy0_run;
+                    rows <= ((out_h-oy0_run) < tile_rows) ? (out_h-oy0_run) : tile_rows;
                     fill_plane <= 16'd0; fill_row <= 16'd0; fill_src <= 1'b0; fill_words <= 32'd0;
                     fill_planes_total <= src0_planes + (f_two ? src1_planes : 16'd0);
                     ibuf_fill_rst_o <= 1'b1;
                     state <= S_FILL;
-                    // r_lo and r_hi need oy0 and rows, computed next cycle.
-                    r_lo <= 16'd0; r_hi <= 16'd0;
+                    // r_lo and r_hi need oy0 and rows, computed over the
+                    // next three cycles.
+                    r_lo <= 16'd0; r_hi <= 16'd0; rphase <= 3'd0;
                 end
                 S_FILL: begin
-                    // First cycle: derive the input row range from oy0 and rows.
-                    if (r_hi == 16'd0) begin
-                        r_lo <= (r_lo_s < 0) ? 16'd0 : r_lo_s[15:0];
-                        r_hi <= (r_hi_s > $signed({2'b0, in_h})) ? in_h : r_hi_s[15:0];
-                        rows_in <= ((r_hi_s > $signed({2'b0, in_h})) ? in_h : r_hi_s[15:0]) - ((r_lo_s < 0) ? 16'd0 : r_lo_s[15:0]);
+                    // Derive the input row range from oy0 and rows first.
+                    if (rphase == 3'd0) begin
+                        oy_last_q <= oy0 + rows - 16'd1;
+                        rphase <= 3'd1;
+                    end else if (rphase == 3'd1) begin
+                        rls_q <= r_lo_s;
+                        rhs_q <= r_hi_s;
+                        rphase <= 3'd2;
+                    end else if (rphase == 3'd2) begin
+                        r_lo <= (rls_q < 0) ? 16'd0 : rls_q[15:0];
+                        r_hi <= (rhs_q > $signed({2'b0, in_h})) ? in_h : rhs_q[15:0];
+                        rows_in <= ((rhs_q > $signed({2'b0, in_h})) ? in_h : rhs_q[15:0]) - ((rls_q < 0) ? 16'd0 : rls_q[15:0]);
+                        rphase <= 3'd3;
+                    end else if (rphase == 3'd3) begin
+                        // One cycle for the continuous products to settle.
+                        rphase <= 3'd4;
+                    end else if (rphase == 3'd4) begin
+                        f_pterm <= 32'd0;
+                        f_rterm <= t_rlh0;
+                        rphase <= 3'd5;
                     end else if (fill_plane == fill_planes_total) begin
                         state <= S_FILL_WAIT;
                     end else if (!cmd_valid_o[0] && cmd_ready_i[0]) begin
@@ -322,23 +369,28 @@ module snpu_seq #(
                         // (source row = ibuf row / 2, every word written twice).
                         if (fill_src == 1'b0 && fill_plane == src0_planes) begin
                             fill_src <= 1'b1;
+                            f_pterm <= 32'd0;
+                            f_rterm <= t_rlh1;
                         end else if (fill_src ? f_ups1 : f_ups0) begin
-                            set_cmd(1'b0, (fill_src ? d[8] : d[4]) + (fill_src ? fill_plane-src0_planes : fill_plane) * (fill_src ? d[9] : d[5])
-                                          + ((r_lo + fill_row) >> 1) * (fill_src ? d[10] : d[6]),
+                            set_cmd(1'b0, (fill_src ? d[8] : d[4]) + f_pterm + f_rterm,
                                     (in_w >> 1) * 32, 16'd1, 32'd0, 16'd1, 32'd0, 16'd1, 32'd0, DST_IBUF_DUP);
                             fill_words <= fill_words + in_w;
                             if (fill_row + 1 == rows_in) begin
                                 fill_row <= 16'd0;
                                 fill_plane <= fill_plane + 1'b1;
+                                f_pterm <= f_pterm + (fill_src ? d[9] : d[5]);
+                                f_rterm <= fill_src ? t_rlh1 : t_rlh0;
                             end else begin
                                 fill_row <= fill_row + 1'b1;
+                                if (r_lo[0] ^ fill_row[0])
+                                    f_rterm <= f_rterm + (fill_src ? d[10] : d[6]);
                             end
                         end else begin
-                            set_cmd(1'b0, (fill_src ? d[8] : d[4]) + (fill_src ? fill_plane-src0_planes : fill_plane) * (fill_src ? d[9] : d[5])
-                                          + r_lo * (fill_src ? d[10] : d[6]),
-                                    rows_in * (fill_src ? d[10] : d[6]), 16'd1, 32'd0, 16'd1, 32'd0, 16'd1, 32'd0, DST_IBUF);
-                            fill_words <= fill_words + rows_in * in_w;
+                            set_cmd(1'b0, (fill_src ? d[8] : d[4]) + f_pterm + (fill_src ? t_rl1 : t_rl0),
+                                    fill_src ? t_len1 : t_len0, 16'd1, 32'd0, 16'd1, 32'd0, 16'd1, 32'd0, DST_IBUF);
+                            fill_words <= fill_words + t_pw;
                             fill_plane <= fill_plane + 1'b1;
+                            f_pterm <= f_pterm + (fill_src ? d[9] : d[5]);
                         end
                     end
                 end
@@ -348,7 +400,7 @@ module snpu_seq #(
                 end
                 S_WEIGHTS: begin
                     if (!cmd_valid_o[1] && cmd_ready_i[1]) begin
-                        set_cmd(1'b1, d[11], d[12] * n_oct, 16'd1, 32'd0, 16'd1, 32'd0, 16'd1, 32'd0, DST_WFIFO);
+                        set_cmd(1'b1, d[11], t_wlen, 16'd1, 32'd0, 16'd1, 32'd0, 16'd1, 32'd0, DST_WFIFO);
                         state <= S_RUN;
                     end
                 end
@@ -357,8 +409,10 @@ module snpu_seq #(
                     cfg_tile0_o <= tile;
                     cfg_oy0_o <= oy0;
                     cfg_out_rows_o <= rows;
-                    cfg_plane_words_o <= rows_in * in_w;
-                    out_base_o <= d[15] + oy0 * d[17];
+                    cfg_plane_words_o <= t_pw[IBUF_AW-1:0];
+                    out_base_o <= d[15] + t_ob;
+                    res_term <= 32'd0;
+                    res_left <= n_planes;
                     unit_start_o <= 1'b1;
                     state <= S_RUN_WAIT;
                 end
@@ -372,6 +426,7 @@ module snpu_seq #(
                         state <= S_DESC_END;
                     end else begin
                         tile <= tile + 1'b1;
+                        oy0_run <= oy0_run + tile_rows;
                         state <= S_TILE;
                     end
                 end
@@ -385,7 +440,7 @@ module snpu_seq #(
                         if (f_ups0) begin
                             set_cmd(1'b0, d[4], (in_w >> 1) * 32, 16'd2, 32'd0, in_h >> 1, d[6], src0_planes, d[5], DST_MP_DUP);
                         end else begin
-                            set_cmd(1'b0, d[4], in_h * in_w * 32, src0_planes, d[5], 16'd1, 32'd0, 16'd1, 32'd0, DST_MP);
+                            set_cmd(1'b0, d[4], t_hw << 5, src0_planes, d[5], 16'd1, 32'd0, 16'd1, 32'd0, DST_MP);
                         end
                         state <= S_MP_WAIT;
                     end

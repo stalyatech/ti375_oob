@@ -8,7 +8,7 @@
 // covers the pass boundary: the vector sampled together with the latch pulse
 // is the first one computed with the new weights.
 //
-// Parameters: CHAIN_LEN (default 32). Override with
+// Parameters: CHAIN_LEN (default 32), CASC_LEN (default 8). Override with
 // -Ptb_pe_chain.CHAIN_LEN=16 for the reduced geometry.
 // Plusargs: +SEED=<n>, +VECTORS=<n> vectors per pass (default 400),
 // +PASSES=<n> weight passes (default 8).
@@ -20,8 +20,11 @@ module tb_pe_chain;
 
     parameter CHAIN_LEN = 32;
     parameter FILL_W    = 256;
+    parameter CASC_LEN  = 8;
 
-    localparam LAT    = CHAIN_LEN + 2;
+    localparam N_SEG  = CHAIN_LEN / CASC_LEN;
+    localparam LEVELS = (N_SEG <= 1) ? 0 : (N_SEG <= 2) ? 1 : (N_SEG <= 4) ? 2 : (N_SEG <= 8) ? 3 : 4;
+    localparam LAT    = CHAIN_LEN + 2 + LEVELS;
     localparam NWORDS = (CHAIN_LEN * 16 + FILL_W - 1) / FILL_W;
     localparam PAIRS  = FILL_W / 16;
 
@@ -48,7 +51,7 @@ module tb_pe_chain;
         .clk(clk), .d_i({CHAIN_LEN{latch}}), .d_o(latch_skew)
     );
 
-    snpu_pe_chain #(.CHAIN_LEN(CHAIN_LEN), .FILL_W(FILL_W)) u_dut (
+    snpu_pe_chain #(.CHAIN_LEN(CHAIN_LEN), .FILL_W(FILL_W), .CASC_LEN(CASC_LEN)) u_dut (
         .clk(clk), .rst(rst),
         .x_i(x_skew), .latch_i(latch_skew),
         .fill_we_i(fill_we), .fill_sel_i(fill_sel), .fill_data_i(fill_data),

@@ -28,7 +28,7 @@ davranışsal DSP ikizini seçer (vendor modelsiz, hızlı); nihai kanıt vendor
 | # | Test | DUT | Kontrol | Durum |
 |---|------|-----|---------|-------|
 | U1 | `tb_dsp_mac` | `snpu_dsp_mac2` FIRST/LAST ve gövde örnekleri | Her çevrim `$signed` çarpım + kaskad toplamı ile karşılaştırma; her iki lane; CE ile ağırlık latch'i; 24-bit sarma ve OVFL; uç değerler (-128·-128 vb.); reset ortasında; 20k rastgele çevrim | PASS (vendor + behav) |
-| U2 | `tb_pe_chain` | `snpu_skew` ×2 + `snpu_pe_chain` (32) | 32'lik nokta çarpım kuyruğu, gecikme `CHAIN_LEN+2`, akış sırasında shadow doldurma + latch, geçiş sınırı vektörü, uç ağırlıklar | PASS |
+| U2 | `tb_pe_chain` | `snpu_skew` ×2 + `snpu_pe_chain` (32) | 32'lik nokta çarpım kuyruğu, gecikme `CHAIN_LEN+2+log2(CHAIN_LEN/CASC_LEN)`, akış sırasında shadow doldurma + latch, geçiş sınırı vektörü, uç ağırlıklar | PASS |
 | U2b | `tb_pe_chain_16` | aynı, `CHAIN_LEN=16` | parametrelendirme | PASS |
 | L1 | `tb_conv_conv1x1` | `snpu_conv_unit` (small512: 16×16, 512 MAC) | 1×1, 32→32, 2 IC grubu | PASS |
 | L2 | `tb_conv_conv3x3` | aynı | 3×3, 32→64 (2 OC döşemesi), SiLU | PASS |

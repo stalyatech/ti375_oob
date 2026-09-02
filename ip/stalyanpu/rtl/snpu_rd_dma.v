@@ -84,6 +84,18 @@ module snpu_rd_dma #(
     reg [3:0]  outstanding [0:1];
     // receive side
     reg [31:0] r_total [0:1];      // bytes still to be received for the command
+    // Chunk start accumulators of the three nest levels, so the next chunk
+    // address is a plain add instead of an index times stride product.
+    reg [31:0] a0 [0:1];
+    reg [31:0] a1 [0:1];
+    reg [31:0] a2 [0:1];
+    // The command total is len*n0*n1*n2. The product is built over six
+    // cycles after acceptance, one multiply every second cycle; warm counts
+    // them down and gates the issue.
+    reg [2:0]  warm [0:1];
+    reg [47:0] tprod [0:1];
+    reg [15:0] tn1 [0:1];
+    reg [15:0] tn2 [0:1];
     reg [2:0]  beat_cnt [0:1];
     reg [255:0] word_acc [0:1];
 
@@ -109,8 +121,8 @@ module snpu_rd_dma #(
 
     // Address issue: round robin between channels with pending bursts.
     reg rr;
-    wire can0 = active[0] && !issue_done[0] && (outstanding[0] < MAX_OUTSTANDING);
-    wire can1 = active[1] && !issue_done[1] && (outstanding[1] < MAX_OUTSTANDING);
+    wire can0 = active[0] && (warm[0] == 3'd0) && !issue_done[0] && (outstanding[0] < MAX_OUTSTANDING);
+    wire can1 = active[1] && (warm[1] == 3'd0) && !issue_done[1] && (outstanding[1] < MAX_OUTSTANDING);
     wire pick = (can0 && can1) ? rr : can1;
     wire issue = (can0 || can1) && !m_arvalid;
     wire [31:0] pick_bytes = burst_bytes(chunk_addr[pick], chunk_left[pick]);
@@ -143,6 +155,8 @@ module snpu_rd_dma #(
                 i0[i] <= 16'd0; i1[i] <= 16'd0; i2[i] <= 16'd0; chunk_addr[i] <= 32'd0; chunk_left[i] <= 32'd0;
                 issue_done[i] <= 1'b0; outstanding[i] <= 4'd0; r_total[i] <= 32'd0; beat_cnt[i] <= 3'd0;
                 word_acc[i] <= 256'd0;
+                a0[i] <= 32'd0; a1[i] <= 32'd0; a2[i] <= 32'd0;
+                warm[i] <= 3'd0; tprod[i] <= 48'd0; tn1[i] <= 16'd0; tn2[i] <= 16'd0;
             end
             m_arvalid <= 1'b0; m_araddr <= 32'd0; m_arlen <= 8'd0; m_arid <= 4'd0;
             rr <= 1'b0; issue_ch <= 1'b0;
@@ -160,9 +174,27 @@ module snpu_rd_dma #(
                     i0[i] <= 16'd0; i1[i] <= 16'd0; i2[i] <= 16'd0;
                     chunk_addr[i] <= cmd_addr_i[i*32 +: 32];
                     chunk_left[i] <= cmd_len_i[i*32 +: 32];
+                    a0[i] <= cmd_addr_i[i*32 +: 32];
+                    a1[i] <= cmd_addr_i[i*32 +: 32];
+                    a2[i] <= cmd_addr_i[i*32 +: 32];
                     issue_done[i] <= 1'b0;
-                    r_total[i] <= cmd_len_i[i*32 +: 32] * cmd_n0_i[i*16 +: 16] * cmd_n1_i[i*16 +: 16] * cmd_n2_i[i*16 +: 16];
+                    warm[i] <= 3'd6;
+                    tn1[i] <= cmd_n1_i[i*16 +: 16];
+                    tn2[i] <= cmd_n2_i[i*16 +: 16];
                     beat_cnt[i] <= 3'd0;
+                end else if (warm[i] == 3'd6) begin
+                    tprod[i] <= len[i] * n0[i];
+                    warm[i] <= 3'd5;
+                end else if (warm[i] == 3'd4) begin
+                    tprod[i] <= tprod[i][31:0] * tn1[i];
+                    warm[i] <= 3'd3;
+                end else if (warm[i] == 3'd2) begin
+                    tprod[i] <= tprod[i][31:0] * tn2[i];
+                    warm[i] <= 3'd1;
+                end else if (warm[i] != 3'd0) begin
+                    if (warm[i] == 3'd1)
+                        r_total[i] <= tprod[i][31:0];
+                    warm[i] <= warm[i] - 3'd1;
                 end
             end
             // Address channel.
@@ -179,16 +211,22 @@ module snpu_rd_dma #(
                     // Chunk complete: advance the nest.
                     if (i0[pick] + 1 < n0[pick]) begin
                         i0[pick] <= i0[pick] + 1'b1;
-                        chunk_addr[pick] <= base[pick] + (i0[pick] + 1) * s0[pick] + i1[pick] * s1[pick] + i2[pick] * s2[pick];
+                        a0[pick] <= a0[pick] + s0[pick];
+                        chunk_addr[pick] <= a0[pick] + s0[pick];
                     end else if (i1[pick] + 1 < n1[pick]) begin
                         i0[pick] <= 16'd0;
                         i1[pick] <= i1[pick] + 1'b1;
-                        chunk_addr[pick] <= base[pick] + (i1[pick] + 1) * s1[pick] + i2[pick] * s2[pick];
+                        a1[pick] <= a1[pick] + s1[pick];
+                        a0[pick] <= a1[pick] + s1[pick];
+                        chunk_addr[pick] <= a1[pick] + s1[pick];
                     end else if (i2[pick] + 1 < n2[pick]) begin
                         i0[pick] <= 16'd0;
                         i1[pick] <= 16'd0;
                         i2[pick] <= i2[pick] + 1'b1;
-                        chunk_addr[pick] <= base[pick] + (i2[pick] + 1) * s2[pick];
+                        a2[pick] <= a2[pick] + s2[pick];
+                        a1[pick] <= a2[pick] + s2[pick];
+                        a0[pick] <= a2[pick] + s2[pick];
+                        chunk_addr[pick] <= a2[pick] + s2[pick];
                     end else begin
                         issue_done[pick] <= 1'b1;
                     end

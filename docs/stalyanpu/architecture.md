@@ -7,7 +7,7 @@ tarafında `hwcfg.py` (`full2048` / `small256` presetleri) aynı değerleri taş
 
 | Konu | Karar |
 |------|-------|
-| Dizi | 1024 DSP48 DUAL = **2048 INT8 MAC/çevrim**; 32 kaskad zinciri (`N_CHAIN`) × 32 DSP (`CHAIN_LEN`). Zincir = 32 giriş kanalı (IC), DSP = 1 IC × 2 çıkış kanalı (OC, lane başına 1). Döşeme: **32 IC × 64 OC, çevrimde 1 çıkış pikseli** |
+| Dizi | 1024 DSP48 DUAL = **2048 INT8 MAC/çevrim**; 32 zincir (`N_CHAIN`) × 32 DSP (`CHAIN_LEN`); her zincir 4 fiziksel kaskat × 8 DSP (`CASC_LEN`, bkz. synthesis-guide). Zincir = 32 giriş kanalı (IC), DSP = 1 IC × 2 çıkış kanalı (OC, lane başına 1). Döşeme: **32 IC × 64 OC, çevrimde 1 çıkış pikseli** |
 | Veri akışı | Ağırlık-sabit sistolik kaskad: ağırlık DSP `B_REG`'de (CE = latch), iact `A`'dan 32 kademeli çarpıklıkla (skew) akar, kısmi toplamlar `CASCIN/CASCOUT` zincirinde. DSP içinde birikim yok: 32 çarpım ≤ 2^19, 24-bit lane taşmaz. Tap ve IC-grubu birikimi 32-bit RAM10 biriktiricide |
 | Biriktirici | `snpu_acc`: 2 bank × 1024 px × 64 OC × 32 bit (2048-bit geniş RMW, 64 toplayıcı), 412 RAM10. En kötü 4608 terim × 2^14 = 2^26,2 < 2^31. Bank değişince epilog boşaltır |
 | 3×3 / 1×1 / stride 2 | Aynı makine: tap ofsetleri ibuf okuma adresinde, im2col yok. Dolgu değeri `zp_in` |
@@ -50,7 +50,7 @@ ağırlık latch'i. `SNPU_SIM_BEHAV` ile davranışsal ikiz. Gecikme: x örnekle
 
 `snpu_skew.v`: üçgen gecikme hattı (lane i, i çevrim). `snpu_wshadow.v`: zincir başına
 32 × 16-bit gölge, 256-bit dolum kelimeleri (32 zincir için pass başına 64 çevrim).
-`snpu_pe_chain.v`: 32 DSP + gölge + kaskad; çıkış s + CHAIN_LEN + 2. Latch darbesi s
+`snpu_pe_chain.v`: 32 DSP + gölge; CASC_LEN'lik kaskatlar SRL hizalama ve kayıtlı toplama ağacıyla birleşir; çıkış s + CHAIN_LEN + 2 + log2(CHAIN_LEN/CASC_LEN). Latch darbesi s
 kenarında örneklenen vektörden itibaren tüm zincirde geçerlidir; yeni dolum son DSP
 latch'ledikten (s + CHAIN_LEN - 1) sonra başlayabilir.
 
@@ -59,7 +59,7 @@ latch'ledikten (s + CHAIN_LEN - 1) sonra başlayabilir.
 `snpu_conv_unit`: agen → ibuf (1 çevrim) → zp kapısı → dizi → acc → epilog. Kontrol
 kuralları (M3'te hata ayıklamayla sabitlendi):
 
-- Dizi yan bandı (valid/first/last/tile_end/p) veriyle aynı gecikmede (CHAIN_LEN+2) taşınır.
+- Dizi yan bandı (valid/first/last/tile_end/p) veriyle aynı gecikmede (LAT = CHAIN_LEN+2+seviye) taşınır.
 - `tile_end` diziden geçerken (`end_pending`) bir sonraki döşeme başlatılmaz; bank ancak
   biriktiricideki `tile_done` sonrası değişir.
 - Epilog, bank release'ini son sözcüğü stage 2'ye aldığı kenarda verir (`drain_open`), böylece
@@ -145,7 +145,7 @@ katman füzyonu M9'a eklendi.
 | `snpu_dsp_mac2.v` | DSP48 DUAL sarmalayıcı | M0 ✔ |
 | `snpu_skew.v` | üçgen gecikme hattı | M0 ✔ |
 | `snpu_wshadow.v` | gölge ağırlık | M0 ✔ |
-| `snpu_pe_chain.v` | 32 DSP kaskad zinciri | M0 ✔ |
+| `snpu_pe_chain.v` | 32 DSP zinciri, CASC_LEN'lik kaskatlar | M0 ✔ |
 | `snpu_pe_array.v` | N_CHAIN zincir, paylaşımlı skew hatları (SKEW_COPIES), yan bant gecikme hattı (LAT+1) | M3 ✔ |
 | `snpu_acc.v` | 2 bank × P_MAX × N_OC × 32 bit RMW biriktirici; okuma portu dizi/epilog paylaşımlı, epilog okuma-etkin (`ep_re`) | M3 ✔ |
 | `snpu_ibuf.v` | IBUF_WORDS × 256 bit basit çift portlu RAM | M3 ✔ |

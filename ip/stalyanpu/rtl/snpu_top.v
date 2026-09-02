@@ -82,7 +82,7 @@ module snpu_top #(
         end
     endfunction
 
-    localparam [31:0] GEOMETRY = {12'((IBUF_WORDS * 32) / 1024), 4'(clog2(P_MAX)), 8'(CHAIN_LEN), 8'(N_CHAIN)};
+    localparam [31:0] GEOMETRY = (((IBUF_WORDS * 32) / 1024) << 20) | (clog2(P_MAX) << 16) | (CHAIN_LEN << 8) | N_CHAIN;
 
     // ---- CSR
     wire start, abort, soft_rst;
@@ -363,13 +363,41 @@ module snpu_top #(
     wire px_new = (o_px != t_px);
     wire [15:0] n_col = !px_new ? t_col : (o_px == 16'd0) ? 16'd0 : ((t_col + 1 == out_w) ? 16'd0 : t_col + 1);
     wire [15:0] n_row = !px_new ? t_row : (o_px == 16'd0) ? 16'd0 : ((t_col + 1 == out_w) ? t_row + 1 : t_row);
-    wire [31:0] o_addr = out_base + o_plane * out_ps + n_row * out_rs + {n_col, 5'd0};
+
+    // The plane term p * out_ps comes from a table that a walker rebuilds
+    // whenever out_ps changes; the walker finishes long before the first
+    // output word because the input rows are fetched first. The row term
+    // is a running sum advanced with the tracked row, so the address is a
+    // plain sum of registered values.
+    reg [31:0] pt [0:15];
+    reg [31:0] pt_acc, out_ps_q;
+    reg [4:0]  pt_i;
+    integer pk;
+    always @(posedge clk) begin
+        if (rst_all) begin
+            out_ps_q <= 32'hFFFFFFFF; pt_acc <= 32'd0; pt_i <= 5'd16;
+            for (pk = 0; pk < 16; pk = pk + 1)
+                pt[pk] <= 32'd0;
+        end else if (out_ps_q != out_ps) begin
+            out_ps_q <= out_ps;
+            pt_acc <= 32'd0;
+            pt_i <= 5'd0;
+        end else if (pt_i < 5'd16) begin
+            pt[pt_i[3:0]] <= pt_acc;
+            pt_acc <= pt_acc + out_ps;
+            pt_i <= pt_i + 5'd1;
+        end
+    end
+
+    reg [31:0] t_rowt;
+    wire [31:0] n_rowt = !px_new ? t_rowt : (o_px == 16'd0) ? 32'd0 : ((t_col + 1 == out_w) ? t_rowt + out_rs : t_rowt);
+    wire [31:0] o_addr = out_base + pt[o_plane[3:0]] + n_rowt + {n_col, 5'd0};
 
     always @(posedge clk) begin
         if (rst_all) begin
-            t_px <= 16'hFFFF; t_row <= 16'd0; t_col <= 16'd0;
+            t_px <= 16'hFFFF; t_row <= 16'd0; t_col <= 16'd0; t_rowt <= 32'd0;
         end else if (o_valid && o_ready) begin
-            t_px <= o_px; t_row <= n_row; t_col <= n_col;
+            t_px <= o_px; t_row <= n_row; t_col <= n_col; t_rowt <= n_rowt;
         end
     end
 

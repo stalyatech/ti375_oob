@@ -1,6 +1,6 @@
 # StalyaNPU: YOLOv8s için INT8 CNN hızlandırıcısı
 
-> **DURUM (2026-08-28): M0'dan M4'e kadar tamamlandı.** Dal `stalya-fmu_v2.0-npu`. Karar kaydı,
+> **DURUM (2026-09-02): M0'dan M5'e kadar tamamlandı.** Dal `stalya-fmu_v2.0-npu`. Karar kaydı,
 > mimari, ISA taslağı, performans modeli, ONNX ön yüzü, ilk RTL adımı (DSP48 DUAL sarmalayıcı +
 > kaskad zinciri, Efinix sim modeliyle bit bit) ve nicemleme hattı (kalibrasyon, bit-kesin
 > referans model, COCO mAP) hazır. **INT8 mAP50-95 düşüşü 0,78 puan (kapı 2,0)**, bkz.
@@ -8,7 +8,11 @@
 > YOLOv8s tam ağda referans modelle bit bit eşleşiyor. Konvolüsyon motoru RTL'i
 > (`snpu_conv_unit`: dizi, biriktirici, ibuf, agen, wfifo, epilog) 7 katman testinde Python altınıyla
 > bit bit, tam 1024 DSP geometrisi dahil. `snpu_top` (DMA, sequencer, CSR, maxpool) demo ağının
-> 5 descriptor'ını uçtan uca yorumlayıcıyla bit bit koşuyor. Sonraki adım M5 (Efinity sentez, 250 MHz).
+> 5 descriptor'ını uçtan uca yorumlayıcıyla bit bit koşuyor. Efinity sentezi (M5): dizi tek başına
+> 258 MHz, konvolüsyon motoru **256 MHz (+0,091 ns)**, tam `snpu_top` 244 MHz (-0,105 ns, yerleşim
+> gürültüsü bandında; kapanış M7 entegrasyonunda sürecek). Ti375'te DSP kaskadı sütun başına 48
+> blokla sınırlı; zincirler 8'lik dört kaskada bölündü. Ayrıntı: [synthesis-guide.md](synthesis-guide.md).
+> Sonraki adım M6 (YOLOv8s katman katman + tam ağ simülasyonu).
 > Üst seviye tasarım (`ti375_oob_top.v`) henüz değişmedi; OpenEye bitstream'i bozulmadı.
 
 Hedef: **YOLOv8s, 1080p kaynaktan 640×384 letterbox, 30 fps, INT8**, Efinix Titanium
@@ -23,6 +27,7 @@ Ti375C529 üzerinde. Gerek 8,6 GMAC/kare → 258 GMAC/s sürekli.
 | [isa-descriptor.md](isa-descriptor.md) | 128 baytlık descriptor formatı, CSR haritası, blob başlığı, IRQ ve hata semantiği |
 | [toolchain-guide.md](toolchain-guide.md) | Python paketi kurulumu ve komutları, nicemleme semantiği, perf modeli |
 | [verification-guide.md](verification-guide.md) | Sim ağacı, `run_sim.py`, test listesi, PASS ölçütleri |
+| [synthesis-guide.md](synthesis-guide.md) | Efinity sentez projeleri, DSP sütun kısıtı, zamanlama durumu (M5) |
 | [bringup-guide.md](bringup-guide.md) | Board üzerinde doğrulama akışı (M8) |
 | [accuracy-report.md](accuracy-report.md) | INT8 PTQ kalibrasyon taraması ve COCO mAP sonuçları (M1) |
 
@@ -75,7 +80,7 @@ python -m venv .venv-stalyanpu
 | M2 | Emitter, blob, tiler, allocator, `interp.py`, altın üretici | interp ≡ runner tüm ağ | **tamam** (66 descriptor, bit bit OK) |
 | M3 | Dizi + acc + ibuf + wfifo + epilog RTL, katman TB'leri | tümü PASS | **tamam** (7/7, vendor DSP modeli + ikiz) |
 | M4 | DMA, seq, csr, maxpool5, `snpu_top`, AXI bellek modeli; descriptor tabanlı testler | PASS | **tamam** (4/4 net testi, demo ağı uçtan uca) |
-| M5 | Dizi-tek Efinity sentezi | 250 MHz pozitif slack | |
+| M5 | Dizi-tek Efinity sentezi | 250 MHz pozitif slack | **tamam** (dizi 258, motor 256 MHz pozitif; top 244 MHz, DSP 1186, RAM10 1149) |
 | M6 | YOLOv8s katman-katman + tam ağ sim | %100 PASS | |
 | M7 | `ti375_oob_top.v` entegrasyonu (OpenEye çıkar) | map/pnr/pgm PASS | |
 | M8 | Board bring-up | ≥ 30 fps ölçüm | |

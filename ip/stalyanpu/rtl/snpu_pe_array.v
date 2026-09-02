@@ -2,7 +2,7 @@
 // snpu_pe_array.v
 //
 // N_CHAIN cascade chains behind shared skew lines. Each cycle the array
-// takes one activation vector of CHAIN_LEN bytes and, CHAIN_LEN + 2 cycles
+// takes one activation vector of CHAIN_LEN bytes and, LAT cycles
 // later, delivers 2 * N_CHAIN partial sums of 24 bits together with the
 // side band (valid, first, last, pixel index) delayed by the same amount.
 //
@@ -18,7 +18,8 @@ module snpu_pe_array #(
     parameter CHAIN_LEN = 32,
     parameter FILL_W    = 256,
     parameter P_W       = 10,
-    parameter SKEW_COPIES = 1
+    parameter SKEW_COPIES = 1,
+    parameter CASC_LEN  = 8
 )(
     input  wire                     clk,
     input  wire                     rst,
@@ -42,7 +43,11 @@ module snpu_pe_array #(
     output wire                     ovfl_o
 );
 
-    localparam LAT = CHAIN_LEN + 2;
+    // Chain latency: skew, the four DSP stages, then one register per
+    // level of the cascade adder tree (see snpu_pe_chain).
+    localparam N_SEG  = CHAIN_LEN / CASC_LEN;
+    localparam LEVELS = (N_SEG <= 1) ? 0 : (N_SEG <= 2) ? 1 : (N_SEG <= 4) ? 2 : (N_SEG <= 8) ? 3 : 4;
+    localparam LAT = CHAIN_LEN + 2 + LEVELS;
 
     // Skew lines. Several copies of the data line cut the fanout into the
     // chains; each copy serves N_CHAIN / SKEW_COPIES chains.
@@ -68,7 +73,7 @@ module snpu_pe_array #(
     generate
         for (c = 0; c < N_CHAIN; c = c + 1) begin : g_chain
             wire [23:0] lo, hi;
-            snpu_pe_chain #(.CHAIN_LEN(CHAIN_LEN), .FILL_W(FILL_W)) u_chain (
+            snpu_pe_chain #(.CHAIN_LEN(CHAIN_LEN), .FILL_W(FILL_W), .CASC_LEN(CASC_LEN)) u_chain (
                 .clk         (clk),
                 .rst         (rst),
                 .x_i         (x_skew[c / (N_CHAIN / SKEW_COPIES)]),

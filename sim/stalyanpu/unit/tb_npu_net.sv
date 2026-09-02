@@ -181,7 +181,7 @@ module tb_npu_net;
         if (dbg) begin
             if (u_dut.unit_start) $display("DBG t=%0t unit_start tile0=%0d row_base=%0d plane_words=%0d", $time, u_dut.cfg_tile0, u_dut.cfg_row_base, u_dut.cfg_plane_words);
             if (u_dut.drain_start) $display("DBG t=%0t drain_start oct=%0d", $time, u_dut.drain_oct);
-            if (u_dut.u_unit.u_acc.s2_end) $display("DBG t=%0t tile_done wr_bank=%0d full=%b", $time, u_dut.u_unit.u_acc.wr_bank, u_dut.u_unit.u_acc.full);
+            if (u_dut.u_unit.u_acc.s3_end) $display("DBG t=%0t tile_done wr_bank=%0d full=%b", $time, u_dut.u_unit.u_acc.wr_bank, u_dut.u_unit.u_acc.full);
             if (u_dut.u_unit.u_acc.ep_release_i) $display("DBG t=%0t release rd_bank=%0d", $time, u_dut.u_unit.u_acc.rd_bank);
             if (u_dut.ibuf_fill_rst) $display("DBG t=%0t ibuf_fill_rst", $time);
             if (dbg > 2 && u_dut.u_seq.state != seq_state_q)
@@ -213,7 +213,7 @@ module tb_npu_net;
                 $display("DBG t=%0t ep s1 plane=%0d px=%0d rd_bank=%0d full=%b wr_bank=%0d acc_lane0=%0d acc_lane1=%0d prm0=%h", $time,
                          u_dut.u_unit.u_ep.s1_plane, u_dut.u_unit.u_ep.s1_px, u_dut.u_unit.u_acc.rd_bank, u_dut.u_unit.u_acc.full,
                          u_dut.u_unit.u_acc.wr_bank, $signed(u_dut.u_unit.u_ep.ep_data_i[31:0]), $signed(u_dut.u_unit.u_ep.ep_data_i[63:32]),
-                         u_dut.u_unit.u_ep.s1_prm[0]);
+                         u_dut.u_unit.u_ep.g_lane[0].u_lane.s1_prm);
             if (dbg > 1 && u_dut.u_unit.u_acc.s1_v && u_dut.u_unit.u_acc.s1_p == 0 && u_dut.u_unit.u_acc.s1_end)
                 $display("DBG t=%0t acc final write p0 bank=%0d sum0=%0d", $time, u_dut.u_unit.u_acc.s1_bank, $signed(u_dut.u_unit.u_acc.sum[31:0]));
             if (dbg > 1 && u_dut.u_unit.u_acc.s1_v && u_dut.u_unit.u_acc.s1_p == 0 && !u_dut.u_unit.u_acc.s1_first)

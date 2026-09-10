@@ -77,8 +77,22 @@ def main():
         else:
             continue
         est = layer_cycles(lay, hw)
+        if op == 1:
+            # The v1 sequencer fills the input rows before each tile run and
+            # only overlaps the weight, residual and output traffic with the
+            # compute, so the serial part is the input fill alone.
+            ic_layout = hw.stem_ic_pad if lay.stem else (lay.ic + 31) // 32 * 32
+            bytes_in = 0
+            remaining = lay.out_h
+            for t in range(est.n_tiles):
+                r = min(est.rows_per_tile, remaining)
+                remaining -= r
+                bytes_in += min(r * lay.s + lay.k - 1, lay.in_h) * lay.in_w * ic_layout
+            serial = est.cyc_mac + est.cyc_tile + -(-bytes_in // hw.bytes_per_cycle) + hw.t_op
+        else:
+            serial = est.cycles
         meas = measured_cycles(os.path.join(a.logs, f"tb_yolo_l{i}.log"))
-        rows.append((i, prog.desc_names[i], est.cycles, meas))
+        rows.append((i, prog.desc_names[i], serial, meas))
 
     print(f"{'idx':>4} {'model':>10} {'rtl':>10} {'dev%':>7}  name")
     t_model = t_rtl = n_meas = 0

@@ -14,7 +14,9 @@
 //
 // Addresses and lengths are multiples of 32 bytes. Chunks are split into
 // bursts of at most BURST_BYTES that never cross a 4 KB boundary. Up to
-// MAX_OUTSTANDING bursts per channel are in flight; the AXI ID carries the
+// MAX_OUTSTANDING bursts per channel are in flight; the SoC fabric ties all
+// AXI IDs to zero, so responses come back in issue order and a small order
+// FIFO carries the
 // channel so returning data is routed by RID. The read data channel is
 // held (rready low) while the destination of the head word is not ready.
 // =============================================================================
@@ -128,8 +130,13 @@ module snpu_rd_dma #(
     wire [31:0] pick_bytes = burst_bytes(chunk_addr[pick], chunk_left[pick]);
     reg issue_ch;
 
-    // Read data routing.
-    wire rch = m_rid[0];
+    // Read data routing. The fabric does not transport IDs (all zero), so
+    // responses arrive in issue order and the order FIFO names the channel
+    // of the burst at the head. Depth 8 covers both channels at their full
+    // outstanding limit.
+    reg [7:0] ord_ch;
+    reg [2:0] ord_wp, ord_rp;
+    wire rch = ord_ch[ord_rp];
     wire word_done = (beat_cnt[rch] == BEATS_PER_WORD - 1);
     reg [1:0] dv;
     reg [511:0] dd;
@@ -160,6 +167,7 @@ module snpu_rd_dma #(
             end
             m_arvalid <= 1'b0; m_araddr <= 32'd0; m_arlen <= 8'd0; m_arid <= 4'd0;
             rr <= 1'b0; issue_ch <= 1'b0;
+            ord_ch <= 8'd0; ord_wp <= 3'd0; ord_rp <= 3'd0;
             dv <= 2'b00; dd <= 512'd0; dl <= 2'b00; ddst <= 8'd0; err_o <= 1'b0;
         end else begin
             // Command acceptance.
@@ -236,6 +244,13 @@ module snpu_rd_dma #(
                     chunk_left[pick] <= chunk_left[pick] - pick_bytes;
                 end
             end
+            // Issue order bookkeeping.
+            if (ar_go) begin
+                ord_ch[ord_wp] <= issue_ch;
+                ord_wp <= ord_wp + 3'd1;
+            end
+            if (burst_end)
+                ord_rp <= ord_rp + 3'd1;
             // Outstanding counters.
             for (i = 0; i < 2; i = i + 1)
                 outstanding[i] <= outstanding[i] + ((ar_go && (issue_ch == i)) ? 4'd1 : 4'd0)

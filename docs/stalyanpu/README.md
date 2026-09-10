@@ -81,7 +81,7 @@ python -m venv .venv-stalyanpu
 | M3 | Dizi + acc + ibuf + wfifo + epilog RTL, katman TB'leri | tümü PASS | **tamam** (7/7, vendor DSP modeli + ikiz) |
 | M4 | DMA, seq, csr, maxpool5, `snpu_top`, AXI bellek modeli; descriptor tabanlı testler | PASS | **tamam** (4/4 net testi, demo ağı uçtan uca) |
 | M5 | Dizi-tek Efinity sentezi | 250 MHz pozitif slack | **tamam** (dizi 258, motor 256 MHz pozitif; top 244 MHz, DSP 1186, RAM10 1149) |
-| M6 | YOLOv8s katman-katman + tam ağ sim | %100 PASS | |
+| M6 | YOLOv8s katman-katman + tam ağ sim | %100 PASS | katmanlar **tamam** (66/66 kırpılmış behav + vendor alt küme 5/5; perf bandı ±%18, bkz. verification-guide); tam ağ koşumda |
 | M7 | `ti375_oob_top.v` entegrasyonu (OpenEye çıkar) | map/pnr/pgm PASS | |
 | M8 | Board bring-up | ≥ 30 fps ölçüm | |
 | M9 | Dokümantasyon, dedicated DDR portu, Linux yer tutucu | | |

@@ -355,8 +355,17 @@ module snpu_top #(
     wire [7:0]  o_plane = mp_busy ? mp_out_plane : cu_out_plane;
     wire [15:0] o_px = mp_busy ? mp_out_px : cu_out_px;
     wire        o_ready;
-    assign mp_out_ready = mp_busy && o_ready;
-    assign cu_out_ready = !mp_busy && o_ready;
+    // The busy select is registered before it reaches the epilogue clock
+    // enables. Conv and maxpool never produce output in the same descriptor,
+    // so the one cycle skew at a descriptor boundary is harmless and it keeps
+    // the maxpool state out of the epilogue enable path.
+    reg mp_busy_q;
+    always @(posedge clk) begin
+        if (rst) mp_busy_q <= 1'b0;
+        else     mp_busy_q <= mp_busy;
+    end
+    assign mp_out_ready = mp_busy_q && o_ready;
+    assign cu_out_ready = !mp_busy_q && o_ready;
 
     reg [15:0] t_px, t_row, t_col;
     // Row and column of the word on the bus, derived from the tracked pixel.

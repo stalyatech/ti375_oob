@@ -39,8 +39,8 @@ davranışsal DSP ikizini seçer (vendor modelsiz, hızlı); nihai kanıt vendor
 | L7 | `tb_conv_full` | tam geometri 32×32 (1024 DSP) | 3×3, 40→96, SiLU | PASS |
 | N1 | `tb_layer_demo0/1/3` | `snpu_top` + `axi4_mem_model` (small512) | Demo ağının tek descriptor'ı: stem (3 döşeme), residual conv (split kaynak), maxpool5 (upsample görünüm); descriptor CRC, param/LUT yükleme, DMA, yazma adresleri; `interp.py` altınıyla bölge karşılaştırması | PASS |
 | N2 | `tb_net_demo` | aynı | Demo ağının 5 descriptor'ı zincirleme, descriptor başına dump bölgeleri dahil 6 bölge bit bit | PASS |
-| Y1 | `tb_yolo_l0` .. `tb_yolo_l65` (`group=yolo`, `all` dışı, `.data/build/q_mse` ister) | tam geometri 32×32, 16/32 MB pencereler | Derlenmiş YOLOv8s'in 66 descriptor'ının her biri tek başına, gerçek ağırlık ve gerçek girişle; üreteç yorumlayıcıyı k. descriptor'a kadar koşturur ve descriptor'ı ilk 2 döşemeye kırpar (`--max-tiles`); bellek imajı yalnız okunan sayfaları içerir, tezgah `mem0/mem1.hex` varsa `$readmemh` ile yükler; 66 test tek `yolo_layer` vvp derlemesini paylaşır | bkz. M6 raporu |
-| Y2 | `tb_yolo_net` (`group=yolo_net`) | tam geometri | 66 descriptor'lık listeyi sequencer uçtan uca yürütür, 6 head çıkışı karşılaştırılır | bkz. M6 raporu |
+| Y1 | `tb_yolo_l0` .. `tb_yolo_l65` (`group=yolo`, `all` dışı, `.data/build/q_mse` ister) | tam geometri 32×32, 16/32 MB pencereler | Derlenmiş YOLOv8s'in 66 descriptor'ının her biri tek başına, gerçek ağırlık ve gerçek girişle; üreteç yorumlayıcıyı k. descriptor'a kadar koşturur ve descriptor'ı ilk 2 döşemeye kırpar (`--max-tiles`); bellek imajı yalnız okunan sayfaları içerir, tezgah `mem0/mem1.hex` varsa `$readmemh` ile yükler; 66 test tek `yolo_layer` vvp derlemesini paylaşır | **66/66 PASS** (behav ikiz); vendor modeliyle alt küme l0/l4/l26/l30/l65 **5/5 PASS** |
+| Y2 | `tb_yolo_net` (`group=yolo_net`) | tam geometri | 66 descriptor'lık listeyi sequencer uçtan uca yürütür (tam 640×384, kırpma yok), 6 head çıkışı karşılaştırılır | koşum ~4-6 saat (behav) |
 
 Katman testleri (`group=layer`) vektörlerini `stalyanpu.golden.unit` üretir (`tests.py` `gen`
 kancası; `sim/stalyanpu/stim/<case>/` altında `cfg/ibuf/w/prm/lut/res/golden.hex`). Ağırlık,
@@ -74,9 +74,15 @@ alanına yazılır ve perf_compare model kestirimini o boyutlarla yapar.
 
 `sim/stalyanpu/perf_compare.py`, yolo katman loglarındaki `CYCLE_CNT`
 değerlerini performans modelinin katman kestirimleriyle karşılaştırır ve
-sapma tablosu basar (kapı: toplam ≤ %15). Model DDR trafiğini hesapla
-örtüşük sayar; v1 sequencer dolgu ve koşumu ardışık yürüttüğü için küçük
-katmanlarda sapma büyüktür, değerlendirme toplam üzerinden yapılır.
+sapma tablosu basar. Sonuç (66 katman, kırpılmış koşular,
+`perf_compare_m6.txt`): ölçüm iki analitik sınırın arasında kalır. Tümü
+ardışık modelde RTL %17,9 hızlı, yalnız giriş dolgusu ardışık modelde
+%17,6 yavaş çıkar; gerçek makine ilk gölge dolumlarını ve paylaşılan AXI
+portunu kısmen serileştirdiği için ikisinin ortasındadır. Kırpılmış
+koşular DDR payını abarttığından bu bant tam kare için üst sınırdır; tam
+karede MAC baskındır ve fps projeksiyonu M0 modelinden gelir. Tekil küçük
+katmanlarda sabit ek yükler (CRC, param/LUT yüklemesi) yüzdeyi büyütür,
+değerlendirme toplam üzerinden yapılır.
 
 ## Koşum
 

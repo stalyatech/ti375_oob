@@ -251,7 +251,7 @@ localparam AXIS_DEV	= 2;
 localparam MTSE		= 0;
 localparam MSDHC	= 1;
 localparam MFCU		= 2;
-localparam MDNN		= 3;	// DNN (OpenEye) DMA -> DDR
+localparam MDNN		= 3;	// StalyaNPU accelerator -> DDR
 localparam MCODEC	= 4;	// H.264/H.265 codec -> DDR (stub for now)
 localparam AXIM_DEV	= 5;
 
@@ -755,19 +755,32 @@ tseCore u_tseCore (
 assign userInterruptG = dma_interrupts[0];
 assign userInterruptH = dma_interrupts[1];
 
+// The soft SoC APB window is split: PADDR[14]=0 stays with the DMA
+// control, PADDR[14]=1 reaches the StalyaNPU CSR bridge below.
+wire [31:0] sp_dma_prdata;
+wire        sp_dma_pready;
+wire        sp_dma_pslverr;
+wire [31:0] npu_csr_prdata;
+wire        npu_csr_pready;
+wire        npu_csr_pslverr;
+
+assign sp_apbSlave_0_PRDATA    = sp_apbSlave_0_PADDR[14] ? npu_csr_prdata  : sp_dma_prdata;
+assign sp_apbSlave_0_PREADY    = sp_apbSlave_0_PADDR[14] ? npu_csr_pready  : sp_dma_pready;
+assign sp_apbSlave_0_PSLVERROR = sp_apbSlave_0_PADDR[14] ? npu_csr_pslverr : sp_dma_pslverr;
+
 gDMA u_gDMA (
     .clk                     ( io_ddrMasters_0_clk ),
     .reset                   ( io_ddrMasters_0_reset ),
     .ctrl_clk                ( io_peripheralClk ),
     .ctrl_reset              ( io_peripheralReset ),
     .ctrl_PADDR              ( sp_apbSlave_0_PADDR[13:0] ),
-    .ctrl_PREADY             ( sp_apbSlave_0_PREADY ),
+    .ctrl_PREADY             ( sp_dma_pready ),
     .ctrl_PENABLE            ( sp_apbSlave_0_PENABLE ),
-    .ctrl_PSEL               ( sp_apbSlave_0_PSEL ),
+    .ctrl_PSEL               ( sp_apbSlave_0_PSEL & ~sp_apbSlave_0_PADDR[14] ),
     .ctrl_PWRITE             ( sp_apbSlave_0_PWRITE ),
     .ctrl_PWDATA             ( sp_apbSlave_0_PWDATA ),
-    .ctrl_PRDATA             ( sp_apbSlave_0_PRDATA ),
-    .ctrl_PSLVERROR          ( sp_apbSlave_0_PSLVERROR ),
+    .ctrl_PRDATA             ( sp_dma_prdata ),
+    .ctrl_PSLVERROR          ( sp_dma_pslverr ),
     .ctrl_interrupts         ( dma_interrupts ),
     .read_arvalid            ( m_axis_arvalid[MTSE*1 +: 1] ),
     .read_araddr             ( m_axis_araddr[MTSE*32 +: 32] ),
@@ -829,12 +842,13 @@ gDMA u_gDMA (
 );
 
 //====================================================================
-// DNN (OpenEye) subsystem, driven by the Hard SoC APB (io_apbSlave_0)
-//   PADDR[14]=0 -> gDMA_dnn control (16 KB window)
-//   PADDR[14]=1 -> OpenEye cfg_reg  (via apb3_2_axi4_lite)
-//   Data plane: gDMA_dnn <-> DDR through master port MDNN.
-//   OpenEye core and both stream ports run on io_dnnClk (100 MHz), the
-//   cfg_reg side stays on io_peripheralClk, gDMA_dnn CDCs to the DDR clock.
+// StalyaNPU accelerator. The CSR window lives in the upper half of the
+// soft SoC APB (see the split at the gDMA instance): PADDR[14]=1 reaches
+// the CSR bridge, PADDR[14]=0 stays with the DMA control. The hard SoC
+// shell APB below is tied off, its bridge logic is unused in this build.
+//   Data plane: snpu_top <-> DDR through master port MDNN on
+//   io_ddrMasters_0_clk. The done interrupt enters the hard SoC PLIC on
+//   userInterruptI, which carries PLIC interrupt id 9.
 //====================================================================
 wire [31:0] hp_apbSlave_0_PADDR;
 wire        hp_apbSlave_0_PSEL;
@@ -845,217 +859,116 @@ wire [31:0] hp_apbSlave_0_PRDATA;
 wire        hp_apbSlave_0_PREADY;
 wire        hp_apbSlave_0_PSLVERROR;
 
-wire sel_dnn_dma = hp_apbSlave_0_PSEL & ~hp_apbSlave_0_PADDR[14];
-wire sel_dnn_cfg = hp_apbSlave_0_PSEL &  hp_apbSlave_0_PADDR[14];
+wire sel_npu_csr = sp_apbSlave_0_PSEL & sp_apbSlave_0_PADDR[14];
 
-wire [31:0] dnn_dma_prdata;
-wire        dnn_dma_pready;
-wire        dnn_dma_pslverr;
-wire [1:0]  dnn_dma_interrupts;
-wire [31:0] oe_cfg_prdata;
-wire        oe_cfg_pready;
-wire        oe_cfg_pslverr;
+assign hp_apbSlave_0_PRDATA    = 32'd0;
+assign hp_apbSlave_0_PREADY    = 1'b1;
+assign hp_apbSlave_0_PSLVERROR = 1'b0;
 
-assign hp_apbSlave_0_PRDATA    = hp_apbSlave_0_PADDR[14] ? oe_cfg_prdata  : dnn_dma_prdata;
-assign hp_apbSlave_0_PREADY    = hp_apbSlave_0_PADDR[14] ? oe_cfg_pready  : dnn_dma_pready;
-assign hp_apbSlave_0_PSLVERROR = hp_apbSlave_0_PADDR[14] ? oe_cfg_pslverr : dnn_dma_pslverr;
+wire [5:0]  npu_paddr;
+wire        npu_psel, npu_penable, npu_pwrite;
+wire [31:0] npu_pwdata;
+wire [31:0] npu_prdata;
+wire        npu_pready, npu_pslverr;
+wire        npu_irq;
 
-// OpenEye 64-bit AXI-Stream nets
-wire        oe_dma_i_tvalid, oe_dma_i_tready, oe_dma_i_tlast;
-wire [63:0] oe_dma_i_tdata;
-wire [7:0]  oe_dma_i_tstrb;
-wire        oe_dma_o_tvalid, oe_dma_o_tready, oe_dma_o_tlast;
-wire [63:0] oe_dma_o_tdata;
-wire [7:0]  oe_dma_o_tstrb;
+// The DDR master reset arrives on one wide interface net. Two local flops
+// rebuffer it so the mapper can replicate the driver instead of routing
+// the pad net into every accelerator register.
+reg [1:0] npu_rst_q;
+always @(posedge io_ddrMasters_0_clk)
+    npu_rst_q <= {npu_rst_q[0], io_ddrMasters_0_reset};
+wire npu_rst = npu_rst_q[1];
 
-// OpenEye cfg_reg AXI4-Lite (bridge -> device)
-wire [5:0]  oe_awaddr; wire oe_awvalid, oe_awready;
-wire [31:0] oe_wdata;  wire oe_wvalid,  oe_wready;
-wire [1:0]  oe_bresp;  wire oe_bvalid,  oe_bready;
-wire [5:0]  oe_araddr; wire oe_arvalid, oe_arready;
-wire [31:0] oe_rdata;  wire [1:0] oe_rresp; wire oe_rvalid, oe_rready;
-
-wire dnn_done_irq;
-
-gDMA_dnn u_gDMA_dnn (
-    .clk                     ( io_ddrMasters_0_clk ),
-    .reset                   ( io_ddrMasters_0_reset ),
-    .ctrl_clk                ( io_peripheralClk ),
-    .ctrl_reset              ( io_peripheralReset ),
-    .ctrl_PADDR              ( hp_apbSlave_0_PADDR[13:0] ),
-    .ctrl_PREADY             ( dnn_dma_pready ),
-    .ctrl_PENABLE            ( hp_apbSlave_0_PENABLE ),
-    .ctrl_PSEL               ( sel_dnn_dma ),
-    .ctrl_PWRITE             ( hp_apbSlave_0_PWRITE ),
-    .ctrl_PWDATA             ( hp_apbSlave_0_PWDATA ),
-    .ctrl_PRDATA             ( dnn_dma_prdata ),
-    .ctrl_PSLVERROR          ( dnn_dma_pslverr ),
-    .ctrl_interrupts         ( dnn_dma_interrupts ),
-    .read_arvalid            ( m_axis_arvalid[MDNN*1 +: 1] ),
-    .read_araddr             ( m_axis_araddr[MDNN*32 +: 32] ),
-    .read_arready            ( m_axis_arready[MDNN*1 +: 1] ),
-    .read_arregion           ( m_axis_arregion[MDNN*4 +: 4] ),
-    .read_arlen              ( m_axis_arlen[MDNN*8 +: 8] ),
-    .read_arsize             ( m_axis_arsize[MDNN*3 +: 3] ),
-    .read_arburst            ( m_axis_arburst[MDNN*2 +: 2] ),
-    .read_arlock             ( m_axis_arlock[MDNN*2 +: 1] ),
-    .read_arcache            ( m_axis_arcache[MDNN*4 +: 4] ),
-    .read_arqos              ( m_axis_arqos[MDNN*4 +: 4] ),
-    .read_arprot             ( m_axis_arprot[MDNN*4 +: 3] ),
-    .read_rready             ( m_axis_rready[MDNN*1 +: 1] ),
-    .read_rvalid             ( m_axis_rvalid[MDNN*1 +: 1] ),
-    .read_rdata              ( m_axis_rdata[MDNN*128 +: 128] ),
-    .read_rlast              ( m_axis_rlast[MDNN*1 +: 1] ),
-    .read_rresp              ( m_axis_rresp[MDNN*2 +: 2] ),
-    .write_awvalid           ( m_axis_awvalid[MDNN*1 +: 1] ),
-    .write_awready           ( m_axis_awready[MDNN*1 +: 1] ),
-    .write_awaddr            ( m_axis_awaddr[MDNN*32 +: 32] ),
-    .write_awregion          ( m_axis_awregion[MDNN*4 +: 4] ),
-    .write_awlen             ( m_axis_awlen[MDNN*8 +: 8] ),
-    .write_awsize            ( m_axis_awsize[MDNN*3 +: 3] ),
-    .write_awburst           ( m_axis_awburst[MDNN*2 +: 2] ),
-    .write_awlock            ( m_axis_awlock[MDNN*2 +: 1] ),
-    .write_awcache           ( m_axis_awcache[MDNN*4 +: 4] ),
-    .write_awqos             ( m_axis_awqos[MDNN*4 +: 4] ),
-    .write_awprot            ( m_axis_awprot[MDNN*4 +: 3] ),
-    .write_wvalid            ( m_axis_wvalid[MDNN*1 +: 1] ),
-    .write_wready            ( m_axis_wready[MDNN*1 +: 1] ),
-    .write_wdata             ( m_axis_wdata[MDNN*128 +: 128] ),
-    .write_wstrb             ( m_axis_wstrb[MDNN*16 +: 16] ),
-    .write_wlast             ( m_axis_wlast[MDNN*1 +: 1] ),
-    .write_bvalid            ( m_axis_bvalid[MDNN*1 +: 1] ),
-    .write_bready            ( m_axis_bready[MDNN*1 +: 1] ),
-    .write_bresp             ( m_axis_bresp[MDNN*2 +: 2] ),
-    .dat1_o_clk              ( io_dnnClk ),
-    .dat1_o_reset            ( io_peripheralReset ),
-    .dat1_o_tvalid           ( oe_dma_i_tvalid ),
-    .dat1_o_tready           ( oe_dma_i_tready ),
-    .dat1_o_tdata            ( oe_dma_i_tdata ),
-    .dat1_o_tkeep            ( oe_dma_i_tstrb ),
-    .dat1_o_tdest            (  ),
-    .dat1_o_tlast            ( oe_dma_i_tlast ),
-    .dat0_i_clk              ( io_dnnClk ),
-    .dat0_i_reset            ( io_peripheralReset ),
-    .dat0_i_tvalid           ( oe_dma_o_tvalid ),
-    .dat0_i_tready           ( oe_dma_o_tready ),
-    .dat0_i_tdata            ( oe_dma_o_tdata ),
-    .dat0_i_tkeep            ( oe_dma_o_tstrb ),
-    .dat0_i_tdest            ( 4'b0 ),
-    .dat0_i_tlast            ( oe_dma_o_tlast ),
-    .io_1_descriptorUpdate   (  ),
-    .io_0_descriptorUpdate   (  )
+snpu_apb_cdc u_snpu_apb_cdc (
+    .s_clk     ( io_peripheralClk ),
+    .s_rst     ( io_peripheralReset ),
+    .s_paddr   ( sp_apbSlave_0_PADDR[5:0] ),
+    .s_psel    ( sel_npu_csr ),
+    .s_penable ( sp_apbSlave_0_PENABLE ),
+    .s_pwrite  ( sp_apbSlave_0_PWRITE ),
+    .s_pwdata  ( sp_apbSlave_0_PWDATA ),
+    .s_prdata  ( npu_csr_prdata ),
+    .s_pready  ( npu_csr_pready ),
+    .s_pslverr ( npu_csr_pslverr ),
+    .d_clk     ( io_ddrMasters_0_clk ),
+    .d_rst     ( npu_rst ),
+    .d_paddr   ( npu_paddr ),
+    .d_psel    ( npu_psel ),
+    .d_penable ( npu_penable ),
+    .d_pwrite  ( npu_pwrite ),
+    .d_pwdata  ( npu_pwdata ),
+    .d_prdata  ( npu_prdata ),
+    .d_pready  ( npu_pready ),
+    .d_pslverr ( npu_pslverr )
 );
 
-apb3_2_axi4_lite #(.ADDR_WTH(6)) u_openeye_apb2axil (
-    .clk              ( io_peripheralClk ),
-    .rstn             ( ~io_peripheralReset ),
-    .s_apb3_paddr     ( hp_apbSlave_0_PADDR[5:0] ),
-    .s_apb3_psel      ( sel_dnn_cfg ),
-    .s_apb3_penable   ( hp_apbSlave_0_PENABLE ),
-    .s_apb3_pready    ( oe_cfg_pready ),
-    .s_apb3_pwrite    ( hp_apbSlave_0_PWRITE ),
-    .s_apb3_pwdata    ( hp_apbSlave_0_PWDATA ),
-    .s_apb3_prdata    ( oe_cfg_prdata ),
-    .s_apb3_pslverror ( oe_cfg_pslverr ),
-    .m_axi_awaddr     ( oe_awaddr ),
-    .m_axi_awvalid    ( oe_awvalid ),
-    .m_axi_awready    ( oe_awready ),
-    .m_axi_wdata      ( oe_wdata ),
-    .m_axi_wvalid     ( oe_wvalid ),
-    .m_axi_wready     ( oe_wready ),
-    .m_axi_bresp      ( oe_bresp ),
-    .m_axi_bvalid     ( oe_bvalid ),
-    .m_axi_bready     ( oe_bready ),
-    .m_axi_araddr     ( oe_araddr ),
-    .m_axi_arvalid    ( oe_arvalid ),
-    .m_axi_arready    ( oe_arready ),
-    .m_axi_rresp      ( oe_rresp ),
-    .m_axi_rdata      ( oe_rdata ),
-    .m_axi_rvalid     ( oe_rvalid ),
-    .m_axi_rready     ( oe_rready )
+snpu_top u_snpu (
+    .clk       ( io_ddrMasters_0_clk ),
+    .rst       ( npu_rst ),
+    .paddr_i   ( npu_paddr ),
+    .psel_i    ( npu_psel ),
+    .penable_i ( npu_penable ),
+    .pwrite_i  ( npu_pwrite ),
+    .pwdata_i  ( npu_pwdata ),
+    .prdata_o  ( npu_prdata ),
+    .pready_o  ( npu_pready ),
+    .pslverr_o ( npu_pslverr ),
+    .irq_o     ( npu_irq ),
+    .m_arvalid ( m_axis_arvalid[MDNN*1 +: 1] ),
+    .m_arready ( m_axis_arready[MDNN*1 +: 1] ),
+    .m_araddr  ( m_axis_araddr[MDNN*32 +: 32] ),
+    .m_arlen   ( m_axis_arlen[MDNN*8 +: 8] ),
+    .m_arsize  ( m_axis_arsize[MDNN*3 +: 3] ),
+    .m_arburst ( m_axis_arburst[MDNN*2 +: 2] ),
+    .m_arid    ( ),
+    .m_rvalid  ( m_axis_rvalid[MDNN*1 +: 1] ),
+    .m_rready  ( m_axis_rready[MDNN*1 +: 1] ),
+    .m_rdata   ( m_axis_rdata[MDNN*128 +: 128] ),
+    .m_rid     ( 4'd0 ),
+    .m_rlast   ( m_axis_rlast[MDNN*1 +: 1] ),
+    .m_rresp   ( m_axis_rresp[MDNN*2 +: 2] ),
+    .m_awvalid ( m_axis_awvalid[MDNN*1 +: 1] ),
+    .m_awready ( m_axis_awready[MDNN*1 +: 1] ),
+    .m_awaddr  ( m_axis_awaddr[MDNN*32 +: 32] ),
+    .m_awlen   ( m_axis_awlen[MDNN*8 +: 8] ),
+    .m_awsize  ( m_axis_awsize[MDNN*3 +: 3] ),
+    .m_awburst ( m_axis_awburst[MDNN*2 +: 2] ),
+    .m_awid    ( ),
+    .m_wvalid  ( m_axis_wvalid[MDNN*1 +: 1] ),
+    .m_wready  ( m_axis_wready[MDNN*1 +: 1] ),
+    .m_wdata   ( m_axis_wdata[MDNN*128 +: 128] ),
+    .m_wstrb   ( m_axis_wstrb[MDNN*16 +: 16] ),
+    .m_wlast   ( m_axis_wlast[MDNN*1 +: 1] ),
+    .m_bvalid  ( m_axis_bvalid[MDNN*1 +: 1] ),
+    .m_bready  ( m_axis_bready[MDNN*1 +: 1] ),
+    .m_bresp   ( m_axis_bresp[MDNN*2 +: 2] )
 );
 
-open_eye_mt_v1_0 u_openeye (
-    .clk             ( io_dnnClk ),                 // DNN core on ~100 MHz for timing
-    .rstn            ( ~io_peripheralReset ),
-    .cfg_reg_aclk    ( io_peripheralClk ),          // cfg_reg stays in the APB (peri) domain
-    .cfg_reg_aresetn ( ~io_peripheralReset ),
-    .cfg_reg_awaddr  ( oe_awaddr ),
-    .cfg_reg_awprot  ( 3'b000 ),
-    .cfg_reg_awvalid ( oe_awvalid ),
-    .cfg_reg_awready ( oe_awready ),
-    .cfg_reg_wdata   ( oe_wdata ),
-    .cfg_reg_wstrb   ( 4'hF ),
-    .cfg_reg_wvalid  ( oe_wvalid ),
-    .cfg_reg_wready  ( oe_wready ),
-    .cfg_reg_bresp   ( oe_bresp ),
-    .cfg_reg_bvalid  ( oe_bvalid ),
-    .cfg_reg_bready  ( oe_bready ),
-    .cfg_reg_araddr  ( oe_araddr ),
-    .cfg_reg_arprot  ( 3'b000 ),
-    .cfg_reg_arvalid ( oe_arvalid ),
-    .cfg_reg_arready ( oe_arready ),
-    .cfg_reg_rdata   ( oe_rdata ),
-    .cfg_reg_rresp   ( oe_rresp ),
-    .cfg_reg_rvalid  ( oe_rvalid ),
-    .cfg_reg_rready  ( oe_rready ),
-    .dma_i_aclk      ( io_dnnClk ),
-    .dma_i_aresetn   ( ~io_peripheralReset ),
-    .dma_i_tready    ( oe_dma_i_tready ),
-    .dma_i_tdata     ( oe_dma_i_tdata ),
-    .dma_i_tstrb     ( oe_dma_i_tstrb ),
-    .dma_i_tlast     ( oe_dma_i_tlast ),
-    .dma_i_tvalid    ( oe_dma_i_tvalid ),
-    .dma_o_aclk      ( io_dnnClk ),
-    .dma_o_aresetn   ( ~io_peripheralReset ),
-    .dma_o_tvalid    ( oe_dma_o_tvalid ),
-    .dma_o_tdata     ( oe_dma_o_tdata ),
-    .dma_o_tstrb     ( oe_dma_o_tstrb ),
-    .dma_o_tlast     ( oe_dma_o_tlast ),
-    .dma_o_tready    ( oe_dma_o_tready )
-);
+// Qualifiers the accelerator does not drive on the MDNN slot.
+assign m_axis_arlock  [MDNN*2 +: 2] = 2'b0;
+assign m_axis_arcache [MDNN*4 +: 4] = 4'b0;
+assign m_axis_arqos   [MDNN*4 +: 4] = 4'b0;
+assign m_axis_arregion[MDNN*4 +: 4] = 4'b0;
+assign m_axis_arprot  [MDNN*4 +: 4] = 4'b0;
+assign m_axis_awlock  [MDNN*2 +: 2] = 2'b0;
+assign m_axis_awcache [MDNN*4 +: 4] = 4'b0;
+assign m_axis_awqos   [MDNN*4 +: 4] = 4'b0;
+assign m_axis_awregion[MDNN*4 +: 4] = 4'b0;
+assign m_axis_awprot  [MDNN*4 +: 4] = 4'b0;
 
-// Write-1-to-clear decode for the DNN done interrupt. A CPU write with bit 0
-// set to cfg register offset 0x3C in the OpenEye window produces a one-cycle
-// pulse in the peripheral clock domain. The write also lands in cfg_reg
-// register 15, which is unused by the core.
-wire oe_irq_clr_wr = sel_dnn_cfg & hp_apbSlave_0_PENABLE & hp_apbSlave_0_PWRITE
-                   & oe_cfg_pready & (hp_apbSlave_0_PADDR[5:0] == 6'h3C)
-                   & hp_apbSlave_0_PWDATA[0];
-
-wire dnn_irq_clear_dnnclk;
-
-pulse_sync u_dnn_irq_clr_sync (
-    .src_clk   ( io_peripheralClk ),
-    .src_rst_n ( ~io_peripheralReset ),
-    .src_pulse ( oe_irq_clr_wr ),
-    .dst_clk   ( io_dnnClk ),
-    .dst_rst_n ( ~io_peripheralReset ),
-    .dst_pulse ( dnn_irq_clear_dnnclk )
-);
-
-openeye_irq u_openeye_irq (
-    .clk          ( io_dnnClk ),
-    .rst_n        ( ~io_peripheralReset ),
-    .dma_o_tvalid ( oe_dma_o_tvalid ),
-    .dma_o_tready ( oe_dma_o_tready ),
-    .dma_o_tlast  ( oe_dma_o_tlast ),
-    .irq_clear    ( dnn_irq_clear_dnnclk ),
-    .irq          ( dnn_done_irq )
-);
-
-// The sticky done flag crosses from the DNN clock into the peripheral clock
-// with two flops before it enters the hard SoC PLIC on userInterruptI, which
-// carries PLIC interrupt id 9.
-reg [1:0] dnn_irq_sync;
+// The level interrupt crosses into the peripheral clock with two flops
+// before it enters the hard SoC PLIC (interrupt id 9). The CPU clears it
+// through the CSR IRQ_STATUS register.
+reg [1:0] npu_irq_sync;
 always @(posedge io_peripheralClk) begin
     if (io_peripheralReset)
-        dnn_irq_sync <= 2'b00;
+        npu_irq_sync <= 2'b00;
     else
-        dnn_irq_sync <= {dnn_irq_sync[0], dnn_done_irq};
+        npu_irq_sync <= {npu_irq_sync[0], npu_irq};
 end
 
-assign userInterruptI = dnn_irq_sync[1];
+assign userInterruptI = npu_irq_sync[1];
 
 // Codec DDR master slot (MCODEC) reserved and held idle until the real
 // H.264/H.265 core (codec_h26x_stub interface) replaces this tie-off.

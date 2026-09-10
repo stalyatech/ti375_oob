@@ -1,4 +1,4 @@
-<efx:project xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="ti375_oob" description="" last_change="1787810386" sw_version="2025.2.288" last_run_state="pass" last_run_flow="bitstream" config_result_in_sync="sync" design_ood="sync" place_ood="sync" route_ood="sync" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
+<efx:project xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="ti375_oob" description="" last_change="1788870384" sw_version="2025.2.288" last_run_state="pass" last_run_flow="place" config_result_in_sync="sync" design_ood="sync" place_ood="sync" route_ood="sync" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
     <efx:device_info>
         <efx:family name="Titanium" />
         <efx:device name="Ti375C529" />
@@ -9,47 +9,28 @@
         <efx:design_file name="ti375_oob_top.v" version="default" library="default" />
         <efx:design_file name="rtl/tseCore.v" version="default" library="default" />
         <efx:design_file name="rtl/design_modules.v" version="default" library="default" />
-        <efx:design_file name="rtl/openeye_irq.v" version="default" library="default" />
         <efx:design_file name="rtl/pulse_sync.v" version="default" library="default" />
+        <efx:design_file name="rtl/snpu_apb_cdc.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_dsp_mac2.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_skew.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_wshadow.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_pe_chain.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_pe_array.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_acc.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_ibuf.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_agen.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_wfifo.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_ep_lane.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_epilogue.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_conv_unit.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_rd_dma.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_wr_dma.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_maxpool5.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_csr.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_seq.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_top.v" version="default" library="default" />
         <efx:design_file name="rtl/openeye_axilite_adapter.v" version="default" library="default" />
-        <efx:design_file name="rtl/apb3_2_axi4_lite.v" version="default" library="default" />
         <efx:design_file name="rtl/codec_h26x_stub.v" version="default" library="default" />
-        <efx:design_file name="rtl/open_eye_mt_v1_0_cfg_reg.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/fpga/hdl/open_eye_axi_v1_0.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/dma_storage.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/OpenEye_FPGA.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/OpenEye_Parallel.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/OpenEye_Cluster.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/GLB_cluster.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/af_cluster.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/bano_cluster.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/router_iact.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/router_wght.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/router_psum.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/PE_cluster.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/PE.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/dsp_unit.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/adder.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/delay_cluster.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/data_pipeline.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/data_pipeline_iact.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/data_pipeline_wght.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/multiplier.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/mux2.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/demux2.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/mux_iact.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/SPad_DP.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/SPad_DP_RW.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/SPad_SP.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/RST_SYNC.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/RAM_DP.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/RAM_DP_RW.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/RAM_SP.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/RAM_DP_generic.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/RAM_DP_RW_generic.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/RAM_SP_generic.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/varlenFIFO.v" version="default" library="default" />
-        <efx:design_file name="ip/OpenEye/hdl/iact_stream_constructor.v" version="default" library="default" />
         <efx:top_vhdl_arch name="" />
     </efx:design_info>
     <efx:constraint_info>
@@ -93,9 +74,6 @@
         <efx:ip instance_name="gAXIM_5to1_switch" path="ip/gAXIM_5to1_switch/settings.json" ooc="false">
             <efx:ip_src_file name="gAXIM_5to1_switch.v" />
         </efx:ip>
-        <efx:ip instance_name="gDMA_dnn" path="ip/gDMA_dnn/settings.json" ooc="false">
-            <efx:ip_src_file name="gDMA_dnn.v" />
-        </efx:ip>
     </efx:ip_info>
     <efx:synthesis tool_name="efx_map">
         <efx:param name="work_dir" value="work_syn" value_type="e_string" />
@@ -111,7 +89,7 @@
         <efx:param name="infer-sync-set-reset" value="1" value_type="e_option" />
         <efx:param name="max_ram" value="-1" value_type="e_integer" />
         <efx:param name="max_mult" value="-1" value_type="e_integer" />
-        <efx:param name="min-sr-fanout" value="0" value_type="e_integer" />
+        <efx:param name="min-sr-fanout" value="64" value_type="e_integer" />
         <efx:param name="min-ce-fanout" value="0" value_type="e_integer" />
         <efx:param name="mode" value="speed" value_type="e_option" />
         <efx:param name="mult-auto-pipeline" value="0" value_type="e_option" />
@@ -150,9 +128,6 @@
         <efx:param name="include" value="ip/gAXIM_3to1_switch" value_type="e_string" />
         <efx:param name="include" value="ip/gAXIS_1to2_switch" value_type="e_string" />
         <efx:param name="include" value="ip/gAXIM_5to1_switch" value_type="e_string" />
-        <efx:param name="include" value="ip/gDMA_dnn" value_type="e_string" />
-        <efx:param name="include" value="ip/OpenEye/hdl" value_type="e_string" />
-        <efx:param name="include" value="ip/OpenEye/hdl/include" value_type="e_string" />
     </efx:synthesis>
     <efx:place_and_route tool_name="efx_pnr">
         <efx:param name="work_dir" value="work_pnr" value_type="e_string" />

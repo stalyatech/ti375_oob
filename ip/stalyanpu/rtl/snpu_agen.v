@@ -105,13 +105,15 @@ module snpu_agen #(
     // row and column pieces, stage a1 holds the row product, the output
     // stage sums the address. Every per pixel flag travels with its pieces
     // so pass boundaries stay aligned; latch and sub ride along too.
-    reg        a0_v, a0_first, a0_last, a0_tend, a0_latch, a0_ok;
+    reg        a0_v, a0_first, a0_last, a0_tend, a0_latch;
+    reg signed [17:0] a0_row, a0_colw;
     reg [P_W-1:0] a0_p;
     reg [7:0]  a0_sub;
     reg [AW-1:0] a0_poff;
     reg [15:0] a0_rowloc;
     reg [AW-1:0] a0_col;
-    reg        a1_v, a1_first, a1_last, a1_tend, a1_latch, a1_ok;
+    reg        a1_v, a1_first, a1_last, a1_tend, a1_latch;
+    reg        a1_ok;
     reg [P_W-1:0] a1_p;
     reg [7:0]  a1_sub;
     reg [AW-1:0] a1_poff;
@@ -128,7 +130,8 @@ module snpu_agen #(
             state <= S_IDLE;
             busy_q <= 1'b0; done_q <= 1'b0;
             tile_start_o <= 1'b0; tile_px_o <= 16'd0; tile_oct_o <= 8'd0; tile_idx_o <= 16'd0;
-            a0_v <= 1'b0; a0_first <= 1'b0; a0_last <= 1'b0; a0_tend <= 1'b0; a0_latch <= 1'b0; a0_ok <= 1'b0;
+            a0_v <= 1'b0; a0_first <= 1'b0; a0_last <= 1'b0; a0_tend <= 1'b0; a0_latch <= 1'b0;
+            a0_row <= 18'sd0; a0_colw <= 18'sd0;
             a0_p <= {P_W{1'b0}}; a0_sub <= 8'd0; a0_poff <= {AW{1'b0}}; a0_rowloc <= 16'd0; a0_col <= {AW{1'b0}};
             tile <= 16'd0; oct <= 8'd0; icg <= 8'd0; ky <= 4'd0; kx <= 4'd0;
             oy <= 16'd0; ox <= 16'd0; row_in_tile <= 16'd0; p <= {P_W{1'b0}};
@@ -182,7 +185,8 @@ module snpu_agen #(
                     a0_v <= 1'b1;
                     a0_rowloc <= in_row_local;
                     a0_col <= in_col_w[AW-1:0];
-                    a0_ok <= row_ok && col_ok;
+                    a0_row <= in_row_w;
+                    a0_colw <= in_col_w;
                     a0_first <= first_pass;
                     a0_last <= last_pass;
                     a0_p <= p;
@@ -251,7 +255,9 @@ module snpu_agen #(
             d1_done <= 1'b0; d2_done <= 1'b0;
         end else begin
             a1_v <= a0_v; a1_first <= a0_first; a1_last <= a0_last; a1_tend <= a0_tend;
-            a1_latch <= a0_latch; a1_ok <= a0_ok; a1_p <= a0_p; a1_sub <= a0_sub;
+            a1_latch <= a0_latch; a1_p <= a0_p; a1_sub <= a0_sub;
+            a1_ok <= (a0_row >= 0) && (a0_row < $signed({2'b0, cfg_in_h_i}))
+                  && (a0_colw >= 0) && (a0_colw < $signed({2'b0, cfg_in_w_i}));
             a1_poff <= a0_poff; a1_col <= a0_col;
             a1_rowmul <= a0_rowloc * cfg_in_w_i;
             v_o <= a1_v; first_o <= a1_first; last_o <= a1_last; tile_end_o <= a1_tend;

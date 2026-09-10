@@ -17,7 +17,7 @@ tarafında `hwcfg.py` (`full2048` / `small256` presetleri) aynı değerleri taş
 | SPPF | `snpu_maxpool5` akış motoru: 4 satır tamponu, 5 sütun pencere, plane başına 1 kelime/çevrim, W ≤ 128 |
 | DFL / sigmoid / NMS | Hard RISC-V @1 GHz, < 1 ms (int8 eşik karşılaştırması, yalnız geçen ~200 anchor için softmax) |
 | DDR | Kendi AXI4 okuma DMA'sı (3 kanal: ibuf, ağırlık, residual/param/descriptor; 4 outstanding 16-beat burst) + yazma DMA'sı; `AXI_DW` 128/256. Faz 1: `gAXIM_5to1_switch` `MDNN=3` yuvası. Faz 2 (M7): `axi_target0` 256-bit dedicated port |
-| Kontrol | DDR'daki 128 B descriptor listesi, `snpu_seq` yürütür; kare başına 1 IRQ (`userInterruptI`, PLIC 9, `rtl/pulse_sync.v`); CSR mevcut APB penceresi `PADDR[14]=1`; perf sayaçları. Bkz. [isa-descriptor.md](isa-descriptor.md) |
+| Kontrol | DDR'daki 128 B descriptor listesi, `snpu_seq` yürütür; kare başına 1 IRQ (`userInterruptI`, PLIC 9, `rtl/pulse_sync.v`); CSR yumuşak SoC APB slave 0 penceresi `PADDR[14]=1` (`0xF810_4000`, M7; `rtl/snpu_apb_cdc.v` köprüsü); perf sayaçları. Bkz. [isa-descriptor.md](isa-descriptor.md) |
 | Saat | `snpu_clk = io_ddrMasters_0_clk` (250 MHz, mevcut PLL çıkışı; AXI ile aynı domain). CDC yalnız APB CSR (200 MHz) ve IRQ. 300 MHz dizi saati uzatma |
 | Nicemleme | Ağırlık int8 simetrik OC başına; aktivasyon int8 tensör başına asimetrik; zp bias'a katlanır; Concat/Add grupları ölçek birleştirme |
 

@@ -93,9 +93,13 @@ module snpu_rd_dma #(
     reg [31:0] a2 [0:1];
     // The command total is len*n0*n1*n2. The product is built over six
     // cycles after acceptance, one multiply every second cycle; warm counts
-    // them down and gates the issue.
+    // them down and gates the issue. Each 32x16 multiply is split into two
+    // registered 16x16 products and a shift add in the following cycle, so
+    // no DSP output feeds another DSP input without a register.
     reg [2:0]  warm [0:1];
-    reg [47:0] tprod [0:1];
+    reg [31:0] tprod [0:1];
+    reg [31:0] p_lo [0:1];
+    reg [31:0] p_hi [0:1];
     reg [15:0] tn1 [0:1];
     reg [15:0] tn2 [0:1];
     reg [2:0]  beat_cnt [0:1];
@@ -163,7 +167,8 @@ module snpu_rd_dma #(
                 issue_done[i] <= 1'b0; outstanding[i] <= 4'd0; r_total[i] <= 32'd0; beat_cnt[i] <= 3'd0;
                 word_acc[i] <= 256'd0;
                 a0[i] <= 32'd0; a1[i] <= 32'd0; a2[i] <= 32'd0;
-                warm[i] <= 3'd0; tprod[i] <= 48'd0; tn1[i] <= 16'd0; tn2[i] <= 16'd0;
+                warm[i] <= 3'd0; tprod[i] <= 32'd0; tn1[i] <= 16'd0; tn2[i] <= 16'd0;
+                p_lo[i] <= 32'd0; p_hi[i] <= 32'd0;
             end
             m_arvalid <= 1'b0; m_araddr <= 32'd0; m_arlen <= 8'd0; m_arid <= 4'd0;
             rr <= 1'b0; issue_ch <= 1'b0;
@@ -191,17 +196,23 @@ module snpu_rd_dma #(
                     tn2[i] <= cmd_n2_i[i*16 +: 16];
                     beat_cnt[i] <= 3'd0;
                 end else if (warm[i] == 3'd6) begin
-                    tprod[i] <= len[i] * n0[i];
+                    p_lo[i] <= len[i][15:0] * n0[i];
+                    p_hi[i] <= len[i][31:16] * n0[i];
                     warm[i] <= 3'd5;
                 end else if (warm[i] == 3'd4) begin
-                    tprod[i] <= tprod[i][31:0] * tn1[i];
+                    p_lo[i] <= tprod[i][15:0] * tn1[i];
+                    p_hi[i] <= tprod[i][31:16] * tn1[i];
                     warm[i] <= 3'd3;
                 end else if (warm[i] == 3'd2) begin
-                    tprod[i] <= tprod[i][31:0] * tn2[i];
+                    p_lo[i] <= tprod[i][15:0] * tn2[i];
+                    p_hi[i] <= tprod[i][31:16] * tn2[i];
                     warm[i] <= 3'd1;
                 end else if (warm[i] != 3'd0) begin
+                    // Odd warm values combine the two halves of the last
+                    // product; the final one is the byte total.
+                    tprod[i] <= p_lo[i] + {p_hi[i][15:0], 16'd0};
                     if (warm[i] == 3'd1)
-                        r_total[i] <= tprod[i][31:0];
+                        r_total[i] <= p_lo[i] + {p_hi[i][15:0], 16'd0};
                     warm[i] <= warm[i] - 3'd1;
                 end
             end

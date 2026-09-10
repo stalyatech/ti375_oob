@@ -1,6 +1,6 @@
 # StalyaNPU: YOLOv8s için INT8 CNN hızlandırıcısı
 
-> **DURUM (2026-09-02): M0'dan M5'e kadar tamamlandı.** Dal `stalya-fmu_v2.0-npu`. Karar kaydı,
+> **DURUM (2026-09-10): M0'dan M7'ye kadar tamamlandı.** Dal `stalya-fmu_v2.0-npu`. Karar kaydı,
 > mimari, ISA taslağı, performans modeli, ONNX ön yüzü, ilk RTL adımı (DSP48 DUAL sarmalayıcı +
 > kaskad zinciri, Efinix sim modeliyle bit bit) ve nicemleme hattı (kalibrasyon, bit-kesin
 > referans model, COCO mAP) hazır. **INT8 mAP50-95 düşüşü 0,78 puan (kapı 2,0)**, bkz.
@@ -12,8 +12,11 @@
 > 258 MHz, konvolüsyon motoru **256 MHz (+0,091 ns)**, tam `snpu_top` 244 MHz (-0,105 ns, yerleşim
 > gürültüsü bandında; kapanış M7 entegrasyonunda sürecek). Ti375'te DSP kaskadı sütun başına 48
 > blokla sınırlı; zincirler 8'lik dört kaskada bölündü. Ayrıntı: [synthesis-guide.md](synthesis-guide.md).
-> Sonraki adım M6 (YOLOv8s katman katman + tam ağ simülasyonu).
-> Üst seviye tasarım (`ti375_oob_top.v`) henüz değişmedi; OpenEye bitstream'i bozulmadı.
+> M6: 66 katmanın tamamı kırpılmış geometride RTL'de altınla bit bit eşleşti. M7 (2026-09-10):
+> `ti375_oob_top.v` içinde OpenEye ve gDMA_dnn bağlantıları söküldü, `snpu_top` MDNN=3
+> yuvasına, CSR yumuşak SoC APB penceresine (`0xF810_4000`, CDC köprüsü), kesme PLIC 9'a
+> bağlandı; tam tasarım map/pnr/pgm PASS, 250 MHz pozitif slack (+0,005 ns), CDC temiz. Ayrıntı
+> [synthesis-guide.md](synthesis-guide.md) "M7 entegrasyonu". Sonraki adım M8 board bring-up.
 
 Hedef: **YOLOv8s, 1080p kaynaktan 640×384 letterbox, 30 fps, INT8**, Efinix Titanium
 Ti375C529 üzerinde. Gerek 8,6 GMAC/kare → 258 GMAC/s sürekli.
@@ -81,7 +84,7 @@ python -m venv .venv-stalyanpu
 | M3 | Dizi + acc + ibuf + wfifo + epilog RTL, katman TB'leri | tümü PASS | **tamam** (7/7, vendor DSP modeli + ikiz) |
 | M4 | DMA, seq, csr, maxpool5, `snpu_top`, AXI bellek modeli; descriptor tabanlı testler | PASS | **tamam** (4/4 net testi, demo ağı uçtan uca) |
 | M5 | Dizi-tek Efinity sentezi | 250 MHz pozitif slack | **tamam** (dizi 258, motor 256 MHz pozitif; top 244 MHz, DSP 1186, RAM10 1149) |
-| M6 | YOLOv8s katman-katman + tam ağ sim | %100 PASS | katmanlar **tamam** (66/66 kırpılmış behav + vendor alt küme 5/5; perf bandı ±%18, bkz. verification-guide); tam ağ koşumda |
-| M7 | `ti375_oob_top.v` entegrasyonu (OpenEye çıkar) | map/pnr/pgm PASS | |
+| M6 | YOLOv8s katman-katman + tam ağ sim | %100 PASS | katmanlar **tamam** (66/66 kırpılmış behav + vendor alt küme 5/5; perf bandı ±%18, bkz. verification-guide); tam ağ koşumu M8 öncesi isteğe bağlı |
+| M7 | `ti375_oob_top.v` entegrasyonu (OpenEye çıkar) | map/pnr/pgm PASS | **tamam** (map/pnr/pgm PASS, io_ddrMasters_0_clk +0,005 ns, CDC temiz; 1217 DSP, 1478 RAM10) |
 | M8 | Board bring-up | ≥ 30 fps ölçüm | |
 | M9 | Dokümantasyon, dedicated DDR portu, Linux yer tutucu | | |

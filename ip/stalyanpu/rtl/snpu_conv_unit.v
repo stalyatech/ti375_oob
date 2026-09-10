@@ -184,7 +184,18 @@ module snpu_conv_unit #(
         else if (tile_done)
             end_pending <= 1'b0;
     end
-    assign bank_free = acc_bank_free && !end_pending && !ag_end;
+    // The bank free flag is registered before it reaches the address
+    // generator. Every 1 to 0 edge of the flag follows an ag_end pulse that
+    // the generator already sees in its own output pipeline, so the one
+    // cycle lag can only delay a start, never allow an early one.
+    reg bank_free_q;
+    always @(posedge clk) begin
+        if (rst)
+            bank_free_q <= 1'b0;
+        else
+            bank_free_q <= acc_bank_free && !end_pending && !ag_end;
+    end
+    assign bank_free = bank_free_q;
 
     snpu_acc #(.N_OC(N_OC), .P_MAX(P_MAX), .P_W(P_W)) u_acc (
         .clk(clk), .rst(rst),

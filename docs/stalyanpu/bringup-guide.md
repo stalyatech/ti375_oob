@@ -11,9 +11,13 @@ Bu sayfa M0'da karar seviyesinde yazılmıştır; adımlar M7 entegrasyonu ve M8
 
 ## Bileşenler
 
-- `snpu_hal.{c,h}`: üretilen `stalyanpu_isa.h` register haritası; APB penceresi
-  `0x100000 + 0x4000` (OpenEye cfg_reg yuvası); `snpu_start(desc_base, n)`, PLIC 9 enable
-  (`plic.h`), W1C temizleme, perf sayaçları, zaman aşımı.
+- `snpu_hal.{c,h}`: üretilen `stalyanpu_isa.h` register haritası; CSR penceresi M7'de
+  yumuşak SoC (`EfxSapphireFCU`) APB slave 0'ın üst yarısına bağlandı: taban
+  `0xF810_4000` (`IO_APB_SLAVE_0_INPUT` + 0x4000; alt yarı gDMA). Sert SoC `io_apbSlave_0`
+  bu yapılandırmada sürücüsüz. Kesme sert SoC PLIC 9'a gider; bu yüzden v0 testte
+  CSR yumuşak SoC'tan sürülür, tamamlanma `STATUS`/`IRQ_STATUS` yoklamasıyla izlenir.
+  Sert SoC'tan sürüş için `io_apbSlave_0` peri.xml'de etkinleştirilmelidir (M8 kararı).
+  `snpu_start(desc_base, n)`, W1C temizleme, perf sayaçları, zaman aşımı.
 - `snpu_loader.c`: v0 OpenOCD `load_image` ile blob + giriş + altın DDR'a yüklenir; v1
   FatFS/SD (`sdhc/fatFSDemo` deseni).
 - `snpu_tail.c`: dequant, DFL softmax + beklenti, box decode, sigmoid, NMS (float, FPU var);

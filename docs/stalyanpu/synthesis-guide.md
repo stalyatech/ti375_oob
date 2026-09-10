@@ -123,6 +123,41 @@ tek başına 258 MHz kapatır (maliyet: 4,6k EFX_ADD, 9,9k SRL8).
 - Sarmalayıcı portları arayüzde eksikse pnr sürmez; `pll_locked` tasarım
   portu olarak eklenmelidir (kilit çıkışı çekirdeğe iner).
 
+## M7 entegrasyonu (ti375_oob, 2026-09-10)
+
+Tam tasarım `ti375_oob.xml` ile derlenir (`efx_run ti375_oob --prj -f map|pnr|pgm`).
+Bağlantı özeti:
+
+| Konu | Bağlantı |
+|---|---|
+| Veri düzlemi | `snpu_top` `gAXIM_5to1_switch` `MDNN=3` yuvasında, 128-bit, `io_ddrMasters_0_clk` (250 MHz). Anahtar AXI ID taşımaz (hepsi 0); `snpu_rd_dma` yanıtları ihraç sırasıyla eşler (8 derinlikli sıra FIFO'su) |
+| CSR | Yumuşak SoC (`EfxSapphireFCU`) `sp_apbSlave_0` penceresinin üst yarısı: `PADDR[14]=1` NPU, `PADDR[14]=0` gDMA. Yazılım tabanı `0xF810_4000` (APB slave 0 `0xF810_0000` + 0x4000). `rtl/snpu_apb_cdc.v` toggle köprüsü 200 MHz peri saatinden 250 MHz NPU saatine geçirir |
+| Sert SoC APB | `io_apbSlave_0` bu yapılandırmada sürücüsüz; sabite bağlı (PREADY=1, veri 0) |
+| Kesme | `irq_o` iki FF ile peri saatine geçer, üst seviye `userInterruptI` (sert SoC PLIC 9) |
+| Reset | `io_ddrMasters_0_reset` iki FF ile yeniden tamponlanır (`npu_rst`); `min-sr-fanout` 64 |
+
+Zamanlama kapanışı entegrasyonda dört ek düzeltme istedi: agen sınır
+karşılaştırması `a1` kademesine alındı, maxpool/motor çıkış seçimi
+(`mp_busy_q`) ve biriktirici banka boşta işareti (`bank_free_q`)
+kayıtlandı, `snpu_rd_dma` komut toplamı çarpımları (32×16) kayıtlı iki
+16×16 yarıya ve bir kaydırmalı toplama bölündü (DSP çıkışından DSP girişine
+kayıtsız yol kalmadı). Adımlar: -0,162 → -0,088 (bank_free) → -0,028
+(rd_dma) → seed/effort taraması (seed 2: -0,013, seed 3: -0,024, seed 4:
+-0,126, **seed 1 effort 3: +0,005**). Proje `placer_effort_level` 3'e
+alındı. Değişiklikler motor (`conv_tiles`, `conv_res`) ve ağ (`net` grubu,
+4/4) testlerinde PASS ile doğrulandı. CDC raporu
+(`outflow/ti375_oob.cdc.rpt`) senkronizer uyarısı vermez.
+
+Sonuçlar (map/pnr, 2026-09-10):
+
+| Ölçüt | Değer |
+|---|---|
+| LUT4 / FF | 92,4k / 85,7k |
+| DSP48 / RAM10 | 1217 / 1478 |
+| `io_ddrMasters_0_clk` | 250 MHz, slack **+0,005 ns** (0 negatif yol, seed 1, effort 3) |
+| Diğer saatler | pozitif (peri +0,24 ns; sd/rgmii/tse geniş) |
+| Bitstream | `outflow/ti375_oob.bit` / `.hex` (`efx_run -f pgm`) |
+
 ## Kaynak durumu (map, 2026-09-02)
 
 | Blok | LUT4 | FF | ADD | SRL8 | DSP48 | RAM10 |

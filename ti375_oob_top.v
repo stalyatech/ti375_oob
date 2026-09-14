@@ -756,17 +756,15 @@ assign userInterruptG = dma_interrupts[0];
 assign userInterruptH = dma_interrupts[1];
 
 // The soft SoC APB window is split: PADDR[14]=0 stays with the DMA
-// control, PADDR[14]=1 reaches the StalyaNPU CSR bridge below.
+// control, PADDR[14]=1 is reserved (always ready, reads as zero). The
+// StalyaNPU CSR lives on the hard SoC window below.
 wire [31:0] sp_dma_prdata;
 wire        sp_dma_pready;
 wire        sp_dma_pslverr;
-wire [31:0] npu_csr_prdata;
-wire        npu_csr_pready;
-wire        npu_csr_pslverr;
 
-assign sp_apbSlave_0_PRDATA    = sp_apbSlave_0_PADDR[14] ? npu_csr_prdata  : sp_dma_prdata;
-assign sp_apbSlave_0_PREADY    = sp_apbSlave_0_PADDR[14] ? npu_csr_pready  : sp_dma_pready;
-assign sp_apbSlave_0_PSLVERROR = sp_apbSlave_0_PADDR[14] ? npu_csr_pslverr : sp_dma_pslverr;
+assign sp_apbSlave_0_PRDATA    = sp_apbSlave_0_PADDR[14] ? 32'd0 : sp_dma_prdata;
+assign sp_apbSlave_0_PREADY    = sp_apbSlave_0_PADDR[14] ? 1'b1  : sp_dma_pready;
+assign sp_apbSlave_0_PSLVERROR = sp_apbSlave_0_PADDR[14] ? 1'b0  : sp_dma_pslverr;
 
 gDMA u_gDMA (
     .clk                     ( io_ddrMasters_0_clk ),
@@ -842,10 +840,12 @@ gDMA u_gDMA (
 );
 
 //====================================================================
-// StalyaNPU accelerator. The CSR window lives in the upper half of the
-// soft SoC APB (see the split at the gDMA instance): PADDR[14]=1 reaches
-// the CSR bridge, PADDR[14]=0 stays with the DMA control. The hard SoC
-// shell APB below is tied off, its bridge logic is unused in this build.
+// StalyaNPU accelerator. The CSR window is the upper half of the hard SoC
+// APB peripheral 0: the CPU reaches it through its AXI-A master port, the
+// soft peripheral subsystem (u_top_peripherals) bridges AXI-A to APB and
+// io_apbSlave_0 covers 64 KB at CPU address 0xE810_0000. PADDR[14]=1
+// selects the CSR bridge (CPU address 0xE810_4000), PADDR[14]=0 is
+// reserved and always ready.
 //   Data plane: snpu_top <-> DDR through master port MDNN on
 //   io_ddrMasters_0_clk. The done interrupt enters the hard SoC PLIC on
 //   userInterruptI, which carries PLIC interrupt id 9.
@@ -859,13 +859,17 @@ wire [31:0] hp_apbSlave_0_PRDATA;
 wire        hp_apbSlave_0_PREADY;
 wire        hp_apbSlave_0_PSLVERROR;
 
-wire sel_npu_csr = sp_apbSlave_0_PSEL & sp_apbSlave_0_PADDR[14];
+wire sel_npu_csr = hp_apbSlave_0_PSEL & hp_apbSlave_0_PADDR[14];
 
-assign hp_apbSlave_0_PRDATA    = 32'd0;
-assign hp_apbSlave_0_PREADY    = 1'b1;
-assign hp_apbSlave_0_PSLVERROR = 1'b0;
+wire [31:0] npu_csr_prdata;
+wire        npu_csr_pready;
+wire        npu_csr_pslverr;
 
-wire [5:0]  npu_paddr;
+assign hp_apbSlave_0_PRDATA    = hp_apbSlave_0_PADDR[14] ? npu_csr_prdata  : 32'd0;
+assign hp_apbSlave_0_PREADY    = hp_apbSlave_0_PADDR[14] ? npu_csr_pready  : 1'b1;
+assign hp_apbSlave_0_PSLVERROR = hp_apbSlave_0_PADDR[14] ? npu_csr_pslverr : 1'b0;
+
+wire [6:0]  npu_paddr;
 wire        npu_psel, npu_penable, npu_pwrite;
 wire [31:0] npu_pwdata;
 wire [31:0] npu_prdata;
@@ -883,11 +887,11 @@ wire npu_rst = npu_rst_q[1];
 snpu_apb_cdc u_snpu_apb_cdc (
     .s_clk     ( io_peripheralClk ),
     .s_rst     ( io_peripheralReset ),
-    .s_paddr   ( sp_apbSlave_0_PADDR[5:0] ),
+    .s_paddr   ( hp_apbSlave_0_PADDR[6:0] ),
     .s_psel    ( sel_npu_csr ),
-    .s_penable ( sp_apbSlave_0_PENABLE ),
-    .s_pwrite  ( sp_apbSlave_0_PWRITE ),
-    .s_pwdata  ( sp_apbSlave_0_PWDATA ),
+    .s_penable ( hp_apbSlave_0_PENABLE ),
+    .s_pwrite  ( hp_apbSlave_0_PWRITE ),
+    .s_pwdata  ( hp_apbSlave_0_PWDATA ),
     .s_prdata  ( npu_csr_prdata ),
     .s_pready  ( npu_csr_pready ),
     .s_pslverr ( npu_csr_pslverr ),
@@ -945,14 +949,16 @@ snpu_top u_snpu (
     .m_bresp   ( m_axis_bresp[MDNN*2 +: 2] )
 );
 
-// Qualifiers the accelerator does not drive on the MDNN slot.
+// Qualifiers the accelerator does not drive on the MDNN slot. The cache
+// attribute matches the Efinix masters on the same port (write back,
+// allocate): with the device setting the port accepted one write at a time.
 assign m_axis_arlock  [MDNN*2 +: 2] = 2'b0;
-assign m_axis_arcache [MDNN*4 +: 4] = 4'b0;
+assign m_axis_arcache [MDNN*4 +: 4] = 4'b1111;
 assign m_axis_arqos   [MDNN*4 +: 4] = 4'b0;
 assign m_axis_arregion[MDNN*4 +: 4] = 4'b0;
 assign m_axis_arprot  [MDNN*4 +: 4] = 4'b0;
 assign m_axis_awlock  [MDNN*2 +: 2] = 2'b0;
-assign m_axis_awcache [MDNN*4 +: 4] = 4'b0;
+assign m_axis_awcache [MDNN*4 +: 4] = 4'b1111;
 assign m_axis_awqos   [MDNN*4 +: 4] = 4'b0;
 assign m_axis_awregion[MDNN*4 +: 4] = 4'b0;
 assign m_axis_awprot  [MDNN*4 +: 4] = 4'b0;
@@ -1112,36 +1118,42 @@ EfxSapphireHpSoc_slb u_top_peripherals(
 	.userInterruptK 						(  ),
 	.userInterruptL 						(  ),
 
-	.axiA_awvalid                           (  ),
-	.axiA_awready                           (  ),
-	.axiA_awaddr                            (  ),
-	.axiA_awlen                             (  ),
-	.axiA_awburst                           (  ),
-	.axiA_awsize                            (  ),
-	.axiA_awcache                           (  ),
-	.axiA_awprot                            (  ),
-	.axiA_wvalid                            (  ),
-	.axiA_wready                            (  ),
-	.axiA_wdata                             (  ),
-	.axiA_wstrb                             (  ),
-	.axiA_wlast                             (  ),
-	.axiA_bvalid                            (  ),
-	.axiA_bready                            (  ),
-	.axiA_bresp                             (  ),
-	.axiA_arvalid                           (  ),
-	.axiA_arready                           (  ),
-	.axiA_araddr                            (  ),
-	.axiA_arlen                             (  ),
-	.axiA_arburst                           (  ),
-	.axiA_arsize                            (  ),
-	.axiA_arcache                           (  ),
-	.axiA_arprot                            (  ),
-	.axiA_rvalid                            (  ),
-	.axiA_rready                            (  ),
-	.axiA_rdata                             (  ),
-	.axiA_rresp                             (  ),
-	.axiA_rlast                             (  ),
-	.axiAInterrupt                          (  ),
+	.axiA_awvalid                         ( axiA_awvalid ),
+	.axiA_awready                         ( axiA_awready ),
+	.axiA_awaddr                          ( axiA_awaddr ),
+	.axiA_awlen                           ( axiA_awlen ),
+	.axiA_awburst                         ( axiA_awburst ),
+	.axiA_awsize                          ( axiA_awsize ),
+	.axiA_awcache                         ( axiA_awcache ),
+	.axiA_awprot                          ( axiA_awprot ),
+	.axiA_wvalid                          ( axiA_wvalid ),
+	.axiA_wready                          ( axiA_wready ),
+	.axiA_wdata                           ( axiA_wdata ),
+	.axiA_wstrb                           ( axiA_wstrb ),
+	.axiA_wlast                           ( axiA_wlast ),
+	.axiA_bvalid                          ( axiA_bvalid ),
+	.axiA_bready                          ( axiA_bready ),
+	.axiA_bresp                           ( axiA_bresp ),
+	.axiA_arvalid                         ( axiA_arvalid ),
+	.axiA_arready                         ( axiA_arready ),
+	.axiA_araddr                          ( axiA_araddr ),
+	.axiA_arlen                           ( axiA_arlen ),
+	.axiA_arburst                         ( axiA_arburst ),
+	.axiA_arsize                          ( axiA_arsize ),
+	.axiA_arcache                         ( axiA_arcache ),
+	.axiA_arprot                          ( axiA_arprot ),
+	.axiA_rvalid                          ( axiA_rvalid ),
+	.axiA_rready                          ( axiA_rready ),
+	.axiA_rdata                           ( axiA_rdata ),
+	.axiA_rresp                           ( axiA_rresp ),
+	.axiA_rlast                           ( axiA_rlast ),
+	.axiA_awlock                            ( axiA_awlock ),
+	.axiA_awqos                             ( axiA_awqos ),
+	.axiA_awregion                          ( axiA_awregion ),
+	.axiA_arlock                            ( axiA_arlock ),
+	.axiA_arqos                             ( axiA_arqos ),
+	.axiA_arregion                          ( axiA_arregion ),
+	.axiAInterrupt                          ( axiAInterrupt ),
 
 	.io_apbSlave_0_PADDR                     ( hp_apbSlave_0_PADDR ),
 	.io_apbSlave_0_PSEL                      ( hp_apbSlave_0_PSEL ),

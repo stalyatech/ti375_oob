@@ -117,12 +117,18 @@ CSR = [
     (0x1C, "IRQ_STATUS",  "W1C", "bit0 done, bit1 descriptor done, bit2 error, bit3 timeout"),
     (0x20, "IRQ_MASK",    "RW", "1 enables the corresponding IRQ_STATUS bit"),
     (0x24, "CYCLE_CNT",   "RO", "cycles spent busy since start"),
-    (0x28, "STALL_IBUF",  "RO", "cycles the array waited for input data"),
-    (0x2C, "STALL_WGT",   "RO", "cycles the array waited for weights"),
-    (0x30, "STALL_ACC",   "RO", "cycles the array waited for an accumulator bank"),
-    (0x34, "STALL_WR",    "RO", "cycles the epilogue waited for the write path"),
+    (0x28, "STALL_IBUF",  "RO", "cycles spent in the input fill phases (array idle, DDR bound)"),
+    (0x2C, "STALL_WGT",   "RO", "run phase cycles with no pixel vector entering the array"),
+    (0x30, "STALL_ACC",   "RO", "cycles with a pixel vector entering the array (MAC cycles)"),
+    (0x34, "STALL_WR",    "RO", "cycles an output word was held by the write path"),
     (0x38, "DESC_DONE",   "RO", "descriptors completed since start"),
     (0x3C, "TAG",         "RO", "tag word of the current descriptor"),
+    (0x40, "DBG0",        "RO", "debug: rd_dma bookkeeping[31:8], seq state[7:3], unit busy, maxpool busy, wr idle"),
+    (0x44, "DBG1",        "RO", "debug: wr pending[7:0], loaders idle, cmd/data handshakes, AXI valid and ready flags"),
+    (0x48, "DBG2",        "RO", "debug: write AW wait cycles since reset"),
+    (0x4C, "DBG3",        "RO", "debug: write W wait cycles after AW accept since reset"),
+    (0x50, "DBG4",        "RO", "debug: write bursts finished since reset"),
+    (0x54, "DBG5",        "RO", "debug: write beats sent since reset"),
 ]
 
 ERRORS = {

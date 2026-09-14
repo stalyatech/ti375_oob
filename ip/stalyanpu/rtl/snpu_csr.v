@@ -15,7 +15,7 @@ module snpu_csr #(
     input  wire        clk,
     input  wire        rst,
     // APB3
-    input  wire [5:0]  paddr_i,
+    input  wire [6:0]  paddr_i,
     input  wire        psel_i,
     input  wire        penable_i,
     input  wire        pwrite_i,
@@ -42,6 +42,12 @@ module snpu_csr #(
     input  wire        stall_wgt_i,
     input  wire        stall_acc_i,
     input  wire        stall_wr_i,
+    input  wire [31:0] dbg0_i,
+    input  wire [31:0] dbg1_i,
+    input  wire [31:0] dbg2_i,
+    input  wire [31:0] dbg3_i,
+    input  wire [31:0] dbg4_i,
+    input  wire [31:0] dbg5_i,
     output wire        irq_o
 );
 
@@ -81,7 +87,7 @@ module snpu_csr #(
             if (desc_done_i) desc_done_cnt <= desc_done_cnt + 1'b1;
             if (wr) begin
                 case (paddr_i)
-                    6'h0C: begin
+                    7'h0C: begin
                         if (pwdata_i[0]) begin
                             start_o <= 1'b1;
                             cycle_cnt <= 32'd0; stall_ibuf <= 32'd0; stall_wgt <= 32'd0;
@@ -90,10 +96,10 @@ module snpu_csr #(
                         abort_o <= pwdata_i[1];
                         soft_rst_o <= pwdata_i[2];
                     end
-                    6'h14: desc_base_o <= pwdata_i;
-                    6'h18: desc_count_o <= pwdata_i;
-                    6'h1C: irq_status <= irq_status & ~pwdata_i[3:0];
-                    6'h20: irq_mask <= pwdata_i[3:0];
+                    7'h14: desc_base_o <= pwdata_i;
+                    7'h18: desc_count_o <= pwdata_i;
+                    7'h1C: irq_status <= irq_status & ~pwdata_i[3:0];
+                    7'h20: irq_mask <= pwdata_i[3:0];
                     default: ;
                 endcase
             end
@@ -102,22 +108,28 @@ module snpu_csr #(
 
     always @(*) begin
         case (paddr_i)
-            6'h00: prdata_o = 32'h534E5055;
-            6'h04: prdata_o = VERSION;
-            6'h08: prdata_o = GEOMETRY;
-            6'h0C: prdata_o = 32'd0;
-            6'h10: prdata_o = {desc_idx_i, 8'd0, err_code_i[7:0]} | {31'd0, busy_i};
-            6'h14: prdata_o = desc_base_o;
-            6'h18: prdata_o = desc_count_o;
-            6'h1C: prdata_o = {28'd0, irq_status};
-            6'h20: prdata_o = {28'd0, irq_mask};
-            6'h24: prdata_o = cycle_cnt;
-            6'h28: prdata_o = stall_ibuf;
-            6'h2C: prdata_o = stall_wgt;
-            6'h30: prdata_o = stall_acc;
-            6'h34: prdata_o = stall_wr;
-            6'h38: prdata_o = desc_done_cnt;
-            6'h3C: prdata_o = tag_i;
+            7'h00: prdata_o = 32'h534E5055;
+            7'h04: prdata_o = VERSION;
+            7'h08: prdata_o = GEOMETRY;
+            7'h0C: prdata_o = 32'd0;
+            7'h10: prdata_o = {desc_idx_i, 8'd0, err_code_i[7:0]} | {31'd0, busy_i};
+            7'h14: prdata_o = desc_base_o;
+            7'h18: prdata_o = desc_count_o;
+            7'h1C: prdata_o = {28'd0, irq_status};
+            7'h20: prdata_o = {28'd0, irq_mask};
+            7'h24: prdata_o = cycle_cnt;
+            7'h28: prdata_o = stall_ibuf;
+            7'h2C: prdata_o = stall_wgt;
+            7'h30: prdata_o = stall_acc;
+            7'h34: prdata_o = stall_wr;
+            7'h38: prdata_o = desc_done_cnt;
+            7'h3C: prdata_o = tag_i;
+            7'h40: prdata_o = dbg0_i;
+            7'h44: prdata_o = dbg1_i;
+            7'h48: prdata_o = dbg2_i;
+            7'h4C: prdata_o = dbg3_i;
+            7'h50: prdata_o = dbg4_i;
+            7'h54: prdata_o = dbg5_i;
             default: prdata_o = 32'd0;
         endcase
     end

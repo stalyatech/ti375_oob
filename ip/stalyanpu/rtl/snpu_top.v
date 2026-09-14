@@ -28,7 +28,7 @@ module snpu_top #(
     input  wire         clk,
     input  wire         rst,
     // APB3 control
-    input  wire [5:0]   paddr_i,
+    input  wire [6:0]   paddr_i,
     input  wire         psel_i,
     input  wire         penable_i,
     input  wire         pwrite_i,
@@ -86,6 +86,16 @@ module snpu_top #(
 
     // ---- CSR
     wire start, abort, soft_rst;
+    wire [31:0] dbg0, dbg1;
+    // Performance counter conditions (registered, one cycle late is fine):
+    // input fill phases, run phase cycles with the array idle, output words
+    // held by the write path. The array active count comes from the unit.
+    wire mac_active;
+    reg  cnt_fill, cnt_run_idle, cnt_wr_wait;
+    wire [23:0] rd_dbg;
+    wire [7:0]  wr_pending;
+    wire [31:0] wr_aw_wait, wr_w_wait, wr_bursts, wr_beats;
+    wire [4:0]  seq_state;
     wire [31:0] desc_base, desc_count;
     wire seq_busy, seq_done, seq_desc_done, seq_error;
     wire [7:0] err_code;
@@ -99,7 +109,8 @@ module snpu_top #(
         .start_o(start), .abort_o(abort), .soft_rst_o(soft_rst), .desc_base_o(desc_base), .desc_count_o(desc_count),
         .busy_i(seq_busy), .err_code_i(err_code), .desc_idx_i(desc_idx), .tag_i(tag),
         .done_i(seq_done), .desc_done_i(seq_desc_done), .error_i(seq_error), .timeout_i(1'b0),
-        .stall_ibuf_i(1'b0), .stall_wgt_i(1'b0), .stall_acc_i(1'b0), .stall_wr_i(1'b0),
+        .stall_ibuf_i(cnt_fill), .stall_wgt_i(cnt_run_idle), .stall_acc_i(mac_active), .stall_wr_i(cnt_wr_wait),
+        .dbg0_i(dbg0), .dbg1_i(dbg1), .dbg2_i(wr_aw_wait), .dbg3_i(wr_w_wait), .dbg4_i(wr_bursts), .dbg5_i(wr_beats),
         .irq_o(irq_o)
     );
 
@@ -123,7 +134,7 @@ module snpu_top #(
         .d_valid_o(d_valid), .d_data_o(d_data), .d_dst_o(d_dst), .d_last_o(d_last), .d_ready_i(d_ready), .busy_o(rd_busy),
         .m_arvalid(m_arvalid), .m_arready(m_arready), .m_araddr(m_araddr), .m_arlen(m_arlen), .m_arsize(m_arsize),
         .m_arburst(m_arburst), .m_arid(m_arid), .m_rvalid(m_rvalid), .m_rready(m_rready), .m_rdata(m_rdata),
-        .m_rid(m_rid), .m_rlast(m_rlast), .m_rresp(m_rresp), .err_o(rd_err)
+        .m_rid(m_rid), .m_rlast(m_rlast), .m_rresp(m_rresp), .err_o(rd_err), .dbg_o(rd_dbg)
     );
 
     // ---- channel 0 destinations
@@ -296,7 +307,8 @@ module snpu_top #(
         .unit_start_o(unit_start), .unit_busy_i(unit_busy), .unit_done_i(unit_done),
         .drain_start_i(drain_start), .drain_oct_i(drain_oct), .ibuf_fill_rst_o(ibuf_fill_rst),
         .mp_start_o(mp_start), .mp_busy_i(mp_busy),
-        .out_base_o(out_base), .out_ps_o(out_ps), .out_rs_o(out_rs), .out_w_o(out_w), .wr_idle_i(wr_idle)
+        .out_base_o(out_base), .out_ps_o(out_ps), .out_rs_o(out_rs), .out_w_o(out_w), .wr_idle_i(wr_idle),
+        .dbg_state_o(seq_state)
     );
 
     // ---- convolution engine
@@ -330,7 +342,8 @@ module snpu_top #(
         .res_valid_i(res_valid), .res_data_i(res_data), .res_ready_o(res_ready),
         .drain_start_o(drain_start), .drain_oct_o(drain_oct),
         .out_valid_o(cu_out_valid), .out_data_o(cu_out_data), .out_plane_o(cu_out_plane), .out_px_o(cu_out_px),
-        .out_tile_o(cu_out_tile), .out_last_o(cu_out_last), .out_ready_i(cu_out_ready), .ovfl_o(ovfl)
+        .out_tile_o(cu_out_tile), .out_last_o(cu_out_last), .out_ready_i(cu_out_ready), .ovfl_o(ovfl),
+        .mac_active_o(mac_active)
     );
     assign d_ready[1] = w_ready;
 
@@ -410,10 +423,30 @@ module snpu_top #(
         end
     end
 
+    // Debug words for the CSR (read only, offsets 0x40 and 0x44).
+    // dbg0: [31:8] rd_dma bookkeeping, [7:3] sequencer state, [2] unit busy,
+    //       [1] maxpool busy, [0] write DMA idle.
+    // dbg1: [7:0] write responses pending, [8] loaders idle, [10:9] cmd valid,
+    //       [12:11] cmd ready, [14:13] d valid, [16:15] d ready, [17] arvalid,
+    //       [18] arready, [19] rvalid, [20] rready, [21] awvalid, [22] awready,
+    //       [23] wvalid, [24] wready, [25] bvalid, [27:26] rd busy,
+    //       [28] out valid, [29] out ready, [30] rd error, [31] wr error.
+    assign dbg0 = {rd_dbg, seq_state, unit_busy, mp_busy, wr_idle};
+    always @(posedge clk) begin
+        cnt_fill     <= (seq_state == 5'd9) || (seq_state == 5'd10);
+        cnt_run_idle <= (seq_state == 5'd13) && !mac_active;
+        cnt_wr_wait  <= o_valid && !o_ready;
+    end
+    assign dbg1 = {wr_err, rd_err, o_ready, o_valid, rd_busy, m_bvalid, m_wready, m_wvalid,
+                   m_awready, m_awvalid, m_rready, m_rvalid, m_arready, m_arvalid,
+                   d_ready, d_valid, cmd_ready, cmd_valid, loaders_idle, wr_pending};
+
     wire wr_err;
     snpu_wr_dma #(.AXI_DW(AXI_DW)) u_wr (
         .clk(clk), .rst(rst_all),
         .w_valid_i(o_valid), .w_addr_i(o_addr), .w_data_i(o_data), .w_ready_o(o_ready), .idle_o(wr_idle),
+        .dbg_pending_o(wr_pending),
+        .dbg_aw_wait_o(wr_aw_wait), .dbg_w_wait_o(wr_w_wait), .dbg_bursts_o(wr_bursts), .dbg_beats_o(wr_beats),
         .m_awvalid(m_awvalid), .m_awready(m_awready), .m_awaddr(m_awaddr), .m_awlen(m_awlen), .m_awsize(m_awsize),
         .m_awburst(m_awburst), .m_awid(m_awid), .m_wvalid(m_wvalid), .m_wready(m_wready), .m_wdata(m_wdata),
         .m_wstrb(m_wstrb), .m_wlast(m_wlast), .m_bvalid(m_bvalid), .m_bready(m_bready), .m_bresp(m_bresp), .err_o(wr_err)

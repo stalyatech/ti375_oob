@@ -50,12 +50,18 @@
 #define SNPU_REG_IRQ_STATUS   0x1C  /* W1C: bit0 done, bit1 descriptor done, bit2 error, bit3 timeout */
 #define SNPU_REG_IRQ_MASK     0x20  /* RW: 1 enables the corresponding IRQ_STATUS bit */
 #define SNPU_REG_CYCLE_CNT    0x24  /* RO: cycles spent busy since start */
-#define SNPU_REG_STALL_IBUF   0x28  /* RO: cycles the array waited for input data */
-#define SNPU_REG_STALL_WGT    0x2C  /* RO: cycles the array waited for weights */
-#define SNPU_REG_STALL_ACC    0x30  /* RO: cycles the array waited for an accumulator bank */
-#define SNPU_REG_STALL_WR     0x34  /* RO: cycles the epilogue waited for the write path */
+#define SNPU_REG_STALL_IBUF   0x28  /* RO: cycles spent in the input fill phases (array idle, DDR bound) */
+#define SNPU_REG_STALL_WGT    0x2C  /* RO: run phase cycles with no pixel vector entering the array */
+#define SNPU_REG_STALL_ACC    0x30  /* RO: cycles with a pixel vector entering the array (MAC cycles) */
+#define SNPU_REG_STALL_WR     0x34  /* RO: cycles an output word was held by the write path */
 #define SNPU_REG_DESC_DONE    0x38  /* RO: descriptors completed since start */
 #define SNPU_REG_TAG          0x3C  /* RO: tag word of the current descriptor */
+#define SNPU_REG_DBG0         0x40  /* RO: debug: rd_dma bookkeeping[31:8], seq state[7:3], unit busy, maxpool busy, wr idle */
+#define SNPU_REG_DBG1         0x44  /* RO: debug: wr pending[7:0], loaders idle, cmd/data handshakes, AXI valid and ready flags */
+#define SNPU_REG_DBG2         0x48  /* RO: debug: write AW wait cycles since reset */
+#define SNPU_REG_DBG3         0x4C  /* RO: debug: write W wait cycles after AW accept since reset */
+#define SNPU_REG_DBG4         0x50  /* RO: debug: write bursts finished since reset */
+#define SNPU_REG_DBG5         0x54  /* RO: debug: write beats sent since reset */
 
 /* Descriptor field accessors: word index, lsb and mask. */
 #define SNPU_DF_OPCODE_WORD 0
@@ -215,32 +221,32 @@ struct snpu_desc {
 };
 
 struct snpu_blob_hdr {
-    uint32_t magic          /* BLOB_MAGIC */
-    uint32_t version        /* ISA_VERSION */
-    uint32_t base           /* load address the blob was linked for */
-    uint32_t size           /* total blob size in bytes */
-    uint32_t desc_off       /* offset of the descriptor table */
-    uint32_t desc_count     /* number of descriptors */
-    uint32_t param_off      /* offset of weights, parameters and tables */
-    uint32_t param_size     /* size of that region */
-    uint32_t scratch_base   /* byte address of the activation scratch region */
-    uint32_t scratch_size   /* size of the scratch region */
-    uint32_t input_off      /* offset of the input tensor buffer inside scratch */
-    uint32_t input_bytes    /* input tensor size in bytes */
-    uint32_t n_outputs      /* number of output tensors */
-    uint32_t outputs_off    /* offset of the output table (see OutputEntry) */
-    uint32_t crc32          /* CRC32 of the blob excluding this word */
+    uint32_t magic;          /* BLOB_MAGIC */
+    uint32_t version;        /* ISA_VERSION */
+    uint32_t base;           /* load address the blob was linked for */
+    uint32_t size;           /* total blob size in bytes */
+    uint32_t desc_off;       /* offset of the descriptor table */
+    uint32_t desc_count;     /* number of descriptors */
+    uint32_t param_off;      /* offset of weights, parameters and tables */
+    uint32_t param_size;     /* size of that region */
+    uint32_t scratch_base;   /* byte address of the activation scratch region */
+    uint32_t scratch_size;   /* size of the scratch region */
+    uint32_t input_off;      /* offset of the input tensor buffer inside scratch */
+    uint32_t input_bytes;    /* input tensor size in bytes */
+    uint32_t n_outputs;      /* number of output tensors */
+    uint32_t outputs_off;    /* offset of the output table (see OutputEntry) */
+    uint32_t crc32;          /* CRC32 of the blob excluding this word */
 };
 
 struct snpu_output_entry {
-    uint32_t offset         /* byte offset inside scratch */
-    uint32_t h              /* height */
-    uint32_t w              /* width */
-    uint32_t c              /* real channels */
-    uint32_t scale_q16      /* dequantization scale, unsigned 16.16 fixed point */
-    uint32_t zp             /* zero point, int8 sign extended */
-    uint32_t name_off       /* offset of the zero terminated tensor name */
-    uint32_t reserved       /* 0 */
+    uint32_t offset;         /* byte offset inside scratch */
+    uint32_t h;              /* height */
+    uint32_t w;              /* width */
+    uint32_t c;              /* real channels */
+    uint32_t scale_q16;      /* dequantization scale, unsigned 16.16 fixed point */
+    uint32_t zp;             /* zero point, int8 sign extended */
+    uint32_t name_off;       /* offset of the zero terminated tensor name */
+    uint32_t reserved;       /* 0 */
 };
 
 _Static_assert(sizeof(struct snpu_desc) == SNPU_DESC_BYTES, "descriptor size");

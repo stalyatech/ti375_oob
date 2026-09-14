@@ -86,10 +86,13 @@ module snpu_conv_unit #(
     output wire [15:0]          out_tile_o,
     output wire                 out_last_o,
     input  wire                 out_ready_i,
-    output wire                 ovfl_o
+    output wire                 ovfl_o,
+    // performance counter view: a pixel vector enters the array this cycle
+    output wire                 mac_active_o
 );
 
     localparam N_OC = 2 * N_CHAIN;
+    assign mac_active_o = d_v;
 
     // ---- address generator
     wire [IBUF_AW-1:0] ag_addr;

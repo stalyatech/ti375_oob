@@ -16,16 +16,19 @@
 // bursts of at most BURST_BYTES that never cross a 4 KB boundary. Up to
 // MAX_OUTSTANDING bursts per channel are in flight; the SoC fabric ties all
 // AXI IDs to zero, so responses come back in issue order and a small order
-// FIFO carries the
-// channel so returning data is routed by RID. The read data channel is
-// held (rready low) while the destination of the head word is not ready.
+// FIFO names the channel of the burst at the head. Every beat of an issued
+// burst has reserved space in a per channel beat FIFO, so the read data
+// channel is always ready: a burst is issued only when its beats fit in the
+// free space of the FIFO. Holding rready low while the consumer stalls would
+// block the shared DDR port and, with the write channel waiting behind it,
+// deadlock the residual path on the board.
 // =============================================================================
 `timescale 1ns / 1ps
 
 module snpu_rd_dma #(
     parameter AXI_DW = 128,
-    parameter BURST_BYTES = 256,
-    parameter MAX_OUTSTANDING = 4
+    parameter BURST_BYTES = 1024,
+    parameter MAX_OUTSTANDING = 16
 )(
     input  wire         clk,
     input  wire         rst,
@@ -62,7 +65,9 @@ module snpu_rd_dma #(
     input  wire [3:0]   m_rid,
     input  wire         m_rlast,
     input  wire [1:0]   m_rresp,
-    output reg          err_o
+    output reg          err_o,
+    // debug view: outstanding counts, warm, active, issue_done, order pointers
+    output wire [23:0]  dbg_o
 );
 
     localparam BEAT_BYTES = AXI_DW / 8;
@@ -83,7 +88,7 @@ module snpu_rd_dma #(
     reg [31:0] chunk_addr [0:1];
     reg [31:0] chunk_left [0:1];
     reg        issue_done [0:1];
-    reg [3:0]  outstanding [0:1];
+    reg [4:0]  outstanding [0:1];
     // receive side
     reg [31:0] r_total [0:1];      // bytes still to be received for the command
     // Chunk start accumulators of the three nest levels, so the next chunk
@@ -104,6 +109,19 @@ module snpu_rd_dma #(
     reg [15:0] tn2 [0:1];
     reg [2:0]  beat_cnt [0:1];
     reg [255:0] word_acc [0:1];
+    // Per channel beat FIFOs with a registered head beat.
+    localparam BURST_BEATS = BURST_BYTES / BEAT_BYTES;
+    // Twice the outstanding capacity: the credit check below is registered
+    // and keeps one burst of margin for the cycle it lags behind.
+    localparam FIFO_DEPTH = 2 * MAX_OUTSTANDING * BURST_BEATS;
+    localparam FIFO_AW = $clog2(FIFO_DEPTH);
+    reg [AXI_DW-1:0] fifo0 [0:FIFO_DEPTH-1];
+    reg [AXI_DW-1:0] fifo1 [0:FIFO_DEPTH-1];
+    reg [FIFO_AW-1:0] fwp [0:1], frp [0:1];
+    reg [FIFO_AW:0]   fcount [0:1];     // beats stored in the RAM
+    reg [FIFO_AW:0]   committed [0:1];  // beats of issued bursts not yet received
+    reg [AXI_DW-1:0]  hd [0:1];         // head beat taken out of the RAM
+    reg               hv [0:1];
 
     genvar c;
     generate
@@ -127,8 +145,15 @@ module snpu_rd_dma #(
 
     // Address issue: round robin between channels with pending bursts.
     reg rr;
-    wire can0 = active[0] && (warm[0] == 3'd0) && !issue_done[0] && (outstanding[0] < MAX_OUTSTANDING);
-    wire can1 = active[1] && (warm[1] == 3'd0) && !issue_done[1] && (outstanding[1] < MAX_OUTSTANDING);
+    // A burst may be issued only when the whole burst fits in the FIFO next
+    // to the beats already stored, held in the head register or committed.
+    reg credit0, credit1;
+    always @(posedge clk) begin
+        credit0 <= (fcount[0] + {{FIFO_AW{1'b0}}, hv[0]} + committed[0] + 2 * BURST_BEATS) <= FIFO_DEPTH;
+        credit1 <= (fcount[1] + {{FIFO_AW{1'b0}}, hv[1]} + committed[1] + 2 * BURST_BEATS) <= FIFO_DEPTH;
+    end
+    wire can0 = active[0] && (warm[0] == 3'd0) && !issue_done[0] && (outstanding[0] < MAX_OUTSTANDING) && credit0;
+    wire can1 = active[1] && (warm[1] == 3'd0) && !issue_done[1] && (outstanding[1] < MAX_OUTSTANDING) && credit1;
     wire pick = (can0 && can1) ? rr : can1;
     wire issue = (can0 || can1) && !m_arvalid;
     wire [31:0] pick_bytes = burst_bytes(chunk_addr[pick], chunk_left[pick]);
@@ -138,17 +163,29 @@ module snpu_rd_dma #(
     // responses arrive in issue order and the order FIFO names the channel
     // of the burst at the head. Depth 8 covers both channels at their full
     // outstanding limit.
-    reg [7:0] ord_ch;
-    reg [2:0] ord_wp, ord_rp;
+    localparam ORD_DEPTH = 2 * MAX_OUTSTANDING;
+    localparam ORD_AW = $clog2(ORD_DEPTH);
+    reg [ORD_DEPTH-1:0] ord_ch;
+    reg [ORD_AW-1:0] ord_wp, ord_rp;
     wire rch = ord_ch[ord_rp];
-    wire word_done = (beat_cnt[rch] == BEATS_PER_WORD - 1);
+    assign dbg_o = {outstanding[1][3:0], outstanding[0][3:0], warm[1], warm[0],
+                    active[1], active[0], issue_done[1], issue_done[0], ord_wp[2:0], ord_rp[2:0]};
     reg [1:0] dv;
     reg [511:0] dd;
     reg [1:0] dl;
     reg [7:0] ddst;
     wire out_free0 = !dv[0] || d_ready_i[0];
     wire out_free1 = !dv[1] || d_ready_i[1];
-    assign m_rready = rch ? out_free1 : out_free0;
+    // Space for every accepted beat is reserved at issue time.
+    assign m_rready = 1'b1;
+    wire push = m_rvalid && m_rready;
+    wire push0 = push && !rch;
+    wire push1 = push && rch;
+    // The consumer takes the head beat when the word output can advance.
+    wire take0 = hv[0] && out_free0;
+    wire take1 = hv[1] && out_free1;
+    wire rd_en0 = (fcount[0] != 0) && (!hv[0] || take0);
+    wire rd_en1 = (fcount[1] != 0) && (!hv[1] || take1);
     assign d_valid_o = dv;
     assign d_data_o = dd;
     assign d_last_o = dl;
@@ -164,7 +201,7 @@ module snpu_rd_dma #(
                 active[i] <= 1'b0; base[i] <= 32'd0; len[i] <= 32'd0; dst[i] <= 4'd0;
                 n0[i] <= 16'd0; n1[i] <= 16'd0; n2[i] <= 16'd0; s0[i] <= 32'd0; s1[i] <= 32'd0; s2[i] <= 32'd0;
                 i0[i] <= 16'd0; i1[i] <= 16'd0; i2[i] <= 16'd0; chunk_addr[i] <= 32'd0; chunk_left[i] <= 32'd0;
-                issue_done[i] <= 1'b0; outstanding[i] <= 4'd0; r_total[i] <= 32'd0; beat_cnt[i] <= 3'd0;
+                issue_done[i] <= 1'b0; outstanding[i] <= 5'd0; r_total[i] <= 32'd0; beat_cnt[i] <= 3'd0;
                 word_acc[i] <= 256'd0;
                 a0[i] <= 32'd0; a1[i] <= 32'd0; a2[i] <= 32'd0;
                 warm[i] <= 3'd0; tprod[i] <= 32'd0; tn1[i] <= 16'd0; tn2[i] <= 16'd0;
@@ -172,8 +209,11 @@ module snpu_rd_dma #(
             end
             m_arvalid <= 1'b0; m_araddr <= 32'd0; m_arlen <= 8'd0; m_arid <= 4'd0;
             rr <= 1'b0; issue_ch <= 1'b0;
-            ord_ch <= 8'd0; ord_wp <= 3'd0; ord_rp <= 3'd0;
+            ord_ch <= 0; ord_wp <= 0; ord_rp <= 0;
             dv <= 2'b00; dd <= 512'd0; dl <= 2'b00; ddst <= 8'd0; err_o <= 1'b0;
+            for (i = 0; i < 2; i = i + 1) begin
+                fwp[i] <= 0; frp[i] <= 0; fcount[i] <= 0; committed[i] <= 0; hv[i] <= 1'b0;
+            end
         end else begin
             // Command acceptance.
             for (i = 0; i < 2; i = i + 1) begin
@@ -258,36 +298,64 @@ module snpu_rd_dma #(
             // Issue order bookkeeping.
             if (ar_go) begin
                 ord_ch[ord_wp] <= issue_ch;
-                ord_wp <= ord_wp + 3'd1;
+                ord_wp <= ord_wp + 1'b1;
             end
             if (burst_end)
-                ord_rp <= ord_rp + 3'd1;
+                ord_rp <= ord_rp + 1'b1;
             // Outstanding counters.
             for (i = 0; i < 2; i = i + 1)
-                outstanding[i] <= outstanding[i] + ((ar_go && (issue_ch == i)) ? 4'd1 : 4'd0)
-                                                 - ((burst_end && (rch == i)) ? 4'd1 : 4'd0);
-            // Data channel.
+                outstanding[i] <= outstanding[i] + ((ar_go && (issue_ch == i)) ? 5'd1 : 5'd0)
+                                                 - ((burst_end && (rch == i)) ? 5'd1 : 5'd0);
+            // Beat FIFOs: AXI side pushes into the channel at the head of the
+            // order FIFO, the consumer side pops into the head register.
+            if (push && m_rresp[1])
+                err_o <= 1'b1;
+            if (push0) begin
+                fifo0[fwp[0]] <= m_rdata;
+                fwp[0] <= fwp[0] + 1'b1;
+            end
+            if (push1) begin
+                fifo1[fwp[1]] <= m_rdata;
+                fwp[1] <= fwp[1] + 1'b1;
+            end
+            if (rd_en0) begin
+                hd[0] <= fifo0[frp[0]];
+                frp[0] <= frp[0] + 1'b1;
+            end
+            if (rd_en1) begin
+                hd[1] <= fifo1[frp[1]];
+                frp[1] <= frp[1] + 1'b1;
+            end
+            fcount[0] <= fcount[0] + {{FIFO_AW{1'b0}}, push0} - {{FIFO_AW{1'b0}}, rd_en0};
+            fcount[1] <= fcount[1] + {{FIFO_AW{1'b0}}, push1} - {{FIFO_AW{1'b0}}, rd_en1};
+            hv[0] <= rd_en0 ? 1'b1 : (take0 ? 1'b0 : hv[0]);
+            hv[1] <= rd_en1 ? 1'b1 : (take1 ? 1'b0 : hv[1]);
+            for (i = 0; i < 2; i = i + 1)
+                committed[i] <= committed[i]
+                              + ((ar_go && (issue_ch == i)) ? ({{(FIFO_AW-5){1'b0}}, m_arlen[5:0]} + 1) : 0)
+                              - ((push && (rch == i)) ? 1 : 0);
+            // Word assembly per channel from the head beat.
             for (i = 0; i < 2; i = i + 1)
                 if (dv[i] && d_ready_i[i])
                     dv[i] <= 1'b0;
-            if (m_rvalid && m_rready) begin
-                if (m_rresp[1])
-                    err_o <= 1'b1;
-                word_acc[rch][beat_cnt[rch] * AXI_DW +: AXI_DW] <= m_rdata;
-                r_total[rch] <= r_total[rch] - BEAT_BYTES;
-                if (word_done) begin
-                    beat_cnt[rch] <= 3'd0;
-                    dv[rch] <= 1'b1;
-                    if (BEATS_PER_WORD == 1)
-                        dd[rch*256 +: 256] <= m_rdata;
-                    else
-                        dd[rch*256 +: 256] <= {m_rdata, word_acc[rch][255-AXI_DW:0]};
-                    dl[rch] <= (r_total[rch] == BEAT_BYTES);
-                    ddst[rch*4 +: 4] <= dst[rch];
-                    if (r_total[rch] == BEAT_BYTES)
-                        active[rch] <= 1'b0;
-                end else begin
-                    beat_cnt[rch] <= beat_cnt[rch] + 1'b1;
+            for (i = 0; i < 2; i = i + 1) begin
+                if (i == 0 ? take0 : take1) begin
+                    word_acc[i][beat_cnt[i] * AXI_DW +: AXI_DW] <= hd[i];
+                    r_total[i] <= r_total[i] - BEAT_BYTES;
+                    if (beat_cnt[i] == BEATS_PER_WORD - 1) begin
+                        beat_cnt[i] <= 3'd0;
+                        dv[i] <= 1'b1;
+                        if (BEATS_PER_WORD == 1)
+                            dd[i*256 +: 256] <= hd[i];
+                        else
+                            dd[i*256 +: 256] <= {hd[i], word_acc[i][255-AXI_DW:0]};
+                        dl[i] <= (r_total[i] == BEAT_BYTES);
+                        ddst[i*4 +: 4] <= dst[i];
+                        if (r_total[i] == BEAT_BYTES)
+                            active[i] <= 1'b0;
+                    end else begin
+                        beat_cnt[i] <= beat_cnt[i] + 1'b1;
+                    end
                 end
             end
         end

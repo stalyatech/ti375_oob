@@ -185,6 +185,10 @@ module snpu_epilogue #(
                         end
                     end
                     S_RUN: begin
+                        // Plane major order: every pixel of one plane, then
+                        // the next plane. The words of a plane row are then
+                        // contiguous in memory, which lets the write DMA and
+                        // the residual fetch use long bursts.
                         ep_addr_o <= px[P_W-1:0];
                         s0_v <= plane_valid;
                         s0_win <= win;
@@ -192,14 +196,16 @@ module snpu_epilogue #(
                         s0_px <= px;
                         s0_tile <= tile_idx;
                         s0_last <= (px == tile_px - 1) && !next_plane_valid;
-                        if (next_plane_valid) begin
-                            win <= win + 8'd1;
-                        end else begin
-                            win <= 8'd0;
-                            if (px == tile_px - 1)
+                        if (px == tile_px - 1) begin
+                            px <= 16'd0;
+                            if (next_plane_valid) begin
+                                win <= win + 8'd1;
+                            end else begin
+                                win <= 8'd0;
                                 state <= S_FLUSH;
-                            else
-                                px <= px + 1'b1;
+                            end
+                        end else begin
+                            px <= px + 1'b1;
                         end
                     end
                     S_FLUSH: begin

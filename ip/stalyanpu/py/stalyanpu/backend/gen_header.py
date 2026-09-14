@@ -62,12 +62,12 @@ def render_header() -> str:
     L.append("")
     L.append("struct snpu_blob_hdr {")
     for name, doc in isa.BLOB_HEADER:
-        L.append(f"    uint32_t {name:<14s} /* {doc} */")
+        L.append(f"    uint32_t {name + chr(59):<15s} /* {doc} */")
     L.append("};")
     L.append("")
     L.append("struct snpu_output_entry {")
     for name, doc in isa.OUTPUT_ENTRY:
-        L.append(f"    uint32_t {name:<14s} /* {doc} */")
+        L.append(f"    uint32_t {name + chr(59):<15s} /* {doc} */")
     L.append("};")
     L.append("")
     L.append("_Static_assert(sizeof(struct snpu_desc) == SNPU_DESC_BYTES, \"descriptor size\");")

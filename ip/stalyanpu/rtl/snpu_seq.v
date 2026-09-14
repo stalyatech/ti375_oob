@@ -83,7 +83,9 @@ module snpu_seq #(
     output reg  [31:0]  out_ps_o,
     output reg  [31:0]  out_rs_o,
     output reg  [15:0]  out_w_o,
-    input  wire         wr_idle_i
+    input  wire         wr_idle_i,
+    // debug view of the state machine
+    output wire [4:0]   dbg_state_o
 );
 
     localparam N_OC = 2 * N_CHAIN;
@@ -122,6 +124,7 @@ module snpu_seq #(
                S_NEXT_TILE = 5'd14, S_DESC_END = 5'd15, S_MP = 5'd16, S_MP_WAIT = 5'd17, S_DONE = 5'd18,
                S_ERROR = 5'd19;
     reg [4:0] state;
+    assign dbg_state_o = state;
     reg [31:0] desc_addr;
     reg [15:0] idx;
     reg [1:0]  fetch_words;
@@ -227,10 +230,12 @@ module snpu_seq #(
                 res_oct <= drain_oct_i;
             end
             if (res_pending && !cmd_valid_o[0] && cmd_ready_i[0] && (state == S_RUN_WAIT)) begin
-                // Words in emission order: rows, columns, planes of the oct.
-                set_cmd(1'b0, d[18] + res_term + t_res_row, 32'd32,
+                // Words in emission order: planes of the oct, rows, columns.
+                // A row of one plane is one contiguous chunk.
+                set_cmd(1'b0, d[18] + res_term + t_res_row, {11'd0, out_w, 5'd0},
+                        rows, d[20],
                         (res_left < (N_OC / 32)) ? res_left : (N_OC / 32), d[19],
-                        out_w, 32'd32, rows, d[20], DST_RES);
+                        16'd1, 32'd0, DST_RES);
                 res_term <= res_term + (N_OC / 32) * d[19];
                 res_left <= res_left - (N_OC / 32);
                 res_pending <= 1'b0;

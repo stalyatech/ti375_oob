@@ -85,23 +85,25 @@ def conv_unit_vectors(out_dir: str, hw: HwConfig, x: np.ndarray, w_q: np.ndarray
     wbytes_all = wbytes_once * n_tiles
     prm = weightpack.pack_params(bias_q, mult, shift, zp_pre, n_oct * hw.n_oc)
 
-    # Output and residual words in emission order.
+    # Output and residual words in emission order: per tile and output
+    # channel tile, plane major (every pixel of a plane, then the next plane).
     out_words = bytearray()
     res_words = bytearray()
+    if residual is not None:
+        rfull = np.full((n_planes * 32, out_h, out_w), zp_res, dtype=np.int8)
+        rfull[:oc] = residual
     row = 0
     for t in range(n_tiles):
         rows = min(tile_rows, out_h-row)
         for o in range(n_oct):
-            for r in range(rows):
-                for c in range(out_w):
-                    for win in range(hw.n_oc // 32):
-                        plane = o * (hw.n_oc // 32) + win
-                        if plane >= n_planes:
-                            continue
+            for win in range(hw.n_oc // 32):
+                plane = o * (hw.n_oc // 32) + win
+                if plane >= n_planes:
+                    continue
+                for r in range(rows):
+                    for c in range(out_w):
                         out_words += full[plane * 32:(plane + 1) * 32, row + r, c].tobytes()
                         if residual is not None:
-                            rfull = np.full((n_planes * 32, out_h, out_w), zp_res, dtype=np.int8)
-                            rfull[:oc] = residual
                             res_words += rfull[plane * 32:(plane + 1) * 32, row + r, c].tobytes()
         row += rows
 

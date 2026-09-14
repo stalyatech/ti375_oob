@@ -27,6 +27,11 @@ TESTS = {
         "needs_dsp_model": True,
         "group": "unit",
     },
+    "tb_wr_dma": {
+        "top": "tb_wr_dma",
+        "files": [f"{RTL}/snpu_wr_dma.v", f"{UNIT}/tb_wr_dma.sv"],
+        "group": "unit",
+    },
     "tb_pe_chain": {
         "top": "tb_pe_chain",
         "files": [
@@ -117,6 +122,18 @@ TESTS = {
         "gen": ["-m", "stalyanpu.golden.demo", "net", "sim/stalyanpu/stim/demo_net"],
         "plusargs": ["+VEC=sim/stalyanpu/stim/demo_net"],
         "plusargs_file": "sim/stalyanpu/stim/demo_net/run.txt",
+    },
+    "tb_net_demo_full": {
+        "top": "tb_npu_net",
+        "files": TOP_FILES,
+        "params": {"N_CHAIN": 32, "CHAIN_LEN": 32, "P_MAX": 1024, "P_W": 10, "IBUF_WORDS": 16384, "IBUF_AW": 14,
+                   "WFIFO_WORDS": 1024, "WFIFO_AW": 10, "WIN0_WORDS": 1 << 20, "WIN1_WORDS": 1 << 20,
+                   "MP_MAX_W": 128, "MP_W_AW": 7},
+        "needs_dsp_model": True,
+        "group": "net",
+        "gen": ["-m", "stalyanpu.golden.demo", "net", "sim/stalyanpu/stim/demo_net_full", "full2048"],
+        "plusargs": ["+VEC=sim/stalyanpu/stim/demo_net_full"],
+        "plusargs_file": "sim/stalyanpu/stim/demo_net_full/run.txt",
     },
     "tb_layer_demo0": {
         "top": "tb_npu_net",

@@ -89,13 +89,14 @@ module tb_conv_unit;
 
     task next_expected;
         begin
-            // advance (tile, oct, px, win) skipping invalid planes
-            e_win = e_win + 1;
-            while (e_win < wins && (e_oct * wins + e_win) >= n_planes) e_win = e_win + 1;
-            if (e_win >= wins) begin
-                e_win = 0;
-                if (e_px == e_rows * out_w - 1) begin
-                    e_px = 0;
+            // advance (tile, oct, win, px), plane major: the pixel runs
+            // fastest, then the next valid plane of the oct
+            if (e_px == e_rows * out_w - 1) begin
+                e_px = 0;
+                e_win = e_win + 1;
+                while (e_win < wins && (e_oct * wins + e_win) >= n_planes) e_win = e_win + 1;
+                if (e_win >= wins) begin
+                    e_win = 0;
                     if (e_oct == n_oct - 1) begin
                         e_oct = 0;
                         e_tile = e_tile + 1;
@@ -104,9 +105,9 @@ module tb_conv_unit;
                     end else begin
                         e_oct = e_oct + 1;
                     end
-                end else begin
-                    e_px = e_px + 1;
                 end
+            end else begin
+                e_px = e_px + 1;
             end
         end
     endtask

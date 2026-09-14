@@ -10,7 +10,7 @@ work_*/
 
 docs/wiki
 # DNN integration helper outputs
-scratch_*.log
+scratch_*
 RUNPNR_*
 .pydeps-openeye/
 sim/openeye/sim_build/
@@ -33,3 +33,4 @@ syn/stalyanpu/*/work_*/
 syn/stalyanpu/*/run_*.log
 syn/stalyanpu/*/*.isf
 syn/stalyanpu/*/*_template.v
+ip/stalyanpu/sw/baremetal/npu_test/build/

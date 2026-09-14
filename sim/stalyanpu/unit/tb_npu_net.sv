@@ -36,7 +36,7 @@ module tb_npu_net;
     reg rst = 1'b1;
 
     // APB.
-    reg [5:0] paddr = 0; reg psel = 0, penable = 0, pwrite = 0; reg [31:0] pwdata = 0;
+    reg [6:0] paddr = 0; reg psel = 0, penable = 0, pwrite = 0; reg [31:0] pwdata = 0;
     wire [31:0] prdata; wire pready, pslverr, irq;
     // AXI.
     wire arvalid, arready, rvalid, rready, rlast, awvalid, awready, wvalid, wready, wlast, bvalid, bready;
@@ -109,7 +109,7 @@ module tb_npu_net;
     endtask
 
     task apb_write;
-        input [5:0] a;
+        input [6:0] a;
         input [31:0] v;
         begin
             @(negedge clk);
@@ -122,7 +122,7 @@ module tb_npu_net;
     endtask
 
     task apb_read;
-        input [5:0] a;
+        input [6:0] a;
         output [31:0] v;
         begin
             @(negedge clk);
@@ -236,6 +236,22 @@ module tb_npu_net;
     initial begin
         if ($value$plusargs("WATCHDOG=%d", wd_cycles)) ;
     end
+    // Shortly before the watchdog fires, show the debug words of the DUT
+    // so a hang can be placed without a waveform.
+    initial begin
+        repeat (wd_cycles - 4) @(posedge clk);
+        $display("DBG before watchdog: dbg0=%08x dbg1=%08x seq_state=%0d desc_idx=%0d",
+                 u_dut.dbg0, u_dut.dbg1, u_dut.seq_state, u_dut.desc_idx);
+        $display("  rd ch1: fcount=%0d hv=%0d committed=%0d r_total=%0d chunk_left=%0d issue_done=%0d active=%0d",
+                 u_dut.u_rd.fcount[1], u_dut.u_rd.hv[1], u_dut.u_rd.committed[1], u_dut.u_rd.r_total[1],
+                 u_dut.u_rd.chunk_left[1], u_dut.u_rd.issue_done[1], u_dut.u_rd.active[1]);
+        $display("  rd ch0: fcount=%0d hv=%0d committed=%0d r_total=%0d active=%0d dv=%b",
+                 u_dut.u_rd.fcount[0], u_dut.u_rd.hv[0], u_dut.u_rd.committed[0], u_dut.u_rd.r_total[0],
+                 u_dut.u_rd.active[0], u_dut.u_rd.dv);
+        $display("  wfifo wp=%0d rp=%0d fullf=%0d w_ready=%0d | agen state=%0d | seq tile=%0d unit_start=%0d",
+                 u_dut.u_unit.u_wfifo.wp, u_dut.u_unit.u_wfifo.rp, u_dut.u_unit.u_wfifo.fullf,
+                 u_dut.u_unit.u_wfifo.w_ready_o, u_dut.u_unit.u_agen.state, u_dut.u_seq.tile, u_dut.u_seq.unit_start_o);
+    end
     `TB_WATCHDOG("tb_npu_net", wd_cycles, clk)
 
     reg [31:0] v, status, cycles;
@@ -271,29 +287,30 @@ module tb_npu_net;
         rst = 1'b0;
         repeat (4) @(negedge clk);
 
-        apb_read(6'h00, v);
+        apb_read(7'h00, v);
         `TB_CHECK(v == 32'h534E5055, "ID register")
-        apb_read(6'h08, v);
+        apb_read(7'h08, v);
         $display("GEOMETRY %h", v);
         // The descriptor list address and count come from the vector meta
         // (desc_base = blob base + 4096, count = descriptors).
-        apb_write(6'h14, desc_base_plus);
-        apb_write(6'h18, desc_count_plus);
-        apb_write(6'h20, 32'h00000005);   // done and error interrupts only
+        apb_write(7'h14, desc_base_plus);
+        apb_write(7'h18, desc_count_plus);
+        apb_write(7'h20, 32'h00000005);   // done and error interrupts only
         t0 = $time;
-        apb_write(6'h0C, 32'h1);
+        apb_write(7'h0C, 32'h1);
 
         // Wait for the interrupt.
         while (!irq) @(posedge clk);
-        apb_read(6'h1C, v);
+        apb_read(7'h1C, v);
         $display("IRQ_STATUS %h after %0d ns", v, $time-t0);
         `TB_CHECK(v[0] == 1'b1, "done interrupt")
         `TB_CHECK(v[2] == 1'b0, "error interrupt")
-        apb_read(6'h10, status);
+        apb_read(7'h10, status);
         $display("STATUS %h", status);
-        apb_read(6'h24, cycles);
+        apb_read(7'h24, cycles);
         $display("CYCLE_CNT %0d", cycles);
-        apb_write(6'h1C, 32'hF);
+        $display("WR_BURSTS %0d WR_BEATS %0d AW_WAIT %0d W_WAIT %0d", u_dut.u_wr.dbg_bursts_o, u_dut.u_wr.dbg_beats_o, u_dut.u_wr.dbg_aw_wait_o, u_dut.u_wr.dbg_w_wait_o);
+        apb_write(7'h1C, 32'hF);
         `TB_CHECK(mem_errors == 0, "memory model saw accesses outside the windows")
 
         // Optional dump of the produced regions (+DUMP_REGION=<file>): one 32 byte line per word.

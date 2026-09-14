@@ -97,7 +97,7 @@ y   = LUT[q + 128]                      (SILU bayrağı; tablo çıkışı zp_ou
 out = sat8( ((y-zp_out)·mult_a + 2^(sa-1)) >> sa + ((r-zp_res)·mult_b + 2^(sb-1)) >> sb + zp_out2 )   (RESIDUAL)
 ```
 
-## CSR haritası (APB, `PADDR[14]=1` penceresi)
+## CSR haritası (APB, `PADDR[14]=1` penceresi, 7 bit bayt ofseti, 128 B)
 
 | Ofset | Ad | Erişim | Açıklama |
 |------:|----|--------|----------|
@@ -111,12 +111,18 @@ out = sat8( ((y-zp_out)·mult_a + 2^(sa-1)) >> sa + ((r-zp_res)·mult_b + 2^(sb-
 | 0x1C | IRQ_STATUS | W1C | bit0 done, bit1 desc done, bit2 error, bit3 timeout |
 | 0x20 | IRQ_MASK | RW | 1 = ilgili bit kesme üretir |
 | 0x24 | CYCLE_CNT | RO | start'tan beri meşgul çevrim |
-| 0x28 | STALL_IBUF | RO | dizi giriş verisi bekledi |
-| 0x2C | STALL_WGT | RO | dizi ağırlık bekledi |
-| 0x30 | STALL_ACC | RO | dizi biriktirici bankı bekledi |
-| 0x34 | STALL_WR | RO | epilog yazma yolunu bekledi |
+| 0x28 | STALL_IBUF (fill) | RO | giriş dolum fazlarında geçen çevrim (dizi boş, DDR'a bağlı) |
+| 0x2C | STALL_WGT (run_idle) | RO | koşum fazında diziye piksel vektörü girmeyen çevrim |
+| 0x30 | STALL_ACC (mac) | RO | diziye piksel vektörü giren çevrim (MAC çevrimi) |
+| 0x34 | STALL_WR (wr_wait) | RO | çıkış kelimesinin yazma yolunda beklediği çevrim |
 | 0x38 | DESC_DONE | RO | tamamlanan descriptor sayısı |
 | 0x3C | TAG | RO | yürüyen descriptor'ın tag'i |
+| 0x40 | DBG0 | RO | hata ayıklama: [31:8] rd_dma (outstanding, warm, active, issue_done, sıra FIFO işaretçileri), [7:3] sequencer durumu, [2] motor meşgul, [1] maxpool meşgul, [0] yazma DMA boşta |
+| 0x44 | DBG1 | RO | hata ayıklama: [7:0] bekleyen yazma yanıtı, [8] yükleyiciler boşta, [10:9] cmd_valid, [12:11] cmd_ready, [14:13] d_valid, [16:15] d_ready, [17..25] AXI ar/r/aw/w/b valid ve ready, [27:26] rd_busy, [28] çıkış valid, [29] çıkış ready, [30] okuma hatası, [31] yazma hatası |
+| 0x48 | DBG2 | RO | ölçüm: yazma AW bekleme çevrimleri (resetten beri) |
+| 0x4C | DBG3 | RO | ölçüm: AW kabulünden sonra W bekleme çevrimleri |
+| 0x50 | DBG4 | RO | ölçüm: biten yazma burst sayısı |
+| 0x54 | DBG5 | RO | ölçüm: gönderilen yazma beat sayısı |
 
 Hata kodları: 0 yok, 1 opcode, 2 CRC, 3 sürüm, 4 AXI okuma, 5 AXI yazma, 6 zaman aşımı,
 7 geometri (descriptor donanım geometrisine sığmıyor).

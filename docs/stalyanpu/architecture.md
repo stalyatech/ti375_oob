@@ -78,7 +78,8 @@ ibuf'a doldurulur (upsample kaynakta satır başına komut, her sözcük iki kez
 akışı kanal 1'den başlatılır (`w_bytes_per_oct · n_oct`, döşeme başına tekrar), motor
 `cfg_oy0/cfg_out_rows/cfg_row_base/cfg_tile0` ile bir döşeme için çalıştırılır; epilog bir OC
 döşemesini boşaltmaya başlayınca (`drain_start`) o döşemenin residual sözcükleri yayın
-sırasında (satır, sütun, plane) tek DMA komutuyla çekilir. Çıkış sözcükleri
+sırasında (plane, satır, sütun; M8'de plane-major yapıldı, bir plane satırı tek parça) tek DMA
+komutuyla çekilir. Çıkış sözcükleri
 `out_base + oy0·rs + plane·ps + row·rs + col·32` adresine yazılır (piksel etiketi
 değişince sütun/satır sayaçları ilerler). `LAST` bayrağı veya sayaç bitince `done` kesmesi.
 

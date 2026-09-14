@@ -1,6 +1,6 @@
 # StalyaNPU: YOLOv8s için INT8 CNN hızlandırıcısı
 
-> **DURUM (2026-09-10): M0'dan M7'ye kadar tamamlandı.** Dal `stalya-fmu_v2.0-npu`. Karar kaydı,
+> **DURUM (2026-09-14): M0'dan M7'ye kadar tamamlandı, M8 board bring-up sürüyor.** Dal `stalya-fmu_v2.0-npu`. Karar kaydı,
 > mimari, ISA taslağı, performans modeli, ONNX ön yüzü, ilk RTL adımı (DSP48 DUAL sarmalayıcı +
 > kaskad zinciri, Efinix sim modeliyle bit bit) ve nicemleme hattı (kalibrasyon, bit-kesin
 > referans model, COCO mAP) hazır. **INT8 mAP50-95 düşüşü 0,78 puan (kapı 2,0)**, bkz.
@@ -16,7 +16,11 @@
 > `ti375_oob_top.v` içinde OpenEye ve gDMA_dnn bağlantıları söküldü, `snpu_top` MDNN=3
 > yuvasına, CSR yumuşak SoC APB penceresine (`0xF810_4000`, CDC köprüsü), kesme PLIC 9'a
 > bağlandı; tam tasarım map/pnr/pgm PASS, 250 MHz pozitif slack (+0,005 ns), CDC temiz. Ayrıntı
-> [synthesis-guide.md](synthesis-guide.md) "M7 entegrasyonu". Sonraki adım M8 board bring-up.
+> [synthesis-guide.md](synthesis-guide.md) "M7 entegrasyonu". M8 (2026-09-14): sert SoC'tan sürülen
+> NPU, Ti375C529 kitinde YOLOv8s 640×384 tam karesini **bit bit doğru** koşturuyor; DDR yolu
+> düzeltmeleriyle (rd_dma FIFO, yazma burst birleştirme, cache öznitelikleri, plane-major boşaltma)
+> **4,6 → 24,6 fps**. Kalan: giriş dolumunun hesapla örtüşmesi ve stem L0 modu (hedef 30 fps),
+> zamanlama kapanışı. Ayrıntı [bringup-guide.md](bringup-guide.md).
 
 Hedef: **YOLOv8s, 1080p kaynaktan 640×384 letterbox, 30 fps, INT8**, Efinix Titanium
 Ti375C529 üzerinde. Gerek 8,6 GMAC/kare → 258 GMAC/s sürekli.
@@ -86,5 +90,5 @@ python -m venv .venv-stalyanpu
 | M5 | Dizi-tek Efinity sentezi | 250 MHz pozitif slack | **tamam** (dizi 258, motor 256 MHz pozitif; top 244 MHz, DSP 1186, RAM10 1149) |
 | M6 | YOLOv8s katman-katman + tam ağ sim | %100 PASS | katmanlar **tamam** (66/66 kırpılmış behav + vendor alt küme 5/5; perf bandı ±%18, bkz. verification-guide); tam ağ koşumu M8 öncesi isteğe bağlı |
 | M7 | `ti375_oob_top.v` entegrasyonu (OpenEye çıkar) | map/pnr/pgm PASS | **tamam** (map/pnr/pgm PASS, io_ddrMasters_0_clk +0,005 ns, CDC temiz; 1217 DSP, 1478 RAM10) |
-| M8 | Board bring-up | ≥ 30 fps ölçüm | |
+| M8 | Board bring-up | ≥ 30 fps ölçüm | sürüyor: tam kare bit bit OK, **24,6 fps** (bkz. bringup-guide) |
 | M9 | Dokümantasyon, dedicated DDR portu, Linux yer tutucu | | |

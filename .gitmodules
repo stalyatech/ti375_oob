@@ -2,3 +2,7 @@
 	path = ip/OpenEye
 	url = https://github.com/stalyatech/OpenEye.git
 	branch = stalya
+[submodule "ip/stalyanpu"]
+	path = ip/stalyanpu
+	url = https://github.com/stalyatech/StalyaNPU.git
+	branch = main

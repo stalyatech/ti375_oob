@@ -8,7 +8,9 @@ embedded_sw/
 outflow/
 work_*/
 
-docs/wiki
+# Obsidian per user window state and the stray empty base view of the wiki
+docs/wiki/.obsidian/workspace.json
+docs/wiki/Untitled.base
 # Flow and board run logs, keep them out of the project root
 syn/logs/
 # DNN integration helper outputs

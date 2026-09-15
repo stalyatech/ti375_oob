@@ -9,9 +9,9 @@ outflow/
 work_*/
 
 docs/wiki
+# Flow and board run logs, keep them out of the project root
+syn/logs/
 # DNN integration helper outputs
-scratch_*
-RUNPNR_*
 .pydeps-openeye/
 sim/openeye/sim_build/
 sim/openeye/stim/demo/

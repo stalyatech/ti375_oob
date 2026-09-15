@@ -1,6 +1,47 @@
 `define ETH_1000MBPS 1
 
 module ti375_oob_top (
+// Dedicated 512-bit AXI port of the LPDDR4x controller (axi_target0),
+// used by the StalyaNPU accelerator on io_ddrMasters_0_clk.
+output          npu_ddr_arstn,
+output          npu_ddr_arvalid,
+input           npu_ddr_arready,
+output [32:0]   npu_ddr_araddr,
+output [7:0]    npu_ddr_arlen,
+output [2:0]    npu_ddr_arsize,
+output [1:0]    npu_ddr_arburst,
+output [5:0]    npu_ddr_arid,
+output          npu_ddr_arlock,
+output          npu_ddr_arqos,
+output          npu_ddr_arapcmd,
+input           npu_ddr_rvalid,
+output          npu_ddr_rready,
+input  [511:0]  npu_ddr_rdata,
+input  [5:0]    npu_ddr_rid,
+input           npu_ddr_rlast,
+input  [1:0]    npu_ddr_rresp,
+output          npu_ddr_awvalid,
+input           npu_ddr_awready,
+output [32:0]   npu_ddr_awaddr,
+output [7:0]    npu_ddr_awlen,
+output [2:0]    npu_ddr_awsize,
+output [1:0]    npu_ddr_awburst,
+output [5:0]    npu_ddr_awid,
+output          npu_ddr_awlock,
+output          npu_ddr_awqos,
+output [3:0]    npu_ddr_awcache,
+output          npu_ddr_awapcmd,
+output          npu_ddr_awallstrb,
+output          npu_ddr_awcobuf,
+output          npu_ddr_wvalid,
+input           npu_ddr_wready,
+output [511:0]  npu_ddr_wdata,
+output [63:0]   npu_ddr_wstrb,
+output          npu_ddr_wlast,
+input           npu_ddr_bvalid,
+output          npu_ddr_bready,
+input  [5:0]    npu_ddr_bid,
+input  [1:0]    npu_ddr_bresp,
 output		    jtagCtrl_tdi,
 input		    jtagCtrl_tdo,
 output		    jtagCtrl_enable,
@@ -846,9 +887,11 @@ gDMA u_gDMA (
 // io_apbSlave_0 covers 64 KB at CPU address 0xE810_0000. PADDR[14]=1
 // selects the CSR bridge (CPU address 0xE810_4000), PADDR[14]=0 is
 // reserved and always ready.
-//   Data plane: snpu_top <-> DDR through master port MDNN on
-//   io_ddrMasters_0_clk. The done interrupt enters the hard SoC PLIC on
-//   userInterruptI, which carries PLIC interrupt id 9.
+//   Data plane: snpu_top (256-bit AXI) <-> snpu_axi_up512 <-> dedicated
+//   512-bit port axi_target0 of the LPDDR4x controller (npu_ddr_*), on
+//   io_ddrMasters_0_clk. The MDNN slot of the shared switch is idle. The
+//   done interrupt enters the hard SoC PLIC on userInterruptI, which
+//   carries PLIC interrupt id 9.
 //====================================================================
 wire [31:0] hp_apbSlave_0_PADDR;
 wire        hp_apbSlave_0_PSEL;
@@ -907,7 +950,21 @@ snpu_apb_cdc u_snpu_apb_cdc (
     .d_pslverr ( npu_pslverr )
 );
 
-snpu_top u_snpu (
+// Accelerator master, 256 bits wide; the write bursts stay at 64 words so
+// they fit the 64 beat limit of the DDR port after widening.
+wire         npu_m_arvalid, npu_m_arready, npu_m_rvalid, npu_m_rready, npu_m_rlast;
+wire         npu_m_awvalid, npu_m_awready, npu_m_wvalid, npu_m_wready, npu_m_wlast, npu_m_bvalid, npu_m_bready;
+wire [31:0]  npu_m_araddr, npu_m_awaddr;
+wire [7:0]   npu_m_arlen, npu_m_awlen;
+wire [255:0] npu_m_rdata, npu_m_wdata;
+wire [31:0]  npu_m_wstrb;
+wire [1:0]   npu_m_rresp, npu_m_bresp;
+wire [31:0]  npu_up_dbg;
+
+snpu_top #(
+    .AXI_DW        ( 256 ),
+    .WR_SLOT_WORDS ( 64 )
+) u_snpu (
     .clk       ( io_ddrMasters_0_clk ),
     .rst       ( npu_rst ),
     .paddr_i   ( npu_paddr ),
@@ -919,49 +976,132 @@ snpu_top u_snpu (
     .pready_o  ( npu_pready ),
     .pslverr_o ( npu_pslverr ),
     .irq_o     ( npu_irq ),
-    .m_arvalid ( m_axis_arvalid[MDNN*1 +: 1] ),
-    .m_arready ( m_axis_arready[MDNN*1 +: 1] ),
-    .m_araddr  ( m_axis_araddr[MDNN*32 +: 32] ),
-    .m_arlen   ( m_axis_arlen[MDNN*8 +: 8] ),
-    .m_arsize  ( m_axis_arsize[MDNN*3 +: 3] ),
-    .m_arburst ( m_axis_arburst[MDNN*2 +: 2] ),
+    .dbg_ext_i ( npu_up_dbg ),
+    .m_arvalid ( npu_m_arvalid ),
+    .m_arready ( npu_m_arready ),
+    .m_araddr  ( npu_m_araddr ),
+    .m_arlen   ( npu_m_arlen ),
+    .m_arsize  ( ),
+    .m_arburst ( ),
     .m_arid    ( ),
-    .m_rvalid  ( m_axis_rvalid[MDNN*1 +: 1] ),
-    .m_rready  ( m_axis_rready[MDNN*1 +: 1] ),
-    .m_rdata   ( m_axis_rdata[MDNN*128 +: 128] ),
+    .m_rvalid  ( npu_m_rvalid ),
+    .m_rready  ( npu_m_rready ),
+    .m_rdata   ( npu_m_rdata ),
     .m_rid     ( 4'd0 ),
-    .m_rlast   ( m_axis_rlast[MDNN*1 +: 1] ),
-    .m_rresp   ( m_axis_rresp[MDNN*2 +: 2] ),
-    .m_awvalid ( m_axis_awvalid[MDNN*1 +: 1] ),
-    .m_awready ( m_axis_awready[MDNN*1 +: 1] ),
-    .m_awaddr  ( m_axis_awaddr[MDNN*32 +: 32] ),
-    .m_awlen   ( m_axis_awlen[MDNN*8 +: 8] ),
-    .m_awsize  ( m_axis_awsize[MDNN*3 +: 3] ),
-    .m_awburst ( m_axis_awburst[MDNN*2 +: 2] ),
+    .m_rlast   ( npu_m_rlast ),
+    .m_rresp   ( npu_m_rresp ),
+    .m_awvalid ( npu_m_awvalid ),
+    .m_awready ( npu_m_awready ),
+    .m_awaddr  ( npu_m_awaddr ),
+    .m_awlen   ( npu_m_awlen ),
+    .m_awsize  ( ),
+    .m_awburst ( ),
     .m_awid    ( ),
-    .m_wvalid  ( m_axis_wvalid[MDNN*1 +: 1] ),
-    .m_wready  ( m_axis_wready[MDNN*1 +: 1] ),
-    .m_wdata   ( m_axis_wdata[MDNN*128 +: 128] ),
-    .m_wstrb   ( m_axis_wstrb[MDNN*16 +: 16] ),
-    .m_wlast   ( m_axis_wlast[MDNN*1 +: 1] ),
-    .m_bvalid  ( m_axis_bvalid[MDNN*1 +: 1] ),
-    .m_bready  ( m_axis_bready[MDNN*1 +: 1] ),
-    .m_bresp   ( m_axis_bresp[MDNN*2 +: 2] )
+    .m_wvalid  ( npu_m_wvalid ),
+    .m_wready  ( npu_m_wready ),
+    .m_wdata   ( npu_m_wdata ),
+    .m_wstrb   ( npu_m_wstrb ),
+    .m_wlast   ( npu_m_wlast ),
+    .m_bvalid  ( npu_m_bvalid ),
+    .m_bready  ( npu_m_bready ),
+    .m_bresp   ( npu_m_bresp )
 );
 
-// Qualifiers the accelerator does not drive on the MDNN slot. The cache
-// attribute matches the Efinix masters on the same port (write back,
-// allocate): with the device setting the port accepted one write at a time.
-assign m_axis_arlock  [MDNN*2 +: 2] = 2'b0;
-assign m_axis_arcache [MDNN*4 +: 4] = 4'b1111;
-assign m_axis_arqos   [MDNN*4 +: 4] = 4'b0;
-assign m_axis_arregion[MDNN*4 +: 4] = 4'b0;
-assign m_axis_arprot  [MDNN*4 +: 4] = 4'b0;
-assign m_axis_awlock  [MDNN*2 +: 2] = 2'b0;
-assign m_axis_awcache [MDNN*4 +: 4] = 4'b1111;
-assign m_axis_awqos   [MDNN*4 +: 4] = 4'b0;
-assign m_axis_awregion[MDNN*4 +: 4] = 4'b0;
-assign m_axis_awprot  [MDNN*4 +: 4] = 4'b0;
+snpu_axi_up512 u_snpu_up512 (
+    .clk       ( io_ddrMasters_0_clk ),
+    .rst       ( npu_rst ),
+    .s_arvalid ( npu_m_arvalid ),
+    .s_arready ( npu_m_arready ),
+    .s_araddr  ( npu_m_araddr ),
+    .s_arlen   ( npu_m_arlen ),
+    .s_rvalid  ( npu_m_rvalid ),
+    .s_rready  ( npu_m_rready ),
+    .s_rdata   ( npu_m_rdata ),
+    .s_rlast   ( npu_m_rlast ),
+    .s_rresp   ( npu_m_rresp ),
+    .s_awvalid ( npu_m_awvalid ),
+    .s_awready ( npu_m_awready ),
+    .s_awaddr  ( npu_m_awaddr ),
+    .s_awlen   ( npu_m_awlen ),
+    .s_wvalid  ( npu_m_wvalid ),
+    .s_wready  ( npu_m_wready ),
+    .s_wdata   ( npu_m_wdata ),
+    .s_wstrb   ( npu_m_wstrb ),
+    .s_wlast   ( npu_m_wlast ),
+    .s_bvalid  ( npu_m_bvalid ),
+    .s_bready  ( npu_m_bready ),
+    .s_bresp   ( npu_m_bresp ),
+    .m_arvalid ( npu_ddr_arvalid ),
+    .m_arready ( npu_ddr_arready ),
+    .m_araddr  ( npu_ddr_araddr ),
+    .m_arlen   ( npu_ddr_arlen ),
+    .m_arsize  ( npu_ddr_arsize ),
+    .m_arburst ( npu_ddr_arburst ),
+    .m_arid    ( npu_ddr_arid ),
+    .m_rvalid  ( npu_ddr_rvalid ),
+    .m_rready  ( npu_ddr_rready ),
+    .m_rdata   ( npu_ddr_rdata ),
+    .m_rlast   ( npu_ddr_rlast ),
+    .m_rresp   ( npu_ddr_rresp ),
+    .m_awvalid ( npu_ddr_awvalid ),
+    .m_awready ( npu_ddr_awready ),
+    .m_awaddr  ( npu_ddr_awaddr ),
+    .m_awlen   ( npu_ddr_awlen ),
+    .m_awsize  ( npu_ddr_awsize ),
+    .m_awburst ( npu_ddr_awburst ),
+    .m_awid    ( npu_ddr_awid ),
+    .m_wvalid  ( npu_ddr_wvalid ),
+    .m_wready  ( npu_ddr_wready ),
+    .m_wdata   ( npu_ddr_wdata ),
+    .m_wstrb   ( npu_ddr_wstrb ),
+    .m_wlast   ( npu_ddr_wlast ),
+    .m_bvalid  ( npu_ddr_bvalid ),
+    .m_bready  ( npu_ddr_bready ),
+    .m_bresp   ( npu_ddr_bresp ),
+    .dbg_o     ( npu_up_dbg )
+);
+
+// Side band of the DDR port: no auto precharge, no locks, default QoS,
+// strobes carried on WSTRB (AWALLSTRB would limit bursts to 16 beats),
+// write response once the port holds command and data.
+assign npu_ddr_arstn     = ~npu_rst;
+assign npu_ddr_arlock    = 1'b0;
+assign npu_ddr_arqos     = 1'b0;
+assign npu_ddr_arapcmd   = 1'b0;
+assign npu_ddr_awlock    = 1'b0;
+assign npu_ddr_awqos     = 1'b0;
+assign npu_ddr_awcache   = 4'b1111;
+assign npu_ddr_awapcmd   = 1'b0;
+assign npu_ddr_awallstrb = 1'b0;
+assign npu_ddr_awcobuf   = 1'b0;
+
+// The MDNN slot of the shared switch is no longer used and is held idle.
+assign m_axis_awvalid [MDNN*1  +: 1]   = 1'b0;
+assign m_axis_awaddr  [MDNN*32 +: 32]  = 32'b0;
+assign m_axis_awlen   [MDNN*8  +: 8]   = 8'b0;
+assign m_axis_awsize  [MDNN*3  +: 3]   = 3'b0;
+assign m_axis_awburst [MDNN*2  +: 2]   = 2'b01;
+assign m_axis_awlock  [MDNN*2  +: 2]   = 2'b0;
+assign m_axis_awcache [MDNN*4  +: 4]   = 4'b0;
+assign m_axis_awprot  [MDNN*4  +: 4]   = 4'b0;
+assign m_axis_awqos   [MDNN*4  +: 4]   = 4'b0;
+assign m_axis_awregion[MDNN*4  +: 4]   = 4'b0;
+assign m_axis_wvalid  [MDNN*1  +: 1]   = 1'b0;
+assign m_axis_wdata   [MDNN*128+: 128] = 128'b0;
+assign m_axis_wstrb   [MDNN*16 +: 16]  = 16'b0;
+assign m_axis_wlast   [MDNN*1  +: 1]   = 1'b0;
+assign m_axis_bready  [MDNN*1  +: 1]   = 1'b1;
+assign m_axis_arvalid [MDNN*1  +: 1]   = 1'b0;
+assign m_axis_araddr  [MDNN*32 +: 32]  = 32'b0;
+assign m_axis_arlen   [MDNN*8  +: 8]   = 8'b0;
+assign m_axis_arsize  [MDNN*3  +: 3]   = 3'b0;
+assign m_axis_arburst [MDNN*2  +: 2]   = 2'b01;
+assign m_axis_arlock  [MDNN*2  +: 2]   = 2'b0;
+assign m_axis_arcache [MDNN*4  +: 4]   = 4'b0;
+assign m_axis_arprot  [MDNN*4  +: 4]   = 4'b0;
+assign m_axis_arqos   [MDNN*4  +: 4]   = 4'b0;
+assign m_axis_arregion[MDNN*4  +: 4]   = 4'b0;
+assign m_axis_rready  [MDNN*1  +: 1]   = 1'b1;
 
 // The level interrupt crosses into the peripheral clock with two flops
 // before it enters the hard SoC PLIC (interrupt id 9). The CPU clears it

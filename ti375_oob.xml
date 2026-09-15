@@ -1,4 +1,4 @@
-<efx:project xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="ti375_oob" description="" last_change="1789390869" sw_version="2025.2.288" last_run_state="pass" last_run_flow="bitstream" config_result_in_sync="sync" design_ood="sync" place_ood="sync" route_ood="sync" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
+<efx:project xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="ti375_oob" description="" last_change="1789470826" sw_version="2025.2.288" last_run_state="pass" last_run_flow="bitstream" config_result_in_sync="sync" design_ood="sync" place_ood="sync" route_ood="sync" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
     <efx:device_info>
         <efx:family name="Titanium" />
         <efx:device name="Ti375C529" />
@@ -29,6 +29,7 @@
         <efx:design_file name="ip/stalyanpu/rtl/snpu_csr.v" version="default" library="default" />
         <efx:design_file name="ip/stalyanpu/rtl/snpu_seq.v" version="default" library="default" />
         <efx:design_file name="ip/stalyanpu/rtl/snpu_top.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyanpu/rtl/snpu_axi_up512.v" version="default" library="default" />
         <efx:design_file name="rtl/openeye_axilite_adapter.v" version="default" library="default" />
         <efx:design_file name="rtl/codec_h26x_stub.v" version="default" library="default" />
         <efx:top_vhdl_arch name="" />
@@ -132,7 +133,7 @@
     <efx:place_and_route tool_name="efx_pnr">
         <efx:param name="work_dir" value="work_pnr" value_type="e_string" />
         <efx:param name="verbose" value="off" value_type="e_bool" />
-        <efx:param name="seed" value="3" value_type="e_integer" />
+        <efx:param name="seed" value="6" value_type="e_integer" />
         <efx:param name="placer_effort_level" value="3" value_type="e_option" />
         <efx:param name="max_threads" value="-1" value_type="e_integer" />
         <efx:param name="beneficial_skew" value="on" value_type="e_option" />

@@ -528,48 +528,48 @@
     </efxpt:jtag_info>
     <efxpt:ddr_info>
         <efxpt:adv_ddr name="soc_ddr_inst1" ddr_def="DDR_0" clkin_sel="0" data_width="32" physical_rank="1" mem_type="LPDDR4x" mem_density="8G">
-            <efxpt:axi_target0 is_axi_width_256="false" is_axi_enable="false">
+            <efxpt:axi_target0 is_axi_width_256="false" is_axi_enable="true">
                 <efxpt:gen_pin_axi>
-                    <efxpt:pin name="" type_name="ACLK_0" is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name="" type_name="ARSTN_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="ARAPCMD_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="ARREADY_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="ARVALID_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="ARLOCK_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="ARQOS_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="AWAPCMD_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="AWALLSTRB_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="AWCOBUF_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="AWREADY_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="AWVALID_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="AWLOCK_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="AWQOS_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="BREADY_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="BVALID_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="RLAST_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="RREADY_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="RVALID_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="WLAST_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="WREADY_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="WVALID_0" is_bus="false"/>
-                    <efxpt:pin name="" type_name="ARADDR_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="ARBURST_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="ARID_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="ARLEN_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="ARSIZE_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="AWADDR_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="AWBURST_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="AWID_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="AWLEN_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="AWSIZE_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="AWCACHE_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="BID_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="BRESP_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="RDATA_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="RID_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="RRESP_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="WDATA_0" is_bus="true"/>
-                    <efxpt:pin name="" type_name="WSTRB_0" is_bus="true"/>
+                    <efxpt:pin name="io_ddrMasters_0_clk" type_name="ACLK_0" is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="npu_ddr_arstn" type_name="ARSTN_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_arapcmd" type_name="ARAPCMD_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_arready" type_name="ARREADY_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_arvalid" type_name="ARVALID_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_arlock" type_name="ARLOCK_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_arqos" type_name="ARQOS_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_awapcmd" type_name="AWAPCMD_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_awallstrb" type_name="AWALLSTRB_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_awcobuf" type_name="AWCOBUF_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_awready" type_name="AWREADY_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_awvalid" type_name="AWVALID_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_awlock" type_name="AWLOCK_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_awqos" type_name="AWQOS_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_bready" type_name="BREADY_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_bvalid" type_name="BVALID_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_rlast" type_name="RLAST_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_rready" type_name="RREADY_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_rvalid" type_name="RVALID_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_wlast" type_name="WLAST_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_wready" type_name="WREADY_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_wvalid" type_name="WVALID_0" is_bus="false"/>
+                    <efxpt:pin name="npu_ddr_araddr" type_name="ARADDR_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_arburst" type_name="ARBURST_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_arid" type_name="ARID_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_arlen" type_name="ARLEN_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_arsize" type_name="ARSIZE_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_awaddr" type_name="AWADDR_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_awburst" type_name="AWBURST_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_awid" type_name="AWID_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_awlen" type_name="AWLEN_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_awsize" type_name="AWSIZE_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_awcache" type_name="AWCACHE_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_bid" type_name="BID_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_bresp" type_name="BRESP_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_rdata" type_name="RDATA_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_rid" type_name="RID_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_rresp" type_name="RRESP_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_wdata" type_name="WDATA_0" is_bus="true"/>
+                    <efxpt:pin name="npu_ddr_wstrb" type_name="WSTRB_0" is_bus="true"/>
                 </efxpt:gen_pin_axi>
             </efxpt:axi_target0>
             <efxpt:axi_target1 is_axi_width_256="false" is_axi_enable="false">

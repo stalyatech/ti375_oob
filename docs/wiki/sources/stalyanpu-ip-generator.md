@@ -84,9 +84,10 @@ ile üretilir. Üretilen sarmalayıcı davranışsal DSP modeliyle iverilog'da d
 "Write files and measure" üretilen projeyi koşturur: `map` gerçek kaynak sayılarını (150 s),
 `pnr` dizinin tek başına kapattığı saati (238 s) verir; board bitstream'i üretmez.
 
-**Doğrulama.** pytest 546 → 578 (hwcfg, adaptör, kaynak, rtlparams, ipgen, proje bağlama,
-API/SSE/iptal/zincir testleri). Sayfa headless Chrome'da çizildi: 32×32 / 250 MHz / dedicated
-→ 44,1 fps ve "ölçüm 43,9" notu; 4. adımda 32×16 uygulanınca kart "rebuild needed"e döndü.
+**Doğrulama.** pytest 546 → 589 (hwcfg, adaptör, kaynak, rtlparams, ipgen, proje bağlama,
+menü/sayfa yapısı, API/SSE/iptal/zincir testleri). Sayfa headless Chrome'da çizildi:
+32×32 / 250 MHz / dedicated → model 44,5 fps ve "ölçüm 43,9" notu; 4. adımda 32×16 uygulanınca
+kart "rebuild needed"e döndü.
 Üretilen include ile `efx_run map` referans build ile birebir aynı sonucu verdi
 (LUT4 98 134, DSP48 1223, RAM10 1606), yani parametrelerin define'lara taşınması tasarımı
 değiştirmez ([[fpga-timing-closure]] kaynak tablosuyla uyumlu).

@@ -79,3 +79,10 @@
 - Değişiklik: adımlar artık soldaki menüden seçilen ayrı sayfalar; aşağı kaydırma gerekmiyor, board ve export adımları katlanır bölüm olmaktan çıktı
 - Her sayfa Accelerator/FPGA/Model rozetleriyle açılıyor; menüdeki noktalar aynı durumu tekrarlıyor ve koşum sürerken yanıp sönüyor
 - Seçili adım adres çubuğunda (`#accelerator`, `#fpga`, `#model`, `#board`, `#export`) ve kaydedilen durumda tutuluyor
+
+## [2026-09-16] lint | Ek yük sabitleri sonrası eskiyen sayıların taranması
+- Güncellenen sayfalar: [[analytic-performance-model]], [[stalyanpu-ip-generator]], [[stalyanpu-decision-record]], [[stalyanpu-toolchain]]
+- Bulunan sorunlar: 1 yanlış iddia (hwcfg varsayılanları hâlâ 40/150/500 yazıyordu), 2 eski projeksiyon tablosu, 2 eski test sayısı
+- Düzeltilen: varsayılanlar 10/200/4000 oldu, M0 tablolarına yeniden ayarlama notu eklendi, doğrulama notu 589 test ve model 44,5 fps oldu
+- Kontrol: 62 sayfa, kırık bağlantı yok, yetim sayfa yok
+- Kaynak dosyalar aynı gün güncellendi: `ip/stalyanpu/docs/toolchain-guide.md`, `decision-record.md`

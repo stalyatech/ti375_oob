@@ -65,6 +65,8 @@ t_op 500, stem 8 kanal dolgulu, CPU kuyruğu 4 ms örtüşük):
 | 8,0 GB/s | 5,67 M | 44,1 | %74 |
 
 DDR trafiği 63,8 MB/kare (11,1 MB benzersiz ağırlık). 200 MHz @2,4 GB/s: 29,3 fps.
+Bu sabitler 2026-09-16'da board ölçümlerine göre 10 / 200 / 4000 yapıldı, tablo o günkü
+karar anını gösterir ([[analytic-performance-model]]).
 
 **Plan düzeltmeleri.** (1) Dedicated 256-bit `axi_target0` portu M9'dan M7'ye çekilir
 (model +8 fps). (2) Erken katman füzyonu (L0→L2 aktivasyonları 512 KB ibuf'a sığar) M9'a.

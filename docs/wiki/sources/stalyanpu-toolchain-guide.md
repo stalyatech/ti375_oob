@@ -22,7 +22,7 @@ analitik performans modelinin formülünü anlatır. Paket sistem Python 3.14 il
 - Referans model `refmodel/` int8 conv'u im2col × float64 matmul ile tam hesaplar; `QRunner` YOLOv8s 640×384 karesini ≈ 0,75 s'de yürütür.
 - Nicemleme: ağırlık int8 simetrik OC başına, aktivasyon int8 tensör başına asimetrik; requant `mult ∈ [2^15, 2^16)`, `shift ∈ [0,47]`, yarım yukarı; SiLU 256 girişli LUT; ölçek birleştirme union-find.
 - M2 kapısı: YOLOv8s tam ağda `interp == runner` bit bit, 546 pytest.
-- Performans modeli: `cycles = max(cyc_mac + cyc_tile, cyc_ddr) + t_op`; varsayılanlar t_pass 40, t_tile 150, t_op 500, DDR 2,4 GB/s.
+- Performans modeli: `cycles = max(cyc_mac + cyc_tile, cyc_ddr) + t_op`; varsayılanlar t_pass 10, t_tile 200, t_op 4000, DDR 2,4 GB/s (ek yükler 2026-09-16'da üç board karesine oturtuldu, önceki değerler 40 / 150 / 500).
 
 ## Detaylı Notlar
 **Kurulum ve veri.** `python -m venv .venv-stalyanpu`, `pip install -e py[dev]`; `[export]`

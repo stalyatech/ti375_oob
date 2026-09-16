@@ -70,7 +70,7 @@ Destekleyen kütüphane eklemeleri: `hwcfg.validate/legal_geometries/geometry_wo
 `perf/resources.py` (hiyerarşik rapora çapalı DSP/RAM10/XLR), `perf/calibration.py` (board
 çapaları), `backend/rtlparams.py` (Verilog parametreleri, define'lar, sarmalayıcılar,
 `-P` sim argümanları), `quant/images.py` (`calibrate --image-dir`), `perf --model/--json`,
-`syn/run_syn.py --project-dir`. pytest 570 ([[stalyanpu-ip-generator]]).
+`syn/run_syn.py --project-dir`. pytest 589 ([[stalyanpu-ip-generator]]).
 
 ## Kaynaklarda Geçişi
 - [[stalyanpu-ip-generator]]: web arayüzü, `ipgen`, adaptör, kaynak kestirimi, ölçüm çapası

@@ -28,11 +28,15 @@ cycles   = max(cyc_mac + cyc_tile, cyc_ddr) + t_op
 
 Döşeme seçimi: tam çıkış satırları, `P_t ≤ p_max` (1024), giriş ayak izi (halo dahil)
 ≤ ibuf/2; `backend/tiler.py` aynı seçimi derleyici için yapar. Varsayılanlar `hwcfg.py`'de:
-t_pass 40, t_tile 150, t_op 500, DDR 2,4 GB/s, saat 250 MHz, CPU kuyruğu 4 ms örtüşük.
+t_pass 10, t_tile 200, t_op 4000, DDR 2,4 GB/s, saat 250 MHz, CPU kuyruğu 4 ms örtüşük.
+Ek yük sabitleri 2026-09-16'da üç board karesine birlikte oturtuldu (aşağıdaki üçüncü çapa
+bölümü); ondan önce 40 / 150 / 500 idi.
 Katman tablosu `perf/layers.py` yaml yapısından üretilir, ONNX gerekmez
 ([[stalyanpu-toolchain]]).
 
-**M0 sonucu (YOLOv8s 640×384, `full2048`).**
+**M0 sonucu (YOLOv8s 640×384, `full2048`).** Tablo o günkü ek yük sabitleriyledir
+(t_pass 40, t_tile 150, t_op 500). Yeniden ayarlamadan sonra aynı satırlar 23,6 / 28,4 /
+32,4 / 37,3 / 41,1 / 44,5 fps verir; fark her satırda yarım fps'in altındadır.
 
 | Etkin DDR | Çevrim/kare | Kare süresi | fps | Kullanım |
 |----------:|------------:|------------:|----:|---------:|

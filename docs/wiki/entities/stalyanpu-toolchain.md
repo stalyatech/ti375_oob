@@ -4,7 +4,7 @@ type: entity
 category: product
 created: 2026-09-15
 updated: 2026-09-15
-source_count: 6
+source_count: 7
 tags: [stalyanpu, toolchain, python, compiler, quantization, golden-model]
 ---
 
@@ -19,7 +19,7 @@ python311 gerekmez.
 
 ## Temel Bilgiler
 **Komutlar.** `perf` ([[analytic-performance-model]]), `lower`, `gen-header`, `export`,
-`calibrate`, `eval`, `check-tail`, `compile`, `golden`; ayrıca `stalyanpu.board.ddrimage`
+`calibrate`, `eval`, `check-tail`, `compile`, `golden`, `ipgen`, `gui`; ayrıca `stalyanpu.board.ddrimage`
 ve `sw/baremetal/npu_test/board.py` (program, openocd, run, dumplog, npu) board akışında
 kullanılır ([[board-bringup-flow]]).
 
@@ -61,7 +61,19 @@ pycocotools) yalnız dışa aktarma ve mAP için.
   512'de genişletici araya girer) kayıtlı; `+EXPECT_OVERLAP=1` dolum/koşum örtüşmesini
   şart koşar. pytest 546, sim paketi 22/22 PASS.
 
+**IP Generator ve `ipgen` (2026-09-15).** `gui/` alt paketi yerel web arayüzünü ekler
+(`python -m stalyanpu gui`, `gui.cmd`, `gui.sh`, `stalyanpu-gui`; stdlib HTTP sunucusu, ek
+bağımlılık yok): geometri/saat/DDR portu seçimiyle anlık fps ve kaynak kestirimi, ONNX'ten
+blob'a seçimli akış zinciri, board adımları, IP paketi üretimi ve canlı iş logları.
+Destekleyen kütüphane eklemeleri: `hwcfg.validate/legal_geometries/geometry_word/DDR_PORTS`
+(`load()` kopya döndürür), `perf/adapter.py` (ONNX graf'ından katman tablosu),
+`perf/resources.py` (hiyerarşik rapora çapalı DSP/RAM10/XLR), `perf/calibration.py` (board
+çapaları), `backend/rtlparams.py` (Verilog parametreleri, define'lar, sarmalayıcılar,
+`-P` sim argümanları), `quant/images.py` (`calibrate --image-dir`), `perf --model/--json`,
+`syn/run_syn.py --project-dir`. pytest 570 ([[stalyanpu-ip-generator]]).
+
 ## Kaynaklarda Geçişi
+- [[stalyanpu-ip-generator]]: web arayüzü, `ipgen`, adaptör, kaynak kestirimi, ölçüm çapası
 - [[stalyanpu-readme]]: paket dizini ve hızlı komutlar
 - [[stalyanpu-isa-descriptor]]: `isa.py` tek kaynak, `weightpack.py`, `alloc.py`, `emit.py`, `interp.py`, DBG6
 - [[stalyanpu-toolchain-guide]]: kurulum, komut tablosu, paket düzeni, nicemleme semantiği, perf formülü

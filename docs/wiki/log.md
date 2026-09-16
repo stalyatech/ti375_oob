@@ -36,3 +36,46 @@
 - Güncellenen sayfalar: [[stalyanpu]], [[lpddr4x-controller]], [[ti375-devkit]], [[stalyanpu-toolchain]], [[efinity-toolchain]], [[efx-sapphire-fcu]], [[yolov8s]], [[gdma]], [[gdma-dnn]], [[fpga-timing-closure]], [[board-bringup-flow]], [[analytic-performance-model]], [[shared-dram-arbitration]], [[axi-interconnect-topology]], [[descriptor-isa]], [[dsp-chain-systolic-array]], [[dual-soc-architecture]], [[accelerator-control-plane-apb]], [[dnn-accelerator-options]], [[overview]], [[index]]
 - Çözülen çelişkiler: NPU CSR yolu (HEAD sert SoC; sentez rehberi M7 tablosu eski), zamanlama (tam tasarım +0,038 ns, board doğrulandı), dedicated port (M9'da gerçeklendi, 512-bit; 256-bit x32 LPDDR4x'te desteklenmiyor)
 - Kalan belirsizlikler: `hwcfg.py` DDR bant genişliği varsayımının yeniden kalibrasyonu; dedicated port sonrası descriptor profili; `tb_yolo_net` tam ağ koşumu; yumuşak SoC APB penceresinin fiziksel olarak kaldırılıp kaldırılmadığı
+
+## [2026-09-15] ingest | StalyaNPU IP Generator (web arayüzü ve ipgen)
+- Kaynak: `ip/stalyanpu/docs/ip-generator.md` (aynı gün yazıldı; `toolchain-guide.md` komut tablosu ve README güncellendi)
+- Oluşturulan sayfalar: [[stalyanpu-ip-generator]]
+- Güncellenen sayfalar: [[stalyanpu-toolchain]] (komutlar, GUI ve kütüphane eklemeleri), [[analytic-performance-model]] (ONNX adaptörü, DDR port presetleri, kaynak kestirimi), [[overview]], [[index]]
+- Çözülen belirsizlik: `hwcfg.py` DDR varsayılanı 2,4 GB/s kaldı; ölçülen değerler `DDR_PORTS` presetlerinde (dedicated512 8 GB/s, shared128 1,8 GB/s)
+- Kalan belirsizlik: kaynak ve performans kestirimi yalnız 32×32 geometride ölçümle doğrulanmış; diğer geometrilerde `efx_run map` sonucu yok
+
+## [2026-09-16] update | IP Generator: Efinity projesine bağlama ve yeniden sentez bildirimi
+- Güncellenen sayfalar: [[stalyanpu-ip-generator]] (4. adım, doğrulama), [[stalyanpu]] (geometri bağlama), [[index]]
+- Kaynak değişiklikleri: `ti375_oob_top.v` `snpu_top` parametrelerini `rtl/snpu_config.vh` define'larından bağlar, `ti375_oob.xml` içine `rtl` include dizini, yeni `py/stalyanpu/project.py` ve `stalyanpu project status|apply|mark-built`, arayüzde 4. adım
+- Doğrulama: üretilen include ile `efx_run map` referans build ile birebir aynı (LUT4 98 134, DSP48 1223, RAM10 1606); pytest 578
+- Not: board veri yolu AXI_DW 256 ve WR_SLOT_WORDS 64 değerlerini sabitler; paylaşımlı port seçimi `apply` tarafından reddedilir
+
+## [2026-09-16] update | IP Generator akış sırası yeniden düzenlendi
+- Güncellenen sayfalar: [[stalyanpu-ip-generator]] (yeni adım sırası, rozetler, ölçüm bölümü), [[index]]
+- Değişiklik: sayfa 1 hızlandırıcı, 2 FPGA donanımı (proje bağlama + sentez), 3 model, 4 board sırasına geçti; IP paketi dışa aktarma en alta isteğe bağlı bölüm oldu, Efinity ölçüm eylemi dosya listesinden çıkarılıp kendi düğmesine taşındı
+- Eklenen: sayfa başında Accelerator/FPGA/Model uyum rozetleri, duruma göre değişen ana düğme metni, tek tek sentez aşamaları katlanır bölümde
+
+## [2026-09-16] update | 32x16 dizisi board'da: 25,2 fps, model çapaları güncellendi
+- Güncellenen sayfalar: [[stalyanpu-ip-generator]] (ikinci board çapası, kaynak tablosu), [[analytic-performance-model]] (32×16 çapası)
+- Ölçüm: 32 zincir × 16 DSP (1024 MAC/çevrim), dedicated 512-bit port, YOLOv8s 640×384, 9 916 570 çevrim/kare = 25,2 fps, MAC %92,6, T1..T5 ALL PASS; model 24,3 fps (%3,8 karamsar)
+- Kaynak (snpu_top): 686 DSP48, 1240 RAM10, 81,0k XLR; kestirim DSP'de bire bir, XLR'de %2,8 yüksek
+- Kod: `perf/calibration.py` çapaları geometriye göre eşleştirir, `perf/resources.py` dizi fabric maliyetini zincir uzunluğuna göre ayırır; arayüzde DDR bağlantısı port adıyla gösterilir
+
+## [2026-09-16] update | Kaynak çubukları projenin kendi raporundan, ölçüm başlıkta
+- Güncellenen sayfalar: [[stalyanpu-ip-generator]] (kaynak çubukları, ölçüm gösterimi), `ip/stalyanpu/docs/ip-generator.md`
+- Değişiklik: 1. adımdaki kaynak çubukları iki parçalı (hızlandırıcı + projenin geri kalanı); ikinci parça `project.resource_report()` ile `outflow/ti375_oob-hierarchical_stats.rpt` raporundan okunur, araçta sabit tutulmaz
+- Ölçülmüş yapılandırmada büyük sayı artık ölçümün kendisi ("measured on the board"), model çıktısı notta ve "Model estimate" kutularında; dizi listesindeki ölçüm etiketi kaldırıldı
+- Dizi dışındaki 174 DSP48'in hızlandırıcının sabit maliyeti olduğu belgelendi (epilog 128, sequencer 22, rd_dma 18, agen 5, maxpool 1)
+
+## [2026-09-16] update | 16x16 dizisi board'da 13,9 fps, model ek yükleri yeniden ayarlandı
+- Güncellenen sayfalar: [[analytic-performance-model]] (üçüncü çapa ve yeni sabitler), [[stalyanpu-ip-generator]] (üçüncü geometri), [[stalyanpu]] (ölçüm listesi)
+- Ölçüm: 16 zincir × 16 DSP (512 MAC/çevrim), dedicated 512-bit port, YOLOv8s 640×384, 17 919 410 çevrim/kare = 13,9 fps, MAC %96,1, T1..T5 ALL PASS
+- Bulgu: modelin dizi terimi üç koşumda da board'un MAC sayacına eşit, sapma tümüyle sabit ek yüklerdeydi
+- Kod: `t_pass` 40→10, `t_tile` 150→200, `t_op` 500→4000; `shared128` preseti 1,8→2,0 GB/s; sapmalar %+1,3 / %−0,5 / %−1,1 / %+0,9
+- Kaynak (snpu_top): 430 DSP48, 1036 RAM10, 68,8k XLR; üçüncü build kaynak modeline çapa olarak eklendi
+
+## [2026-09-16] update | Arayüz tek sayfadan sol menülü adım sayfalarına geçti
+- Güncellenen sayfalar: [[stalyanpu-ip-generator]] (yerleşim), `ip/stalyanpu/docs/ip-generator.md`
+- Değişiklik: adımlar artık soldaki menüden seçilen ayrı sayfalar; aşağı kaydırma gerekmiyor, board ve export adımları katlanır bölüm olmaktan çıktı
+- Her sayfa Accelerator/FPGA/Model rozetleriyle açılıyor; menüdeki noktalar aynı durumu tekrarlıyor ve koşum sürerken yanıp sönüyor
+- Seçili adım adres çubuğunda (`#accelerator`, `#fpga`, `#model`, `#board`, `#export`) ve kaydedilen durumda tutuluyor

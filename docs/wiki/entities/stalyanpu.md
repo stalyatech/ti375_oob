@@ -3,7 +3,7 @@ title: "StalyaNPU"
 type: entity
 category: product
 created: 2026-09-15
-updated: 2026-09-15
+updated: 2026-09-16
 source_count: 10
 tags: [stalyanpu, npu, dnn, accelerator, int8, dsp48, rtl]
 ---
@@ -51,6 +51,13 @@ giriş, residual satır terimi ve satır sayısı tabloları), epilog `drain_til
 `out_tile_nxt` / `out_adv` ile hangi döşemeyi boşalttığını bildirir. Biriktirici 2 bank
 olduğundan en çok 3 döşeme aynı anda canlıdır; son döşeme ve descriptor sonu tam bekler.
 
+**Geometri bağlama (2026-09-16).** `ti375_oob_top.v` artık `snpu_top` parametrelerini
+`rtl/snpu_config.vh` içindeki `SNPU_CFG_*` define'larından alır; bu dosyayı
+`python -m stalyanpu project apply` (ya da arayüzün 4. adımı) yazar ve `rtl/snpu_config.json`
+bitstream'in hangi geometriyle kurulduğunu kaydeder. Böylece dizi boyutu değiştirmek üst
+modüle dokunmadan yapılır ve bitstream eskidiğinde araç uyarır ([[stalyanpu-ip-generator]]).
+Board veri yolu `AXI_DW` 256 ve `WR_SLOT_WORDS` 64 değerlerini sabitler.
+
 **Yazılım.** [[stalyanpu-toolchain]] Python paketi ONNX lowering, kalibrasyon, bit-kesin
 referans model, descriptor/blob derleme, sim vektörleri, perf modeli
 ([[analytic-performance-model]]) ve board araçlarını sağlar. YOLOv8s 66 descriptor, blob
@@ -72,7 +79,10 @@ descriptor, tam kare, bit bit doğru ve iki koşumda aynı CRC ([[board-bringup-
 | A2: epilog/yazma örtüşmesi | 8,89 M | 28,1 |
 | Dedicated 512-bit DDR portu (`axi_target0` + [[snpu-axi-up512]]) | **5,69 M** | **43,9** |
 
-Son dağılım MAC %85, giriş dolumu 0,30 M, koşumda boş 0,37 M, yazma bekleme 0,79 M. A2'nin
+Son dağılım MAC %85, giriş dolumu 0,30 M, koşumda boş 0,37 M, yazma bekleme 0,79 M.
+Aynı RTL, [[stalyanpu-ip-generator]] ile küçültülüp board'da iki kez daha ölçüldü: 32×16
+(1024 MAC/çevrim) 9,92 M çevrim = 25,2 fps, 16×16 (512 MAC/çevrim) 17,92 M çevrim = 13,9 fps,
+her ikisinde de T1..T5 ALL PASS. Dizi dışı sabit maliyet üç build'de de 174 DSP48. A2'nin
 board'da hiç kazandırmaması kare süresinin paylaşımlı DDR yolunun etkin bant genişliğine
 (~1,8 GB/s) bağlı olduğunu gösterdi; dedicated port bu bağı kaldırdı. Tam tasarım
 zamanlaması kapalı: +0,038 ns (seed 6, port pinleri kısıtlı), LUT4 98,1k, FF 94,1k, DSP48

@@ -1,6 +1,6 @@
 # Wiki Dizini
 
-Son güncelleme: 2026-09-15
+Son güncelleme: 2026-09-16
 
 Bu wiki, `docs/help/` FMU mimari yardım sayfalarının, `docs/dnn-integration/` OpenEye
 entegrasyon notlarının ve `ip/stalyanpu/docs/` StalyaNPU belgelerinin [[overview|genel bakış]],
@@ -26,6 +26,7 @@ kaynak, varlık, kavram ve karşılaştırma sayfalarına ayrıştırılmış ha
 - [[stalyanpu-bringup-guide]] — Ti375C529 kitinde sert SoC bring-up, 4,6 → 43,9 fps ölçüm tablosu, dedicated DDR portu ve pin kısıtları (volvox, 2026-09-15) [stalyanpu, bringup, board]
 - [[stalyanpu-accuracy-report]] — INT8 PTQ kalibrasyon taraması, COCO mAP 44,86 → 44,07 (volvox, 2026-08-28) [stalyanpu, quantization, coco]
 - [[stalyanpu-perf-plan]] — 24,6 → 30 fps planı ve sonucu: çift tampon, A2, zamanlama, dedicated DDR portu ile 43,9 fps; L0 modu marj işi (volvox, 2026-09-15) [stalyanpu, performance, plan]
+- [[stalyanpu-ip-generator]] — Yerel web arayüzü (sol menüden seçilen adım sayfaları), `ipgen` ve `project`: geometri/saat/DDR seçimiyle fps ve kaynak kestirimi, model hazırlama, IP paketi, Efinity projesine bağlama ve yeniden sentez bildirimi, board adımları (volvox, 2026-09-16) [stalyanpu, gui, ip-generator]
 
 ## Varlıklar
 - [[ti375c529]] — Efinix Titanium FPGA (product) [source_count: 5]
@@ -45,7 +46,7 @@ kaynak, varlık, kavram ve karşılaştırma sayfalarına ayrıştırılmış ha
 - [[stalyanpu]] — Sıfırdan tasarlanan INT8 CNN hızlandırıcısı, 2048 MAC/çevrim @250 MHz (product) [source_count: 10]
 - [[yolov8s]] — Hedef tespit modeli, 640×384 letterbox, INT8, 8,58 GMAC/kare (product) [source_count: 8]
 - [[efx-dsp48]] — Titanium DSP48 DUAL bloğu, DSP başına 2 INT8 MAC (product) [source_count: 5]
-- [[stalyanpu-toolchain]] — py/stalyanpu: lowering, nicemleme, altın model, perf modeli, board araçları (product) [source_count: 6]
+- [[stalyanpu-toolchain]] — py/stalyanpu: lowering, nicemleme, altın model, perf modeli, board araçları, web arayüzü ve `ipgen` (product) [source_count: 7]
 - [[ti375-devkit]] — Titanium Ti375C529 Development Kit, FT4232H JTAG/UART, bring-up board'u (product) [source_count: 2]
 - [[snpu-axi-up512]] — 256→512 bit AXI genişletici, NPU ile LPDDR4x `axi_target0` portu arasında (product) [source_count: 3]
 
@@ -64,7 +65,7 @@ kaynak, varlık, kavram ve karşılaştırma sayfalarına ayrıştırılmış ha
 - [[dsp-chain-systolic-array]] — 32 zincir × 32 DSP ağırlık-sabit sistolik dizi, 32 IC × 64 OC döşeme [source_count: 5]
 - [[descriptor-isa]] — Descriptor listesi, CRC32, CSR haritası, blob, hata kodları [source_count: 6]
 - [[int8-quantization-flow]] — PTQ hattı: OC başına ölçek, u16 requant, SiLU LUT, bit-kesin referans [source_count: 5]
-- [[analytic-performance-model]] — Çevrim modeli, DDR sınırı, fps projeksiyonları (32,9 fps @2,4 GB/s) [source_count: 7]
+- [[analytic-performance-model]] — Çevrim modeli, DDR sınırı, fps projeksiyonları, ONNX adaptörü, kaynak kestirimi ve üç board çapasına ayarlanmış ek yükler [source_count: 8]
 - [[fpga-timing-closure]] — 250 MHz kapanış süreci, kaskat bölme, seed taraması, negatif slack riski [source_count: 4]
 - [[board-bringup-flow]] — DDR imajı, sert SoC CSR yolu, T1..T5 testleri, fps sayaçları, 24,6 fps [source_count: 4]
 - [[ddr-port-pin-constraints]] — Sert blok AXI port pinlerinin gecikme kısıtları: şablondan proje SDC'sine kopyalanmalı, aksi halde yerleşime bağlı davranış [source_count: 2]

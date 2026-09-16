@@ -2,8 +2,8 @@
 title: "Analitik Performans Modeli"
 type: concept
 created: 2026-09-15
-updated: 2026-09-15
-source_count: 7
+updated: 2026-09-16
+source_count: 8
 tags: [performance, cycle-model, ddr-bandwidth, fps, perf, m9]
 ---
 
@@ -79,9 +79,41 @@ fps), epilog örtüşmesi aynı, dedicated 512-bit DDR portu ([[snpu-axi-up512]]
   port için artık düşüktür; etkin değer 4 GB/s'nin üzerindedir ve tasarım DDR'a değil
   MAC'e bağlı hâle gelmiştir (MAC %85). Ağırlık tekrar akışı (20 MB/kare) marj işi oldu.
 
-> ❓ **Belirsiz:** `hwcfg.py` DDR varsayılanının (2,4 GB/s) dedicated port için
-> güncellenip güncellenmediği ve modelin `first_fill` teriminin çift tamponlu RTL'ye göre
-> yeniden kalibre edilip edilmediği belgelerde yazmaz.
+> ❓ **Belirsiz:** Modelin `first_fill` teriminin çift tamponlu RTL'ye göre yeniden
+> kalibre edilip kalibre edilmediği belgelerde yazmaz.
+
+**İkinci board çapası: 32×16 (2026-09-16).** 1024 MAC/çevrim dizi (32 zincir × 16 DSP),
+dedicated 512-bit portta, YOLOv8s 640×384: ölçülen **9,92 M çevrim = 25,2 fps**, MAC payı
+%92,6; o günkü ek yük sabitleriyle model 10,30 M çevrim = 24,3 fps veriyordu, yani %3,8
+karamsardı. Küçük dizide kare süresi neredeyse tamamen MAC ile belirlenir, modelin döşeme ve
+pass ek yükleri gerçekte biraz daha ucuzdu; bu fark aşağıdaki üçüncü çapa ile kapatıldı.
+Kaynak tarafı:
+686 DSP48, 1240 RAM10, 81,0k XLR (`snpu_top`), dizi DSP farkı tam olarak 512 blok
+([[dsp-chain-systolic-array]] ölçeklemesi doğrulandı).
+
+**Üçüncü board çapası ve ek yüklerin yeniden ayarlanması (2026-09-16).** 512 MAC/çevrim
+dizi (16 zincir × 16 DSP), dedicated 512-bit portta, YOLOv8s 640×384: ölçülen **17,92 M
+çevrim = 13,9 fps**, sayaç dağılımı `mac` 17 228 160, `fill` 301 527, `run_idle` 248 448,
+`wr_wait` 661 982, yani MAC payı %96,1. Üç ölçüm elde olunca modelin hangi teriminin
+kaydığı ayrıştırılabildi: `cyc_mac`'in `t_pass` payı çıkarıldığında kalan dizi terimi üç
+koşumda da board'un MAC sayacına eşit çıkıyor (4 870 080 / 4 870 000, 9 187 200 / 9 187 200,
+17 228 160 / 17 228 160). Fark tümüyle sabit ek yüklerdeydi. `t_pass`, `t_tile` ve `t_op` üç
+kareye birlikte oturtuldu ve 40 / 150 / 500 yerine **10 / 200 / 4000** çevrimde karar
+kılındı. Yeni sapmalar: 32×32 %+1,3, 32×16 %−0,5, 16×16 %−1,1. Üçü ortak bir uyum olduğu
+için tek bir sabit kendi başına o etkinin ölçümü sayılmaz. Aynı uyum paylaşımlı 128-bit
+portun etkin bant genişliğini de yeniden verdi: ek yükler ayrı hesaplandığında port 2,0 GB/s
+gibi davranıyor (28,1 fps ölçümüne karşı model 28,4), eski ~1,8 GB/s değeri kare süresinin
+tamamını bant genişliğine yıkmaktan geliyordu. Kaynak tarafı: 430 DSP48, 1036 RAM10, 68,8k
+XLR (`snpu_top`); dizi dışı sabit maliyet üç build'de de tam 174 DSP48.
+
+**IP Generator eklemeleri (2026-09-15, 09-16 güncellendi).** `hwcfg.py` DDR varsayılanı 2,4 GB/s kalır, ama
+`DDR_PORTS` presetleri ölçülen değerleri taşır: `dedicated512` 8 GB/s (board 43,9 fps,
+model 44,5), `shared128` 2,0 GB/s, `shared128_plan` 2,4 GB/s. Katman tablosu artık ONNX'ten
+de üretilir (`perf/adapter.py`; YOLOv8s için yerleşik tabloyla aynı 5,671 M çevrim), rapor
+JSON olarak alınır (`perf --json`), `perf/resources.py` hiyerarşik sentez raporuna çapalı
+kaynak kestirimi ve `perf/calibration.py` ölçüm notunu verir. Web arayüzü bunları geometri
+başına anlık gösterir ([[stalyanpu-ip-generator]]). Ölçüm 32×32, 32×16 ve 16×16
+geometrileriyle sınırlıdır; diğerleri aynı formülün projeksiyonudur.
 
 ## Örnekler
 - `python -m stalyanpu perf --hwcfg full2048 --ddr-bw 4.5 --quiet` → dedicated port senaryosu, 40,8 fps.
@@ -91,7 +123,7 @@ fps), epilog örtüşmesi aynı, dedicated 512-bit DDR portu ([[snpu-axi-up512]]
 ## İlişkili Kavramlar
 - [[dsp-chain-systolic-array]]: `t_pass` ve `P_t` terimlerinin donanım karşılığı
 - [[board-bringup-flow]]: sayaçlarla kalibrasyon ve gerçek fps (24,6 → 28,1 → 43,9)
-- [[shared-dram-arbitration]]: 2,4 GB/s planlama değerinin nedeni (paylaşımlı 128-bit port) ve ~1,8 GB/s etkin bulgusu
+- [[shared-dram-arbitration]]: 2,4 GB/s planlama değerinin nedeni (paylaşımlı 128-bit port), kare süresinden türetilen ~1,8 GB/s ve ek yükler ayrıştırıldıktan sonra kalan 2,0 GB/s
 - [[descriptor-isa]]: CYCLE_CNT ve STALL sayaçları
 - [[dnn-accelerator-options]]: OpenEye için aynı hedefin fps karşılığı
 - Varlıklar: [[snpu-axi-up512]], [[lpddr4x-controller]] (dedicated portun bant genişliği varsayımını değiştirmesi)
@@ -104,3 +136,4 @@ fps), epilog örtüşmesi aynı, dedicated 512-bit DDR portu ([[snpu-axi-up512]]
 - [[stalyanpu-bringup-guide]]: board sayaçları, 24,6 ve 43,9 fps
 - [[stalyanpu-perf-plan]]: 33,6 fps model kestirimi, A/A2/dedicated port sonuçları
 - [[stalyanpu-readme]]: M0 kapısı (32,9 fps, marj ince)
+- [[stalyanpu-ip-generator]]: ONNX adaptörü, DDR port presetleri, kaynak kestirimi, web arayüzü

@@ -56,6 +56,11 @@ sayfalarına ayrıştırılmıştır.
    [[snpu-axi-up512]] genişletici, port pinlerinin kısıtlanma dersi [[ddr-port-pin-constraints]]). Negatif slack'li build'lerin
    bozuk sonuç üretebildiği görüldü ([[fpga-timing-closure]]); son build'in kapanışı seed
    taramasında. Tabanı [[board-bringup-flow]] ölçümleri ve [[analytic-performance-model]].
+9. **IP Generator (2026-09-15).** [[stalyanpu-toolchain]] yerel bir web arayüzü kazandı
+   ([[stalyanpu-ip-generator]]): dizi geometrisi, saat ve DDR portu seçilir, perf modeli ve
+   kaynak kestirimi anında hesaplanır, ONNX'ten blob'a akış ve board adımları seçimli zincir
+   olarak koşar, seçilen geometri için IP paketi (hwcfg, ISA başlığı, Verilog sarmalayıcı,
+   Efinity projesi) üretilir. Yalnız INT8.
 
 ## Gelişen sonuçlar
 

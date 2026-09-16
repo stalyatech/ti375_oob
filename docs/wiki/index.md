@@ -75,4 +75,4 @@ kaynak, varlık, kavram ve karşılaştırma sayfalarına ayrıştırılmış ha
 - [[dnn-accelerator-options]] — OpenEye 2×2, ölçeklenmiş OpenEye ve StalyaNPU tam dizi: MAC/çevrim, tepe, fps, kaynak, karar
 
 ## Sorgular
-- (henüz yok)
+- [[stalyanpu-patent-disclosure]] — Patent başvurusu için İngilizce teknik açıklama belgesi (docx) ve 12 SVG/PNG çizim, buluş grupları A..D (2026-09-16)

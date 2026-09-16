@@ -86,3 +86,9 @@
 - Düzeltilen: varsayılanlar 10/200/4000 oldu, M0 tablolarına yeniden ayarlama notu eklendi, doğrulama notu 589 test ve model 44,5 fps oldu
 - Kontrol: 62 sayfa, kırık bağlantı yok, yetim sayfa yok
 - Kaynak dosyalar aynı gün güncellendi: `ip/stalyanpu/docs/toolchain-guide.md`, `decision-record.md`
+
+## [2026-09-16] query | StalyaNPU patent teknik açıklama belgesi
+- Yanıt kaydedildi: [[stalyanpu-patent-disclosure]]
+- Üretilen dosyalar: `ip/stalyanpu/docs/patent/stalyanpu-technical-disclosure.docx`, `ip/stalyanpu/docs/patent/figures/` (12 SVG + 12 PNG)
+- Güncellenen sayfalar: [[stalyanpu]] (ilişkilere belge bağlantısı); `ip/stalyanpu/docs/README.md` belge tablosuna satır eklendi
+- Ham kaynakla doğrulama: okuma DMA kanal ataması (0 denetim, 1 ağırlık, 2 dolum) ve sert SoC CSR yolu RTL ile teyit edildi; yeni çelişki bulunmadı

@@ -123,4 +123,5 @@ kontrol satırı hâlâ eski yolu anlatır; bu tablolar **eskidir**, güncel kay
 - [[gdma-dnn]]: `MDNN` yuvasını devraldığı önceki DMA
 - [[accelerator-control-plane-apb]]: CSR penceresinin bölme deseni
 - [[efinity-toolchain]]: sentez ve programlama aracı
+- [[stalyanpu-patent-disclosure]]: patent başvurusu için teknik açıklama belgesi ve çizimler
 - Kavramlar: [[dsp-chain-systolic-array]], [[descriptor-isa]], [[int8-quantization-flow]], [[analytic-performance-model]], [[fpga-timing-closure]], [[ddr-port-pin-constraints]], [[board-bringup-flow]], [[shared-dram-arbitration]], [[axi-interconnect-topology]], [[dual-soc-architecture]]

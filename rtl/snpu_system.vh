@@ -9,9 +9,9 @@
 `ifndef SNPU_SYSTEM_VH
 `define SNPU_SYSTEM_VH
 
-// Instance npu0 (u_snpu): 16 chains of 16 DSP48 blocks, 512 MAC per cycle,
+// Instance npu0 (u_snpu): 32 chains of 16 DSP48 blocks, 1024 MAC per cycle,
 // CSR slot 0 at 0xE8104000, DDR port axi_target0, interrupt line I (PLIC 9).
-`define SNPU_NPU0_N_CHAIN        16
+`define SNPU_NPU0_N_CHAIN        32
 `define SNPU_NPU0_CHAIN_LEN      16
 `define SNPU_NPU0_P_MAX          1024
 `define SNPU_NPU0_P_W            10
@@ -24,7 +24,7 @@
 `define SNPU_NPU0_WR_SLOT_WORDS  64
 `define SNPU_NPU0_MP_MAX_W       128
 `define SNPU_NPU0_MP_W_AW        7
-`define SNPU_NPU0_GEOMETRY       32'h200A1010
+`define SNPU_NPU0_GEOMETRY       32'h200A1020
 
 // Instance npu1 (u_snpu_npu1): 16 chains of 8 DSP48 blocks, 256 MAC per cycle,
 // CSR slot 1 at 0xE8104100, DDR port MDNN, interrupt line J (PLIC 10).

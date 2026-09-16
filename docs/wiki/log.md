@@ -139,3 +139,9 @@
 - Güncellenen sayfalar: [[overview]] (10. madde: çok örnekli sistem, board sonuçları, axi_target1 kısıtı; açık sorular), [[stalyanpu-ip-generator]] (model aşamaları, FPGA karşılaştırması, board doğrulaması)
 - Kontrol: kırık wiki bağlantısı yok
 
+## [2026-09-16] query | Örnek başı sabit DSP maliyeti: ortak havuz analizi ve azaltma
+- Yanıt kaydedildi: [[stalyanpu-dsp-overhead-sharing]]
+- Güncellenen sayfalar: [[efx-dsp48]] (residual supabı uygulandı), [[stalyanpu]], [[multi-instance-npu]] (iki örnekli karışım 46,1 fps kestirimi), [[analytic-performance-model]] (yeni kaynak çapası)
+- Kaynak dosyalar: `ip/stalyanpu/docs/synthesis-guide.md`, `ip-generator.md`, `system-integrator.md`, `isa-descriptor.md`
+- Ölçüm: `syn/top` 32×32 map 1098 DSP48 / 1302 RAM10 / 88,4k XLR (önce 1198 / 1269 / 102,9k), pnr 255,3 MHz, setup +0,083 ns; dizi dışı sabit 174 → 74 DSP48
+- Doğrulama: sim 26/26 PASS, pytest 627; üst proje build'i ve board testi yapılmadı

@@ -3,7 +3,7 @@ title: "EFX_DSP48 (Titanium DSP48 DUAL bloğu)"
 type: entity
 category: product
 created: 2026-09-15
-updated: 2026-09-15
+updated: 2026-09-16
 source_count: 5
 tags: [dsp48, efinix, titanium, mac, int8]
 ---
@@ -37,7 +37,10 @@ SRL hizalama + kayıtlı toplama ağacıyla birleşir ([[dsp-chain-systolic-arra
 **Bütçe.** Dizi 1024, epilog 128 (kanal başına 2 requant + 2 residual), seq/rd_dma/agen
 çarpımları; `snpu_top` tek başına 1186, tam tasarım 1217 DSP48 (%88-90). Emniyet supapları:
 residual çarpanlarını LUT'a almak, requant'ı yarı hıza düşürmek. OpenEye tasarımı yalnızca
-152 DSP kullanıyordu ([[dnn-accelerator-options]]).
+152 DSP kullanıyordu ([[dnn-accelerator-options]]). İlk supap 2026-09-16'da uygulandı: residual
+çarpımları lane başına iki tabloya alındı, sequencer, okuma DMA ve adres üreteci çarpımları
+paylaştırıldı; dizi dışı maliyet 174'ten 74 DSP48'e, `snpu_top` 32×32 1198'den 1098'e indi
+([[stalyanpu-dsp-overhead-sharing]]).
 
 **Risk.** Silikon davranışının sim modelinden farklı olması (R1) listede ilk sıradaydı; M8'de
 tam kare bit bit eşleşmesi bu riski fiilen kapatmıştır ([[board-bringup-flow]]).

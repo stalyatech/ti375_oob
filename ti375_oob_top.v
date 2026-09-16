@@ -891,7 +891,7 @@ gDMA u_gDMA (
     .io_0_descriptorUpdate   ( dma_rx_descriptorUpdate )
 );
 
-// >>> stalyanpu:generated region=npu sha256=8dcc1dbd5f6a802f
+// >>> stalyanpu:generated region=npu sha256=ad03daf51602bcf8
 // Written by python -m stalyanpu system apply from rtl/snpu_system.json. Do not edit.
 //====================================================================
 // StalyaNPU accelerators. The CSR window is the upper half of the hard
@@ -899,7 +899,7 @@ gDMA u_gDMA (
 // PADDR[14]=1 selects it, PADDR[13:8] selects the slot of an instance
 // and PADDR[6:0] the register. PADDR[14]=0 is reserved and always ready.
 // All instances run on io_ddrMasters_0_clk.
-//   npu0: 16 x 16 chains, CSR 0xE8104000, axi_target0 (512 bit), userInterruptI (PLIC 9)
+//   npu0: 32 x 16 chains, CSR 0xE8104000, axi_target0 (512 bit), userInterruptI (PLIC 9)
 //   npu1: 16 x 8 chains, CSR 0xE8104100, MDNN (128 bit), userInterruptJ (PLIC 10)
 //====================================================================
 wire [31:0] hp_apbSlave_0_PADDR;
@@ -996,7 +996,7 @@ snpu_apb_demux #(
     .m_pslverr ( npu_csr_m_pslverr )
 );
 
-// Instance npu0 (u_snpu): 16 x 16 chains, CSR slot 0 at CPU
+// Instance npu0 (u_snpu): 32 x 16 chains, CSR slot 0 at CPU
 // address 0xE8104000, DDR port axi_target0, interrupt line I.
 wire [6:0]  npu_npu0_paddr   = npu_csr_m_paddr;
 wire        npu_npu0_psel    = npu_csr_m_psel[0];

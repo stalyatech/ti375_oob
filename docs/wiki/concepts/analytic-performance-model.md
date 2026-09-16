@@ -108,7 +108,10 @@ için tek bir sabit kendi başına o etkinin ölçümü sayılmaz. Aynı uyum pa
 portun etkin bant genişliğini de yeniden verdi: ek yükler ayrı hesaplandığında port 2,0 GB/s
 gibi davranıyor (28,1 fps ölçümüne karşı model 28,4), eski ~1,8 GB/s değeri kare süresinin
 tamamını bant genişliğine yıkmaktan geliyordu. Kaynak tarafı: 430 DSP48, 1036 RAM10, 68,8k
-XLR (`snpu_top`); dizi dışı sabit maliyet üç build'de de tam 174 DSP48.
+XLR (`snpu_top`); dizi dışı sabit maliyet üç build'de de tam 174 DSP48. 2026-09-16'da bu sabit
+74 DSP48'e indi; kaynak modeli yeni 32×32 build'ine (1098 DSP48, 1302 RAM10, 88,4k XLR)
+çapalandı, eski build'ler `RTL_MULTIPLIERS_DELTA` farkıyla karşılaştırılır
+([[stalyanpu-dsp-overhead-sharing]]).
 
 **IP Generator eklemeleri (2026-09-15, 09-16 güncellendi).** `hwcfg.py` DDR varsayılanı 2,4 GB/s kalır, ama
 `DDR_PORTS` presetleri ölçülen değerleri taşır: `dedicated512` 8 GB/s (board 43,9 fps,

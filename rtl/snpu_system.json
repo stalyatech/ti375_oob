@@ -6,13 +6,13 @@
    "name": "npu0",
    "hier": "u_snpu",
    "hwcfg": {
-    "name": "snpu16x16",
-    "n_chain": 16,
+    "name": "snpu32x16",
+    "n_chain": 32,
     "chain_len": 16,
     "p_max": 1024,
     "ibuf_bytes": 524288,
     "wfifo_bytes": 32768,
-    "clk_mhz": 250,
+    "clk_mhz": 250.0,
     "axi_dw": 256,
     "ddr_bw_gbps": 8.0,
     "t_pass": 10,
@@ -41,7 +41,10 @@
      "size": "0x08000000"
     }
    },
-   "layout": {},
+   "layout": {
+    "x": 410,
+    "y": 80
+   },
    "model": {
     "onnx": "E:\\Projects\\fpga\\efinix\\project\\fpga\\ti375_oob\\ip\\stalyanpu\\.data\\yolov8s_640x384.onnx"
    }
@@ -85,7 +88,10 @@
      "size": "0x08000000"
     }
    },
-   "layout": {},
+   "layout": {
+    "x": 410,
+    "y": 260
+   },
    "model": {
     "onnx": "E:\\Projects\\fpga\\efinix\\project\\fpga\\ti375_oob\\ip\\stalyanpu\\.data\\yolov8s_640x384.onnx"
    }

@@ -71,7 +71,7 @@ CSR yalıtımı, tek tek koşum, birlikte koşum ve örnek başına fps, kendi P
   kestirim DSP48 757, RAM10 2164, npu0 13,7 fps, npu1 6,9 fps; Efinity map DSP48 757, RAM10 2081.
 - `tb_npu_sys` simülasyonu: iki farklı geometri tek CSR penceresi arkasında aynı anda koşar,
   iki kesme ve tüm altın bölgeler eşleşir (24 kontrol).
-- Kestirimde tek 32x32 örnek 44,5 fps, en iyi iki örnekli karışım 38,7 fps: örnek başına sabit
+- (2026-09-16 öncesi) Kestirimde tek 32x32 örnek 44,5 fps, en iyi iki örnekli karışım 38,7 fps: örnek başına sabit
   maliyet (174 DSP48, epilog, DMA'lar) yüzünden çoklu örnek toplam iş hacmi için değil, ayrı akış,
   ayrı ağ veya yalıtım ihtiyacı için anlamlıdır.
 
@@ -93,6 +93,10 @@ CSR yalıtımı, tek tek koşum, birlikte koşum ve örnek başına fps, kendi P
 
 > ❓ **Belirsiz:** İki örnek aynı paylaşımlı anahtar yuvasını (`MDNN` ve `MCODEC`) birlikte
 > kullandığında bant genişliği bölünmesi board'da ölçülmedi; o durumdaki fps kestirimdir.
+
+- Sabit maliyet 74 DSP48'e indikten sonra (2026-09-16) kestirimde en iyi iki örnekli karışım
+  (16x32 `axi_target0` + 16x32 `MDNN`) 46,1 fps, tek 32x32 örnek 44,5 fps; çoklu örnek toplam iş
+  hacminde de öne geçti. Ortak DSP havuzu incelendi ve ertelendi ([[stalyanpu-dsp-overhead-sharing]]).
 
 ## İlişkili Kavramlar
 - [[accelerator-control-plane-apb]]: CSR penceresinin slotlara bölünmesi

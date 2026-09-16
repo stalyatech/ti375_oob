@@ -82,7 +82,8 @@ descriptor, tam kare, bit bit doğru ve iki koşumda aynı CRC ([[board-bringup-
 Son dağılım MAC %85, giriş dolumu 0,30 M, koşumda boş 0,37 M, yazma bekleme 0,79 M.
 Aynı RTL, [[stalyanpu-ip-generator]] ile küçültülüp board'da iki kez daha ölçüldü: 32×16
 (1024 MAC/çevrim) 9,92 M çevrim = 25,2 fps, 16×16 (512 MAC/çevrim) 17,92 M çevrim = 13,9 fps,
-her ikisinde de T1..T5 ALL PASS. Dizi dışı sabit maliyet üç build'de de 174 DSP48. A2'nin
+her ikisinde de T1..T5 ALL PASS. Dizi dışı sabit maliyet üç build'de de 174 DSP48 (2026-09-16'da
+epilog tabloları ve paylaşılan çarpıcılarla 74'e indi, [[stalyanpu-dsp-overhead-sharing]]). A2'nin
 board'da hiç kazandırmaması kare süresinin paylaşımlı DDR yolunun etkin bant genişliğine
 (~1,8 GB/s) bağlı olduğunu gösterdi; dedicated port bu bağı kaldırdı. Tam tasarım
 zamanlaması kapalı: +0,038 ns (seed 6, port pinleri kısıtlı), LUT4 98,1k, FF 94,1k, DSP48

@@ -76,4 +76,5 @@ kaynak, varlık, kavram ve karşılaştırma sayfalarına ayrıştırılmış ha
 - [[dnn-accelerator-options]] — OpenEye 2×2, ölçeklenmiş OpenEye ve StalyaNPU tam dizi: MAC/çevrim, tepe, fps, kaynak, karar
 
 ## Sorgular
+- [[stalyanpu-dsp-overhead-sharing]] — Örnek başı 174 DSP48 için ortak havuz analizi ve uygulanan azaltma (174 → 74, 32×32 1098 DSP48, 250 MHz) (2026-09-16)
 - [[stalyanpu-patent-disclosure]] — Patent başvurusu için İngilizce teknik açıklama belgesi (docx) ve 12 SVG/PNG çizim, buluş grupları A..D (2026-09-16)

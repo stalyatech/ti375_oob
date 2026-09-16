@@ -25,3 +25,6 @@ sim/openeye/sim_build*/
 .venv-stalyanpu/
 .pytest_cache/
 .data/
+# Build record the ip generator writes next to the geometry header. It
+# follows the local bitstream, so it is not shared; snpu_config.vh is.
+rtl/snpu_config.json

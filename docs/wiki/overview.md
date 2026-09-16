@@ -2,7 +2,7 @@
 title: "Genel Bakış"
 type: overview
 created: 2026-07-03
-updated: 2026-09-15
+updated: 2026-09-16
 tags: [overview, fmu, ti375, dnn, stalyanpu]
 ---
 
@@ -61,6 +61,13 @@ sayfalarına ayrıştırılmıştır.
    kaynak kestirimi anında hesaplanır, ONNX'ten blob'a akış ve board adımları seçimli zincir
    olarak koşar, seçilen geometri için IP paketi (hwcfg, ISA başlığı, Verilog sarmalayıcı,
    Efinity projesi) üretilir. Yalnız INT8.
+10. **Bir FPGA'da birden çok StalyaNPU (2026-09-16).** Sistem tanımı ([[multi-instance-npu]])
+   arayüzün tek doğru kaynağı oldu: Design (blok diyagramı ve seçili örneğin fps'i), Models
+   (model başına bir kalibrasyon, örnek başına derleme), FPGA hardware, Board. Board'da tek
+   örnekli 16×16 sistem 13,9 fps, 16×16 dedicated + 16×8 paylaşımlı `MDNN` sistemi birlikte
+   20,8 fps verdi (S1..S6 ALL PASS, kestirim 20,6). İkinci dedicated DDR portu bu kartta
+   açılamaz: sert SoC DDR_0'ın AXI hedef 1'ini kullanır ([[efx-sapphire-hpsoc-slb]]). 16×8
+   karesi [[analytic-performance-model]]'e dördüncü çapa olarak eklendi (model 6,86, ölçüm 6,87 fps).
 
 ## Gelişen sonuçlar
 
@@ -76,6 +83,8 @@ sayfalarına ayrıştırılmıştır.
 > elaboration log ile doğrulanmalıdır.
 
 - `MAC_SOURCE_ADDRESS` ve statik IP henüz sağlanmamıştır (placeholder).
+- StalyaNPU karışım önerisinin en yüksek fps'li iki örnekli sonucu ve `MDNN` ile `MCODEC`'in
+  bant genişliğini bölüştüğü yapılandırma board'da ölçülmedi ([[multi-instance-npu]]).
 - `rtl/` altındaki tutkal RTL dosyaları ve `gAXIS_1to3_switch` henüz üst modüle bağlanmamıştır.
 - FMU için kanonik NuttX boot varyantı (`hp`/`x2`/`x3`) netleştirilmelidir.
 - NPU CSR yolunun belgelerdeki iki hali (yumuşak SoC M7, sert SoC M8): HEAD sert SoC;

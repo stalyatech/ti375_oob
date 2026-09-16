@@ -345,6 +345,8 @@ set_output_delay -clock jtagCtrl_tck -reference_pin [get_ports {jtagCtrl_tck~CLK
 # set_clock_latency -source -setup <board_max + 0.828> [get_ports {io_cfuClk}]
 # set_clock_latency -source -hold <board_min + 0.552> [get_ports {io_cfuClk}]
 
+# >>> stalyanpu:generated region=npu_ddr_io sha256=831c8e3df335192c
+# Written by python -m stalyanpu system apply from rtl/snpu_system.json. Do not edit.
 # Dedicated 512-bit DDR AXI port of the accelerator (axi_target0), from the
 # interface designer template outflow/ti375_oob.pt.sdc (2026-09-15).
 set_output_delay -clock io_ddrMasters_0_clk -reference_pin [get_ports {io_ddrMasters_0_clk~CLKOUT~2~464}] -max 3.675 [get_ports {npu_ddr_arstn}]
@@ -428,3 +430,4 @@ set_input_delay -clock io_ddrMasters_0_clk -reference_pin [get_ports {io_ddrMast
 
 # The AXI reset of the DDR port is held for many cycles.
 set_false_path -to [get_ports {npu_ddr_arstn}]
+# <<< stalyanpu:generated region=npu_ddr_io

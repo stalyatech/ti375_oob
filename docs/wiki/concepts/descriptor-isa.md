@@ -87,6 +87,7 @@ doğrulanır.
 
 ## İlişkili Kavramlar
 - [[dsp-chain-systolic-array]]: descriptor'ın tarif ettiği döşeme/oct/icg/tap döngüsü
+- [[multi-instance-npu]]: mutlak adresler yüzünden her örnek kendi DDR bölgelerine ayrı derlenir
 - [[int8-quantization-flow]]: param bloğu ve epilog aritmetiği
 - [[board-bringup-flow]]: CSR sayaçları ve T1..T5 testleri
 - [[analytic-performance-model]]: sayaçlarla kalibrasyon

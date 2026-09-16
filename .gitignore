@@ -28,3 +28,7 @@ sim/openeye/sim_build*/
 # Build record the ip generator writes next to the geometry header. It
 # follows the local bitstream, so it is not shared; snpu_config.vh is.
 rtl/snpu_config.json
+
+# Backups of project files taken before the StalyaNPU system generator overwrites them.
+rtl/.snpu_backup/
+rtl/snpu_system.state.json

@@ -1,0 +1,95 @@
+{
+ "schema": "stalyanpu.system/1",
+ "platform": "ti375_oob",
+ "instances": [
+  {
+   "name": "npu0",
+   "hier": "u_snpu",
+   "hwcfg": {
+    "name": "snpu16x16",
+    "n_chain": 16,
+    "chain_len": 16,
+    "p_max": 1024,
+    "ibuf_bytes": 524288,
+    "wfifo_bytes": 32768,
+    "clk_mhz": 250,
+    "axi_dw": 256,
+    "ddr_bw_gbps": 8.0,
+    "t_pass": 10,
+    "t_tile": 200,
+    "t_op": 4000,
+    "epilogue_oc_per_cycle": 32,
+    "ch_group": 32,
+    "stem_ic_pad": 8
+   },
+   "csr": {
+    "slot": 0
+   },
+   "ddr": {
+    "port": "axi_target0"
+   },
+   "irq": {
+    "line": "I"
+   },
+   "regions": {
+    "blob": {
+     "base": "0x20000000",
+     "size": "0x08000000"
+    },
+    "scratch": {
+     "base": "0x28000000",
+     "size": "0x08000000"
+    }
+   },
+   "layout": {},
+   "model": {
+    "onnx": "E:\\Projects\\fpga\\efinix\\project\\fpga\\ti375_oob\\ip\\stalyanpu\\.data\\yolov8s_640x384.onnx"
+   }
+  },
+  {
+   "name": "npu1",
+   "hier": "u_snpu_npu1",
+   "hwcfg": {
+    "name": "snpu16x8",
+    "n_chain": 16,
+    "chain_len": 8,
+    "p_max": 512,
+    "ibuf_bytes": 262144,
+    "wfifo_bytes": 32768,
+    "clk_mhz": 250.0,
+    "axi_dw": 128,
+    "ddr_bw_gbps": 2.0,
+    "t_pass": 10,
+    "t_tile": 200,
+    "t_op": 4000,
+    "epilogue_oc_per_cycle": 32,
+    "ch_group": 32,
+    "stem_ic_pad": 8
+   },
+   "csr": {
+    "slot": 1
+   },
+   "ddr": {
+    "port": "MDNN"
+   },
+   "irq": {
+    "line": "J"
+   },
+   "regions": {
+    "blob": {
+     "base": "0x30000000",
+     "size": "0x08000000"
+    },
+    "scratch": {
+     "base": "0x38000000",
+     "size": "0x08000000"
+    }
+   },
+   "layout": {},
+   "model": {
+    "onnx": "E:\\Projects\\fpga\\efinix\\project\\fpga\\ti375_oob\\ip\\stalyanpu\\.data\\yolov8s_640x384.onnx"
+   }
+  }
+ ],
+ "layout": {}
+}

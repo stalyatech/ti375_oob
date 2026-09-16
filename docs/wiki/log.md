@@ -92,3 +92,50 @@
 - Üretilen dosyalar: `ip/stalyanpu/docs/patent/stalyanpu-technical-disclosure.docx`, `ip/stalyanpu/docs/patent/figures/` (12 SVG + 12 PNG)
 - Güncellenen sayfalar: [[stalyanpu]] (ilişkilere belge bağlantısı); `ip/stalyanpu/docs/README.md` belge tablosuna satır eklendi
 - Ham kaynakla doğrulama: okuma DMA kanal ataması (0 denetim, 1 ağırlık, 2 dolum) ve sert SoC CSR yolu RTL ile teyit edildi; yeni çelişki bulunmadı
+
+## [2026-09-16] update | Bir FPGA'da birden çok StalyaNPU: sistem tanımı ve System sayfası
+- Oluşturulan sayfalar: [[multi-instance-npu]]
+- Güncellenen sayfalar: [[stalyanpu]] (ilişki), [[stalyanpu-ip-generator]] (bağlantı)
+- Kaynak dosya: `ip/stalyanpu/docs/system-integrator.md` (yeni)
+- Bulgu: YOLOv8s 640x384 bir örnekte en az p_max 512 ve 256 KB giriş tamponu ister; 64 KB ile ilk katman derlenemedi
+- Ölçüm: tek örnekli sistemin map çıktısı sistem öncesiyle aynı; 16x16 + 16x8 sisteminde map DSP48 757 (kestirim 757), RAM10 2081 (kestirim 2164)
+- Build: 16x16 + 16x8 sistemi pnr ve pgm PASS, 250 MHz setup +0,032 ns, hold +0,023 ns; wiki sayfasına eklendi
+
+## [2026-09-16] update | Çok örnekli sistemde örnek başına model, kalibrasyon ve derleme
+- Güncellenen sayfalar: [[multi-instance-npu]] (modeller bölümü, [[int8-quantization-flow]] ve [[descriptor-isa]] bağlantıları)
+- Kaynak dosya: `ip/stalyanpu/docs/system-integrator.md` (Modeller bölümü, E014, W109)
+- Ölçüm: YOLOv8s tek kalibrasyon, 16x16 blob 11,3 MB, 16x8 blob 22,4 MB, ikisi `interp == runner` OK
+
+## [2026-09-16] update | IP generator arayüzü sistem tanımı etrafında yeniden düzenlendi
+- Güncellenen sayfalar: [[stalyanpu-ip-generator]] (özet, düzen notu, eski adım paragrafları için çelişki işareti), [[multi-instance-npu]] (web arayüzü, modeller, bağlantı)
+- Kaynak dosyalar: `ip/stalyanpu/docs/ip-generator.md` (baştan yazılan adım bölümleri), `system-integrator.md` (web arayüzü bölümü), `docs/README.md`
+- Değişiklik: menü 1 Design, 2 Models, 3 FPGA hardware, 4 Board; Accelerator sayfası seçili örneğin sekmelerine taşındı, rozetler Design/Models/FPGA/Board
+- Tespit edilen çelişki: eski Accelerator sayfası diyagramdan bağımsız DDR bant genişliği kullanıyordu; kestirim artık örneğin bağlı olduğu porttan geliyor
+
+## [2026-09-16] update | IP generator: model aşamaları, menü noktaları, FPGA karşılaştırması
+- Güncellenen kaynak dosya: `ip/stalyanpu/docs/ip-generator.md` (Models zinciri, rozet notu, FPGA paneli)
+- Değişiklik: model hazırlama tek satır yerine model başına Lower/Calibrate, örnek başına Compile ve Summary satırlarıyla koşuyor (`system models --step`)
+- Değişiklik: FPGA paneli taslak ile projeyi örnek örnek karşılaştırıyor; tek örnekli taslakta projenin iki örneği "removed in the design" olarak görünüyor
+- Değişiklik: Models noktası ilk açılışta turuncu, Board noktası koşulmamışken gri
+
+## [2026-09-16] update | Tek örnekli sistem arayüzle board'da doğrulandı
+- Güncellenen sayfalar: [[multi-instance-npu]] (örnekler, belirsizlik notu daraltıldı)
+- Ölçüm: 16x16 tek örnek, map DSP48 455 / RAM10 1402, pnr setup +0,030 ns, board S1..S6 ALL PASS, 13,9 fps (17 919 489 çevrim/kare)
+- Bitstream kopyası: `ip/stalyanpu/.data/build/bits/ti375_oob_sys_16x16_single.bit`
+
+## [2026-09-16] update | İki örnekli sistem board'da doğrulandı
+- Güncellenen sayfalar: [[multi-instance-npu]] (örnekler, belirsizlik notu paylaşımlı yuva çekişmesine daraltıldı)
+- Ölçüm: 16x16 axi_target0 + 16x8 MDNN, S1..S6 ALL PASS; npu0 13,9 fps, npu1 6,8 fps, birlikte 20,8 fps (kestirim 20,6)
+- Build: map DSP48 757 / RAM10 2081, pnr setup +0,032 ns, hold +0,023 ns; bitstream `ip/stalyanpu/.data/build/bits/ti375_oob_sys_16x16_16x8_gui.bit`
+- Bulgu: pythonw altında `system models` alt süreç çıktısı iş loguna düşmüyordu; çıktı artık boru üzerinden aktarılıyor. Referans denetimi örnek başına yaklaşık 2 s sürüyor
+
+## [2026-09-16] update | S3 axi_target1 incelemesi ve S4 kalibrasyon çapaları
+- Güncellenen sayfalar: [[multi-instance-npu]] (axi_target1 kullanılamaz, peri.xml denetimi), [[analytic-performance-model]] (dördüncü çapa 16×8 paylaşımlı), [[efx-sapphire-hpsoc-slb]] (AXI hedef 1 ilişkisi)
+- Kaynak dosyalar: `ip/stalyanpu/docs/system-integrator.md`, `ip-generator.md`, `decision-record.md`
+- Bulgu: Efinity kuralı `ddr_rule_axi_1_qcrv32` sert SoC varken DDR_0 AXI hedef 1'i reddeder; planın S3 adımı (ikinci dedicated port) bu kartta yapılamaz
+- Ölçüm: 16×8 MDNN 36,23 M çevrim, 6,87 fps, model 6,86; 8'lik zincir 17,2 XLR/DSP
+
+## [2026-09-16] lint | Commit öncesi wiki güncelliği
+- Güncellenen sayfalar: [[overview]] (10. madde: çok örnekli sistem, board sonuçları, axi_target1 kısıtı; açık sorular), [[stalyanpu-ip-generator]] (model aşamaları, FPGA karşılaştırması, board doğrulaması)
+- Kontrol: kırık wiki bağlantısı yok
+

@@ -116,8 +116,18 @@ model 44,5), `shared128` 2,0 GB/s, `shared128_plan` 2,4 GB/s. Katman tablosu art
 de üretilir (`perf/adapter.py`; YOLOv8s için yerleşik tabloyla aynı 5,671 M çevrim), rapor
 JSON olarak alınır (`perf --json`), `perf/resources.py` hiyerarşik sentez raporuna çapalı
 kaynak kestirimi ve `perf/calibration.py` ölçüm notunu verir. Web arayüzü bunları geometri
-başına anlık gösterir ([[stalyanpu-ip-generator]]). Ölçüm 32×32, 32×16 ve 16×16
+başına anlık gösterir ([[stalyanpu-ip-generator]]). Ölçüm 32×32, 32×16, 16×16 ve 16×8
 geometrileriyle sınırlıdır; diğerleri aynı formülün projeksiyonudur.
+
+**Dördüncü board çapası: 16×8 paylaşımlı yuvada (2026-09-16).** İki örnekli sistemin
+([[multi-instance-npu]]) ikinci örneği: 256 MAC/çevrim, `p_max` 512, 256 KB giriş tamponu,
+paylaşımlı anahtarın `MDNN` yuvası (128 bit, 2,0 GB/s). Ölçülen **36,23 M çevrim, 6,87 fps**
+(duvar saati 145 569 µs/kare), MAC sayacı 33 903 360, MAC payı %93,6. Model 6,86 fps ve
+36,43 M çevrim verir; dizi terimi sayaçla birebir eşit. Bu kare ayarda kullanılmadı ve model
+onu %1 içinde bulduğu için ek yük sabitleri değiştirilmedi. Çapa tampon boyutunu da taşır ve
+yalnız aynı tamponlu yapılandırmayla eşleşir. Kaynak tarafı: 302 DSP48, 679 RAM10, 64,8k XLR;
+8'lik zincirin DSP başına fabric maliyeti 17,2 XLR ölçüldü (önceden 16'lık zincirin 22,8 değeri
+varsayılıyordu), kestirim 302 / 706 / 65,7k.
 
 ## Örnekler
 - `python -m stalyanpu perf --hwcfg full2048 --ddr-bw 4.5 --quiet` → dedicated port senaryosu, 40,8 fps.

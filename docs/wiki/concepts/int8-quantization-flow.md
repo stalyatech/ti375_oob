@@ -61,6 +61,7 @@ ayrı yeniden ölçek ISA değişmeden denenebilir.
 
 ## İlişkili Kavramlar
 - [[descriptor-isa]]: param bloğu, LUT tabanı, sıfır noktaları ve residual ölçek alanları
+- [[multi-instance-npu]]: aynı model birden çok örnekte bir kez kalibre edilir, örnek başına derlenir
 - [[dsp-chain-systolic-array]]: düz int8 nokta çarpımı, DSP içinde birikim olmaması
 - [[analytic-performance-model]]: nicemlemenin performans modeline etkisi yoktur; her ikisi `hwcfg` üstünde çalışır
 

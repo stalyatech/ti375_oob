@@ -15,24 +15,24 @@ tags: [stalyanpu, gui, ip-generator, toolchain, perf-model, resources]
 [[stalyanpu-toolchain]] paketine eklenen yerel web arayüzünü ve `ipgen` komutunu anlatır.
 Arayüz `python -m stalyanpu gui` (veya `gui.cmd`, `gui.sh`, `stalyanpu-gui`) ile standart
 kütüphanenin HTTP sunucusu üzerinde açılır, ek Python paketi istemez ve yalnız yerel adrese
-bağlanır. Solda adımların menüsü vardır, seçilen adım sağda tek başına açılır: 1 hızlandırıcıyı
-seç ve fps'i gör (geometri, saat, DDR portu, ağ; [[analytic-performance-model]] ve kaynak
-kestirimi), 2 geometriyi Efinity projesine bağla ve bitstream'i kur, 3 modeli bu hızlandırıcı
-için hazırla (lower → calibrate → compile, isteğe bağlı golden ve eval), 4 board'da koştur
-([[board-bringup-flow]]). 2 ve 3 birbirini beklemez ama aynı geometriyi kullanmak zorundadır;
-her sayfa aynı üç rozetle açılır (Accelerator, FPGA, Model) ve menüdeki noktalar aynı durumu
-tekrarlar, koşum sürerken yanıp söner. Menünün altında isteğe bağlı bir adım daha vardır:
-IP'yi başka bir projeye taşınacak dosya paketi olarak yazmak ve o geometriyi Efinity ile tek
-başına ölçmek. Seçilen adımlar tek zincir olarak sırayla koşar; ilerleme çubukları,
+bağlanır. Solda adımların menüsü vardır, seçilen adım sağda tek başına açılır. Güncel düzen
+(2026-09-16) sistem tanımını ([[multi-instance-npu]]) tek doğru kaynak yapar: 1 Design (blok
+diyagramı; seçili örneğin fps'i, katmanları ve dizi boyutları, [[analytic-performance-model]] ve
+kaynak kestirimi), 2 Models (örnek başına model, bir kez kalibrasyon, örnek başına derleme),
+3 FPGA hardware (farkı göstererek uygula, bitstream'i kur), 4 Board (S1..S6, örnek başına ölçülen
+fps; [[board-bringup-flow]]). Tek hızlandırıcı bir örnekli tasarımdır. Her sayfa dört rozetle
+açılır (Design, Models, FPGA, Board) ve menüdeki noktalar aynı durumu tekrarlar, koşum sürerken
+yanıp söner. Menünün altında isteğe bağlı bir adım daha vardır: bir örneği başka bir projeye
+taşınacak dosya paketi olarak yazmak ve o geometriyi Efinity ile tek başına ölçmek. Seçilen adımlar tek zincir olarak sırayla koşar; ilerleme çubukları,
 başarısız adımın nedeni ve log ilgili adımın yanında görünür. Her bölümde "Reset to defaults"
 vardır ve seçili adım adres çubuğunda durur, yani yenileme ve geri tuşu aynı adıma döner.
 
 ## Temel Çıkarımlar
 - Yalnız INT8; bit genişliği seçeneği yoktur. Geometri kısıtları RTL'den gelir: `N_CHAIN` 16'nın katı (epilog 32 lane), `CHAIN_LEN ∈ {8,16,32}`, `P_MAX` 2'nin kuvveti, `AXI_DW` 128/256; `hwcfg.validate` bunları denetler, `legal_geometries` 12 çifti listeler.
 - Perf modeli değişmedi; `perf/adapter.py` indirgenmiş ONNX graf'ından aynı `Layer` tablosunu üretir ve YOLOv8s dışa aktarımında yerleşik tabloyla aynı çevrim sayısını verir (5,671 M).
-- Kaynak kestirimi üç gerçek build'e çapalıdır (32×32: 1198 DSP48, 1269 RAM10, 102,9k XLR; 32×16: 686, 1240, 81,0k; 16×16: 430, 1036, 68,8k); dizi, biriktirici ve tamponlar ölçeklenir, epilog ve denetim sabittir. Dizinin DSP başına fabric maliyeti zincir uzunluğuna bağlıdır (32'lik zincir 30,5 XLR/DSP, 16'lık 22,8). Dizi dışındaki 174 DSP48 (epilog 128, sequencer 22, okuma DMA 18, agen 5, maxpool 1) hızlandırıcının sabit maliyetidir.
+- Kaynak kestirimi gerçek build'lere çapalıdır (32×32: 1198 DSP48, 1269 RAM10, 102,9k XLR; 32×16: 686, 1240, 81,0k; 16×16: 430, 1036, 68,8k; iki örnekli sistemin 16×8 örneği, p_max 512, 256 KB: 302, 679, 64,8k); dizi, biriktirici ve tamponlar ölçeklenir, epilog ve denetim sabittir. Dizinin DSP başına fabric maliyeti zincir uzunluğuna bağlıdır (32'lik zincir 30,5 XLR/DSP, 16'lık 22,8, 8'lik 17,2). Dizi dışındaki 174 DSP48 (epilog 128, sequencer 22, okuma DMA 18, agen 5, maxpool 1) hızlandırıcının sabit maliyetidir.
 - Çubuklar iki parçalı: hızlandırıcı ve projenin geri kalanı. İkincisi sabit değil, `project.resource_report()` ile projenin son build raporundan (tasarım toplamı eksi hızlandırıcı örneği) okunur; son build'de 25 DSP48, 366 RAM10, 83,2k XLR. Proje kurulmamışsa gösterilmez.
-- Ölçüm çapaları (YOLOv8s 640×384, 250 MHz): 32×32 dedicated portta 43,9 fps (model 44,5), 32×16 dedicated portta 25,2 fps (model 25,1), 16×16 dedicated portta 13,9 fps (model 13,7), 32×32 paylaşımlı portta 28,1 fps (model 28,4); ek yük sabitleri bu karelere birlikte ayarlıdır. Eşleşme geometri + port + bant genişliği + çözünürlük ile yapılır (paylaşımlı portun 2,4 GB/s planlama değeri ölçüm sayılmaz); ölçüm dizi listesinde, rozette, fps notunda ve karşılaştırma tablosunun "fps measured" sütununda görünür, ölçülmemişlerde "estimate only".
+- Ölçüm çapaları (YOLOv8s 640×384, 250 MHz): 32×32 dedicated portta 43,9 fps (model 44,5), 32×16 dedicated portta 25,2 fps (model 25,1), 16×16 dedicated portta 13,9 fps (model 13,7), 32×32 paylaşımlı portta 28,1 fps (model 28,4), 16×8 paylaşımlı `MDNN` yuvasında (p_max 512, 256 KB) 6,87 fps (model 6,86); ek yük sabitleri ilk dört kareye birlikte ayarlıdır, 16×8 karesi doğrulama çapasıdır. Eşleşme geometri + port + bant genişliği + çözünürlük ile, çapa tampon boyutu taşıyorsa tamponla da yapılır (paylaşımlı portun 2,4 GB/s planlama değeri ölçüm sayılmaz); ölçüm seçili örneğin Frame rate notunda ve Array sizes tablosunun "fps measured" sütununda görünür, ölçülmemişlerde "estimate only".
 - IP paketi: `hwcfg.json`, `stalyanpu_isa.h`, perf/kaynak raporları, `rtl/snpu_params.vh`, `rtl/snpu_top_<ad>.v`, `rtl_files.f`, `sim_args.txt`, `syn/` Efinity projesi (xml, peri.xml, sdc, sentez sarmalayıcısı); isteğe bağlı `efx_run` işi `syn/run_syn.py --project-dir` ile.
 - `hwcfg.load()` artık presetin kopyasını döndürür; `calibrate --image-dir` düz klasörden kalibrasyon yapar.
 
@@ -44,6 +44,34 @@ server sent events akışı sağlar. `gui/jobs.py` her adımı alt süreç olara
 ağacını kapatır (Windows `taskkill /T`, POSIX süreç grubu); zincirde bir adım başarısız olunca
 kalanlar `skipped` olur; OpenOCD servis yuvasında Start/Stop ile yaşar. İş türleri
 `gui/registry.py`'de beyaz listeli argümanlarla tanımlıdır; kabuk kullanılmaz.
+
+**Sayfa düzeninin yeniden kurulması (2026-09-16).** Çok örnekli System sayfası eklenince eski
+1. adım (Accelerator) projede olmayan tek bir yapılandırmayı gösteriyor, DDR bant genişliğini
+diyagramdaki bağlantıdan bağımsız bir form alanından alıyordu; FPGA ve Model sayfaları o
+geometriyle karşılaştırıyordu. Düzen tek akışa çevrildi. Accelerator sayfasının içeriği (büyük
+fps değeri ve ölçüm notu, kartlar, katman grafiği, dizi boyutu karşılaştırması) Design sayfasında
+seçili örneğin sekmelerine taşındı ve örneğin bağlı olduğu porttan kestirilir; karşılaştırma
+satırına tıklamak örneğin geometrisini değiştirir. Model seçimi Models sayfasının tablosunda,
+uygulama ve build FPGA sayfasında, S1..S6 zinciri Board sayfasındadır. Arayüz donanım farkını
+(ad, hiyerarşi, hwcfg, slot, port, hat) yazılım farkından (model, DDR bölgeleri, yerleşim) ayırır;
+yalnız ikincisi değişince yeniden build istenmez. Sistem tanımı olmayan projede Design sayfası
+projenin hızlandırıcısını taslak olarak gösterir, dosya yazmaz. Eski adresler (`#accelerator`,
+`#system`, `#model`) ve kaydedilmiş form durumu yeni sayfalara taşınır. Aşağıdaki "Adım 1",
+"Adım 2" paragrafları bu düzenden önceki sayfaları anlatır; tek hızlandırıcı `project apply`
+akışı ve T1..T5 testi komut satırında kalmıştır.
+
+**Düzen sonrası düzeltmeler ve board doğrulaması (2026-09-16).** Model hazırlama tek satır yerine
+aşama aşama koşar: model başına Lower ve Calibrate, örnek başına Compile, sonra Summary
+(`system models --step`); `models/<örnek>/compiled.json` derlemenin hangi bölge ve modelle
+yapıldığını kaydeder. pythonw altında alt süreç çıktısı iş loguna düşmüyordu, artık boru
+üzerinden aktarılır; referans denetimi örnek başına yaklaşık 2 s sürer. FPGA sayfası taslağı
+projeyle örnek örnek karşılaştırır, menüde Models noktası ilk açılışta turuncu, Board noktası
+koşulmamışken gri görünür. Arayüzün dört adımıyla tek örnekli 16×16 sistem (13,9 fps) ve
+16×16 + 16×8 sistemi (birlikte 20,8 fps) board'da S1..S6 ALL PASS verdi ([[multi-instance-npu]]).
+
+> ⚠️ **Çelişki:** Aşağıdaki "Adım 1", "Adım 2 ve Board" ve "Adım 2 (proje bağlama)" paragrafları ile
+> Özet'teki güncel düzen farklıdır; güncel düzen `ip/stalyanpu/docs/ip-generator.md` (2026-09-16,
+> ikinci sürüm) içindedir, eski paragraflar tarihçe olarak tutuldu.
 
 **Adım 1.** Geometri açılır listesi (her satırda MAC/çevrim ve DSP), saat, DDR port
 presetleri ([[lpddr4x-controller]] dedicated 512-bit portu için 8 GB/s, paylaşımlı
@@ -130,7 +158,7 @@ yalnız RTL simülasyonuyla doğrulanmıştır.
 
 ## Bağlantılar
 - İlgili varlıklar: [[stalyanpu-toolchain]], [[stalyanpu]], [[yolov8s]], [[ti375c529]], [[ti375-devkit]], [[lpddr4x-controller]], [[efinity-toolchain]]
-- İlgili kavramlar: [[analytic-performance-model]], [[board-bringup-flow]], [[descriptor-isa]], [[int8-quantization-flow]], [[dsp-chain-systolic-array]], [[fpga-timing-closure]], [[shared-dram-arbitration]]
+- İlgili kavramlar: [[multi-instance-npu]], [[analytic-performance-model]], [[board-bringup-flow]], [[descriptor-isa]], [[int8-quantization-flow]], [[dsp-chain-systolic-array]], [[fpga-timing-closure]], [[shared-dram-arbitration]]
 - Destekleyen kaynaklar: [[stalyanpu-toolchain-guide]], [[stalyanpu-synthesis-guide]], [[stalyanpu-bringup-guide]], [[stalyanpu-perf-plan]]
 
 ## Alıntılar

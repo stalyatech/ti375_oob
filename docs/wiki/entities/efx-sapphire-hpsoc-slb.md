@@ -3,7 +3,7 @@ title: "EfxSapphireHpSoc_slb (Donanım Blok SoC)"
 type: entity
 category: product
 created: 2026-07-03
-updated: 2026-09-15
+updated: 2026-09-16
 source_count: 6
 tags: [soc, riscv, sapphire, hard-processor, housekeeping]
 ---
@@ -46,3 +46,4 @@ TSEMAC/SDHC/SLB switch kaldırılmış, geriye ev-işleri kalmıştır ([[oob-to
 - [[ti375-devkit]]: bring-up board'u
 - [[board-bringup-flow]]: T1..T5 test akışı
 - [[hard-soc-fabric-interrupt-path]]: kesmelerin PLIC'e ulaşma yolu
+- [[multi-instance-npu]]: sert SoC DDR_0'ın AXI hedef 1'ini kullandığı için ikinci dedicated NPU portu açılamaz (Efinity kuralı `ddr_rule_axi_1_qcrv32`)

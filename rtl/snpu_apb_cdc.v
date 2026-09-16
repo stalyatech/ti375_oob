@@ -7,14 +7,20 @@
 // time: the source latches the command, toggles a request, holds PREADY
 // low and completes when the acknowledge toggle returns with the captured
 // read data. CSR accesses are rare, so the handshake latency is harmless.
+//
+// AW is the address width. The single accelerator design passes the 7 bit
+// register address; a design with several instances passes the slot bits
+// as well and decodes them after the crossing.
 // =============================================================================
 `timescale 1ns / 1ps
 
-module snpu_apb_cdc (
+module snpu_apb_cdc #(
+    parameter AW = 7
+) (
     // source side, peripheral clock
     input  wire        s_clk,
     input  wire        s_rst,
-    input  wire [6:0]  s_paddr,
+    input  wire [AW-1:0] s_paddr,
     input  wire        s_psel,
     input  wire        s_penable,
     input  wire        s_pwrite,
@@ -25,7 +31,7 @@ module snpu_apb_cdc (
     // destination side, accelerator clock
     input  wire        d_clk,
     input  wire        d_rst,
-    output reg  [6:0]  d_paddr,
+    output reg  [AW-1:0] d_paddr,
     output reg         d_psel,
     output reg         d_penable,
     output reg         d_pwrite,
@@ -39,7 +45,7 @@ module snpu_apb_cdc (
     // until the acknowledge comes back, so the destination samples them
     // safely after its two flop synchroniser.
     reg        req_t, busy;
-    reg [6:0]  l_addr;
+    reg [AW-1:0] l_addr;
     reg        l_write;
     reg [31:0] l_wdata;
     reg [1:0]  ack_sync;
@@ -48,7 +54,7 @@ module snpu_apb_cdc (
     always @(posedge s_clk) begin
         if (s_rst) begin
             req_t <= 1'b0; busy <= 1'b0;
-            l_addr <= 7'd0; l_write <= 1'b0; l_wdata <= 32'd0;
+            l_addr <= {AW{1'b0}}; l_write <= 1'b0; l_wdata <= 32'd0;
         end else begin
             if (s_psel && s_penable && !busy) begin
                 l_addr <= s_paddr;
@@ -74,7 +80,7 @@ module snpu_apb_cdc (
         if (d_rst) begin
             req_sync <= 2'b00; ack_t <= 1'b0; run <= 1'b0;
             d_psel <= 1'b0; d_penable <= 1'b0; d_pwrite <= 1'b0;
-            d_paddr <= 7'd0; d_pwdata <= 32'd0;
+            d_paddr <= {AW{1'b0}}; d_pwdata <= 32'd0;
             cap_rdata <= 32'd0; cap_slverr <= 1'b0;
         end else begin
             req_sync <= {req_sync[0], req_t};

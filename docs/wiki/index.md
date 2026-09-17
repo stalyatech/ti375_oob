@@ -77,4 +77,4 @@ kaynak, varlık, kavram ve karşılaştırma sayfalarına ayrıştırılmış ha
 
 ## Sorgular
 - [[stalyanpu-dsp-overhead-sharing]] — Örnek başı 174 DSP48 için ortak havuz analizi ve uygulanan azaltma (174 → 74, 32×32 1098 DSP48, 250 MHz) (2026-09-16)
-- [[stalyanpu-patent-disclosure]] — Patent başvurusu için İngilizce teknik açıklama belgesi (docx) ve 12 SVG/PNG çizim, buluş grupları A..D (2026-09-16)
+- [[stalyanpu-patent-disclosure]] — Patent başvurusu için İngilizce teknik açıklama belgesi (docx, sürüm 1.1), 12 SVG/PNG çizim ve renkli CNN ilüstrasyonu, buluş grupları A..E (2026-09-17)

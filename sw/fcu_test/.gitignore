@@ -1,0 +1,2 @@
+# Build products; the image goes into ip/EfxSapphireFCU/*ram_symbol*.bin
+build/

@@ -1,0 +1,2 @@
+obj-m += fcu_rproc.o
+ccflags-y += -I$(src)/../../amp

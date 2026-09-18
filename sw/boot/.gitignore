@@ -1,0 +1,4 @@
+# Only bootloader.hex is an input of the Efinity build (OCR_FILE_PATH)
+*
+!.gitignore
+!bootloader.hex

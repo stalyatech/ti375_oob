@@ -22,9 +22,12 @@
 //                         pending over there
 //   0x14 DB_PENDING  W1C  doorbells rung by the other side
 //   0x18 DB_MASK     RW   pending bits that raise this side's interrupt
+//   0x1C SYS_RESET   WO*  write SYS_RESET_KEY to reset the whole system, as
+//                         the reset button does; reads 0, other values are
+//                         an error
 //   0x20 SCRATCH0 .. 0x3C SCRATCH7   RW, shared by both sides
-//   * writable from the host port only. The FCU cannot release itself or
-//     move its own entry point; a write from the FCU port is an error.
+//   * host port only. The FCU cannot release itself, move its own entry
+//     point or reset the system; any FCU access to these is an error.
 //
 // Both interrupts are level: they stay high while a masked-in doorbell is
 // pending and drop when that side clears it. A doorbell set and cleared in
@@ -75,10 +78,12 @@ module amp_ctrl #(
 
     output wire          fcu_hold,   // to the FCU asynchronous reset
     output reg           host_irq,   // doorbell from the FCU, to the hard SoC PLIC
-    output reg           fcu_irq     // doorbell from the host, to the FCU PLIC
+    output reg           fcu_irq,    // doorbell from the host, to the FCU PLIC
+    output reg           sys_reset   // one-cycle request, to the reset button input
 );
 
-    localparam [31:0] ID_VALUE = 32'h414D_5001;
+    localparam [31:0] ID_VALUE      = 32'h414D_5001;
+    localparam [31:0] SYS_RESET_KEY = 32'h5253_5421;    // "RST!"
 
     localparam [3:0] R_ID         = 4'h0,
                      R_CTRL       = 4'h1,
@@ -86,8 +91,9 @@ module amp_ctrl #(
                      R_STATUS     = 4'h3,
                      R_DB_SEND    = 4'h4,
                      R_DB_PENDING = 4'h5,
-                     R_DB_MASK    = 4'h6;
-    // word 7 is unused, words 8..15 are the scratch registers
+                     R_DB_MASK    = 4'h6,
+                     R_SYS_RESET  = 4'h7;
+    // words 8..15 are the scratch registers
 
     // ---------------------------------------------------------------- decode
     // Zero wait states on both ports.
@@ -138,8 +144,11 @@ module amp_ctrl #(
             f_mask_q      <= 32'd0;
             host_irq      <= 1'b0;
             fcu_irq       <= 1'b0;
+            sys_reset     <= 1'b0;
             scratch_q     <= 256'd0;
         end else begin
+            sys_reset <= h_wr && h_in && h_w == R_SYS_RESET && h_pwdata == SYS_RESET_KEY;
+
             h2f_pending_q <= (h2f_pending_q & ~h2f_clr) | h2f_set;
             f2h_pending_q <= (f2h_pending_q & ~f2h_clr) | f2h_set;
 
@@ -203,14 +212,17 @@ module amp_ctrl #(
     end
 
     // ---------------------------------------------------------------- errors
-    // Word 7 is a hole. The FCU may not write ID, CTRL, BOOT_ADDR or STATUS;
-    // the host may not write ID or STATUS.
+    // The FCU may not write ID, CTRL, BOOT_ADDR or STATUS, nor touch
+    // SYS_RESET; the host may not write ID or STATUS, nor SYS_RESET with
+    // anything but the key.
     always @(*) begin
         h_pslverr = 1'b0;
         if (h_acc) begin
-            if (!h_in || (!h_scr && h_w == 4'h7))
+            if (!h_in)
                 h_pslverr = 1'b1;
             else if (h_pwrite && !h_scr && (h_w == R_ID || h_w == R_STATUS))
+                h_pslverr = 1'b1;
+            else if (h_pwrite && !h_scr && h_w == R_SYS_RESET && h_pwdata != SYS_RESET_KEY)
                 h_pslverr = 1'b1;
         end
     end
@@ -218,7 +230,7 @@ module amp_ctrl #(
     always @(*) begin
         f_pslverr = 1'b0;
         if (f_acc) begin
-            if (!f_in || (!f_scr && f_w == 4'h7))
+            if (!f_in || (!f_scr && f_w == R_SYS_RESET))
                 f_pslverr = 1'b1;
             else if (f_pwrite && !f_scr && f_w <= R_STATUS)
                 f_pslverr = 1'b1;

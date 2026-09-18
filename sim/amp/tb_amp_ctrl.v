@@ -13,7 +13,8 @@ module tb_amp_ctrl;
 
     localparam [11:0] A_ID = 12'h000, A_CTRL = 12'h004, A_BOOT = 12'h008,
                       A_STATUS = 12'h00C, A_SEND = 12'h010, A_PEND = 12'h014,
-                      A_MASK = 12'h018, A_HOLE = 12'h01C, A_SCR0 = 12'h020;
+                      A_MASK = 12'h018, A_SYSRST = 12'h01C, A_SCR0 = 12'h020;
+    localparam [31:0] RST_KEY = 32'h5253_5421;
 
     reg clk = 1'b0;
     reg rst = 1'b1;
@@ -25,7 +26,11 @@ module tb_amp_ctrl;
     reg  [31:0] h_pwdata = 0, f_pwdata = 0;
     wire [31:0] h_prdata, f_prdata;
     wire        h_pready, f_pready, h_pslverr, f_pslverr;
-    wire        fcu_hold, host_irq, fcu_irq;
+    wire        fcu_hold, host_irq, fcu_irq, sys_reset;
+
+    // Cycles sys_reset has been high since the last clear.
+    integer sysrst_cycles = 0;
+    always @(posedge clk) if (sys_reset) sysrst_cycles = sysrst_cycles + 1;
 
     amp_ctrl dut (
         .clk(clk), .rst(rst),
@@ -33,7 +38,7 @@ module tb_amp_ctrl;
         .h_pwdata(h_pwdata), .h_prdata(h_prdata), .h_pready(h_pready), .h_pslverr(h_pslverr),
         .f_paddr(f_paddr), .f_psel(f_psel), .f_penable(f_penable), .f_pwrite(f_pwrite),
         .f_pwdata(f_pwdata), .f_prdata(f_prdata), .f_pready(f_pready), .f_pslverr(f_pslverr),
-        .fcu_hold(fcu_hold), .host_irq(host_irq), .fcu_irq(fcu_irq)
+        .fcu_hold(fcu_hold), .host_irq(host_irq), .fcu_irq(fcu_irq), .sys_reset(sys_reset)
     );
 
     integer pass = 0, fail = 0;
@@ -188,7 +193,21 @@ module tb_amp_ctrl;
                                           check("fcu may write scratch7", err, 0);
 
         // --------------------------------------------------------- errors
-        h_xfer(0, A_HOLE, 0, rd, err);    check("hole word is an error", err, 1);
+        // SYS_RESET: host only, and only the key.
+        sysrst_cycles = 0;
+        h_xfer(0, A_SYSRST, 0, rd, err);  check("sys_reset reads without error", err, 0);
+                                          check("sys_reset reads 0", rd, 0);
+        h_xfer(1, A_SYSRST, 32'h1234_5678, rd, err);
+                                          check("sys_reset wrong key is an error", err, 1);
+        f_xfer(1, A_SYSRST, RST_KEY, rd, err);
+                                          check("fcu may not write sys_reset", err, 1);
+        f_xfer(0, A_SYSRST, 0, rd, err);  check("fcu may not read sys_reset", err, 1);
+        repeat (3) @(posedge clk);
+        check("no reset from refused writes", sysrst_cycles, 0);
+        h_xfer(1, A_SYSRST, RST_KEY, rd, err);
+                                          check("sys_reset key accepted", err, 0);
+        repeat (3) @(posedge clk);
+        check("sys_reset pulses one cycle", sysrst_cycles, 1);
         h_xfer(0, 12'h040, 0, rd, err);   check("past the register file", err, 1);
         f_xfer(0, 12'h800, 0, rd, err);   check("far in the window", err, 1);
         h_xfer(0, A_MASK, 0, rd, err);    check("valid read has no error", err, 0);

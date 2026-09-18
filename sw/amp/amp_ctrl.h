@@ -8,8 +8,9 @@
  *   hard SoC  AMP_HOST_BASE  0xE810_8000
  *   FCU       AMP_FCU_BASE   0xF810_8000
  *
- * CTRL and BOOT_ADDR are writable from the host port only. Accesses outside
- * the map, and writes to read-only registers, complete with a bus error.
+ * CTRL, BOOT_ADDR and SYS_RESET are writable from the host port only.
+ * Accesses outside the map, and writes to read-only registers, complete with
+ * a bus error.
  */
 #ifndef AMP_CTRL_H
 #define AMP_CTRL_H
@@ -30,6 +31,9 @@
 #define AMP_REG_DB_SEND         0x10u           /* W1S: ring the other side */
 #define AMP_REG_DB_PENDING      0x14u           /* W1C: doorbells rung by the other side */
 #define AMP_REG_DB_MASK         0x18u           /* pending bits that raise this side's irq */
+#define AMP_REG_SYS_RESET       0x1Cu           /* WO host: AMP_SYS_RESET_KEY resets the whole
+                                                   system, as the reset button does */
+#define   AMP_SYS_RESET_KEY     0x52535421u     /* "RST!" */
 #define AMP_REG_SCRATCH(n)      (0x20u + 4u * (n))   /* n = 0..7, shared */
 
 /*

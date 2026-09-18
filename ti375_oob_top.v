@@ -551,6 +551,7 @@ wire                        amp_f_pslverr;
 wire                        amp_fcu_hold;
 wire                        amp_host_irq;
 wire                        amp_fcu_irq;
+wire                        amp_sys_reset;
 
 // Hard SoC peripherals that now reach pins and PLIC lines.
 wire                        hp_uart0_irq;
@@ -1603,8 +1604,29 @@ amp_ctrl #(
     .f_pslverr          ( amp_f_pslverr ),
     .fcu_hold           ( amp_fcu_hold ),
     .host_irq           ( amp_host_irq ),
-    .fcu_irq            ( amp_fcu_irq )
+    .fcu_irq            ( amp_fcu_irq ),
+    .sys_reset          ( amp_sys_reset )
 );
+
+//-------------------------------------------------------------------
+// Software system reset (amp_ctrl SYS_RESET, used by OpenSBI for reboot).
+// Holds the reset button input low for 64K peripheral clocks, 328 us,
+// which is exactly what pressing the button does: the LPDDR4 init block
+// drops flag_ok, io_asyncReset resets the hard SoC, amp_ctrl and the FCU,
+// and the DDR is configured again. The counter is initialised by the
+// configuration only, so the reset it starts cannot cut it short; the
+// output is registered so the asynchronous reset input sees no glitches.
+//-------------------------------------------------------------------
+reg [15:0] sysrst_cnt = 16'd0;
+reg        sysrst_q   = 1'b0;
+always @(posedge io_peripheralClk) begin
+    if (amp_sys_reset)
+        sysrst_cnt <= 16'hFFFF;
+    else if (sysrst_cnt != 16'd0)
+        sysrst_cnt <= sysrst_cnt - 16'd1;
+    sysrst_q <= (sysrst_cnt != 16'd0);
+end
+wire hp_gpio_sw_n = io_gpio_sw_n & ~sysrst_q;
 
 //-------------------------------------------------------------------
 // Hard SoC PLIC lines, userInterruptA..L = PLIC 1..12. The soft logic
@@ -1798,7 +1820,7 @@ EfxSapphireHpSoc_slb u_top_peripherals(
 	.io_peripheralClk                       ( io_peripheralClk ),
 	.io_peripheralReset                     ( io_peripheralReset ),
 	.io_asyncReset                          ( io_asyncReset ),
-	.io_gpio_sw_n                           ( io_gpio_sw_n ), 
+	.io_gpio_sw_n                           ( hp_gpio_sw_n ), 
 	.pll_peripheral_locked                  ( pll_peripheral_locked ),
 	.pll_system_locked                      ( pll_system_locked )
 );

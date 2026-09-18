@@ -38,4 +38,47 @@
  *   FCU       userInterruptA = PLIC 16   doorbell from the host
  */
 
+/*
+ * Boot and park protocol between the host (Linux remoteproc, sw/linux/fcu_rproc)
+ * and the FCU on-chip RAM image (sw/fcu_test), on top of the registers above.
+ *
+ * The FCU always starts at 0xF900_0000. To run an image from DDR the host holds
+ * the FCU, loads the image into the FCU memory region, writes BOOT_ADDR and
+ * AMP_BOOT_MAGIC, then releases it. The on-chip RAM image jumps to BOOT_ADDR
+ * with every hart only when the magic is present and the address lies in the
+ * region; otherwise it runs the LED test. The magic is cleared by the host
+ * when it stops the FCU, and amp_ctrl comes up with it cleared at power-up,
+ * so the FSBL's release at power-up always gets the LED test.
+ *
+ * To stop the FCU without wedging the shared DDR switch, the host asks it to
+ * park first: doorbell bit AMP_DB_PARK. The FCU finishes its bus traffic, sets
+ * AMP_SCR_STATE to AMP_STATE_PARKED, rings AMP_DB_PARK back and idles with
+ * interrupts off. Only then does the host assert FCU_HOLD.
+ *
+ * The region below must match the fcu reserved-memory node in the Linux device
+ * tree (br2-efinix tools/efx/dts/ti375_oob-linux.dtsi).
+ */
+#define AMP_FCU_MEM_BASE        0x1E000000u
+#define AMP_FCU_MEM_SIZE        0x02000000u     /* 32 MiB */
+
+#define AMP_SCR_HEARTBEAT       0               /* FCU: incremented while running */
+#define AMP_SCR_MAGIC           1               /* FCU: AMP_FCU_MAGIC once running */
+#define AMP_SCR_PATTERN         2               /* FCU test: current LED pattern */
+#define AMP_SCR_STATE           4               /* FCU: AMP_STATE_* */
+#define AMP_SCR_BOOT            6               /* host: AMP_BOOT_MAGIC to boot BOOT_ADDR */
+
+#define AMP_FCU_MAGIC           0x46435521u     /* "FCU!" */
+#define AMP_BOOT_MAGIC          0x424F4F54u     /* "BOOT" */
+
+#define AMP_STATE_LED_TEST      1u              /* on-chip RAM LED test running */
+#define AMP_STATE_BOOTING       2u              /* stub jumping to BOOT_ADDR */
+#define AMP_STATE_RUNNING       3u              /* DDR image running */
+#define AMP_STATE_PARKED        4u              /* idle, safe to hold */
+
+/* Doorbell bits, both directions. */
+#define AMP_DB_USER             (1u << 0)       /* host->FCU: LED test toggles its pattern;
+                                                   FCU->host: FCU started */
+#define AMP_DB_PARK             (1u << 1)       /* host->FCU: park request;
+                                                   FCU->host: parked */
+
 #endif /* AMP_CTRL_H */

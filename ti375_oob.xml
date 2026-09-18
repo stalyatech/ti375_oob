@@ -11,6 +11,9 @@
         <efx:design_file name="rtl/design_modules.v" version="default" library="default" />
         <efx:design_file name="rtl/pulse_sync.v" version="default" library="default" />
         <efx:design_file name="rtl/snpu_apb_cdc.v" version="default" library="default" />
+        <efx:design_file name="rtl/amp_ctrl.v" version="default" library="default" />
+        <efx:design_file name="rtl/axi_addr_split.v" version="default" library="default" />
+        <efx:design_file name="rtl/axi_err_slave.v" version="default" library="default" />
         <efx:design_file name="ip/stalyanpu/rtl/snpu_dsp_mac2.v" version="default" library="default" />
         <efx:design_file name="ip/stalyanpu/rtl/snpu_skew.v" version="default" library="default" />
         <efx:design_file name="ip/stalyanpu/rtl/snpu_wshadow.v" version="default" library="default" />

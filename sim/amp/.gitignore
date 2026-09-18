@@ -1,0 +1,5 @@
+# Build products of run.sh
+*.vvp
+*.vcd
+top_stubs.v
+top_elab.log

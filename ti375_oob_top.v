@@ -308,7 +308,7 @@ localparam MCODEC	= 4;	// H.264/H.265 codec -> DDR (stub for now)
 localparam AXIM_DEV	= 5;
 
 ////////////////////////////////////////////////////////////////////////////
-// Switch between SP SoC -> SDHC, TSEMAC
+// Switch between the hard SoC -> SDHC, TSEMAC (fed by u_hs_axi_split)
 // 	These AXI Slaves are connected to the AXI Interconnect Master ports 
 wire [(AXIS_DEV*32)-1:0]    s_axis_awaddr;
 wire [(AXIS_DEV*8)-1:0]	    s_axis_awlen;
@@ -414,9 +414,9 @@ wire                        m_eth_rx_tlast;
 
 wire						sp_asyncReset;
 wire 						sp_watchdogReset;
-wire						sp_spi_io_sclk_write;
-wire						sp_spi_0_io_sclk_write;
-wire						sp_spi_1_io_sclk_write;
+wire						boot_spi_sclk;
+wire						hp_spi_0_io_sclk_write;
+wire						hp_spi_1_io_sclk_write;
 
 wire [31:0]    				sp_m_axis_awaddr;
 wire [7:0]	    			sp_m_axis_awlen;
@@ -466,7 +466,243 @@ wire [31:0]   				sp_apbSlave_0_PRDATA;
 wire            			sp_apbSlave_0_PSLVERROR;
 
 //-------------------------------------------------------------------
-// SP SoC can access to the TSEMAC, SDHC using AXI interconnect
+// The hard SoC (Linux) is the boot master of the FCU (NuttX).
+//
+// The hard SoC owns the two boot flashes, the console UART, the SD host
+// and the Ethernet MAC with its DMA. The FCU keeps the flight I/O
+// (UART1/2, SPI2, I2C, GPIO) and is started by the hard SoC through
+// amp_ctrl, which holds it in reset after power-up, hands it its entry
+// point and carries doorbells in both directions.
+//-------------------------------------------------------------------
+
+// Hard SoC AXI-A after axi_addr_split: payload shared by both targets.
+wire [31:0]                 hs_axi_awaddr;
+wire [7:0]                  hs_axi_awlen;
+wire [2:0]                  hs_axi_awsize;
+wire [1:0]                  hs_axi_awburst;
+wire                        hs_axi_awlock;
+wire [3:0]                  hs_axi_awcache;
+wire [2:0]                  hs_axi_awprot;
+wire [3:0]                  hs_axi_awqos;
+wire [3:0]                  hs_axi_awregion;
+wire [31:0]                 hs_axi_wdata;
+wire [3:0]                  hs_axi_wstrb;
+wire                        hs_axi_wlast;
+wire [31:0]                 hs_axi_araddr;
+wire [7:0]                  hs_axi_arlen;
+wire [2:0]                  hs_axi_arsize;
+wire [1:0]                  hs_axi_arburst;
+wire                        hs_axi_arlock;
+wire [3:0]                  hs_axi_arcache;
+wire [2:0]                  hs_axi_arprot;
+wire [3:0]                  hs_axi_arqos;
+wire [3:0]                  hs_axi_arregion;
+
+// Target 0: the soft logic block with the hard SoC's own peripherals.
+wire                        hs_slb_awvalid;
+wire                        hs_slb_awready;
+wire                        hs_slb_wvalid;
+wire                        hs_slb_wready;
+wire                        hs_slb_bvalid;
+wire                        hs_slb_bready;
+wire [1:0]                  hs_slb_bresp;
+wire                        hs_slb_arvalid;
+wire                        hs_slb_arready;
+wire                        hs_slb_rvalid;
+wire                        hs_slb_rready;
+wire [31:0]                 hs_slb_rdata;
+wire [1:0]                  hs_slb_rresp;
+wire                        hs_slb_rlast;
+
+// Target 1: the AXI switch in front of the gTSE and gSDHC register files.
+wire                        hs_pe_awvalid;
+wire                        hs_pe_awready;
+wire                        hs_pe_wvalid;
+wire                        hs_pe_wready;
+wire                        hs_pe_bvalid;
+wire                        hs_pe_bready;
+wire [1:0]                  hs_pe_bresp;
+wire                        hs_pe_arvalid;
+wire                        hs_pe_arready;
+wire                        hs_pe_rvalid;
+wire                        hs_pe_rready;
+wire [31:0]                 hs_pe_rdata;
+wire [1:0]                  hs_pe_rresp;
+wire                        hs_pe_rlast;
+
+// Hard SoC APB window (0xE810_0000) as it leaves the soft logic block,
+// before the split into gDMA, StalyaNPU and amp_ctrl.
+wire [31:0]                 hp_apb_PADDR;
+wire                        hp_apb_PSEL;
+wire                        hp_apb_PENABLE;
+wire                        hp_apb_PWRITE;
+wire [31:0]                 hp_apb_PWDATA;
+wire [31:0]                 hp_apb_PRDATA;
+wire                        hp_apb_PREADY;
+wire                        hp_apb_PSLVERROR;
+
+// amp_ctrl
+wire [31:0]                 amp_h_prdata;
+wire                        amp_h_pready;
+wire                        amp_h_pslverr;
+wire [31:0]                 amp_f_prdata;
+wire                        amp_f_pready;
+wire                        amp_f_pslverr;
+wire                        amp_fcu_hold;
+wire                        amp_host_irq;
+wire                        amp_fcu_irq;
+
+// Hard SoC peripherals that now reach pins and PLIC lines.
+wire                        hp_uart0_irq;
+wire                        hp_spi0_irq;
+wire                        hp_spi1_irq;
+wire                        hp_wdt_irq;
+
+//-------------------------------------------------------------------
+// Hard SoC AXI-A. The soft logic block keeps the SoC's own peripherals.
+// It decodes only address bits [23:0], so without this split every 16 MB
+// of the 256 MB window would alias onto it. The 32 MB window at
+// 0xEA00_0000 is taken out and sent to the switch below:
+//   0xEA00_0000  gTSE register file   16 MB, switch port 0
+//   0xEB00_0000  gSDHC register file  64 KB, switch port 1
+//-------------------------------------------------------------------
+axi_addr_split #(
+    .MATCH_MASK         ( 32'hFE00_0000 ),
+    .MATCH_BASE         ( 32'hEA00_0000 )
+) u_hs_axi_split (
+    .clk                ( io_peripheralClk ),
+    .rst                ( io_peripheralReset ),
+    .m_awvalid          ( axiA_awvalid ),
+    .m_awready          ( axiA_awready ),
+    .m_awaddr           ( axiA_awaddr ),
+    .m_awlen            ( axiA_awlen ),
+    .m_awsize           ( axiA_awsize ),
+    .m_awburst          ( axiA_awburst ),
+    .m_awlock           ( axiA_awlock ),
+    .m_awcache          ( axiA_awcache ),
+    .m_awprot           ( axiA_awprot ),
+    .m_awqos            ( axiA_awqos ),
+    .m_awregion         ( axiA_awregion ),
+    .m_wvalid           ( axiA_wvalid ),
+    .m_wready           ( axiA_wready ),
+    .m_wdata            ( axiA_wdata ),
+    .m_wstrb            ( axiA_wstrb ),
+    .m_wlast            ( axiA_wlast ),
+    .m_bvalid           ( axiA_bvalid ),
+    .m_bready           ( axiA_bready ),
+    .m_bresp            ( axiA_bresp ),
+    .m_arvalid          ( axiA_arvalid ),
+    .m_arready          ( axiA_arready ),
+    .m_araddr           ( axiA_araddr ),
+    .m_arlen            ( axiA_arlen ),
+    .m_arsize           ( axiA_arsize ),
+    .m_arburst          ( axiA_arburst ),
+    .m_arlock           ( axiA_arlock ),
+    .m_arcache          ( axiA_arcache ),
+    .m_arprot           ( axiA_arprot ),
+    .m_arqos            ( axiA_arqos ),
+    .m_arregion         ( axiA_arregion ),
+    .m_rvalid           ( axiA_rvalid ),
+    .m_rready           ( axiA_rready ),
+    .m_rdata            ( axiA_rdata ),
+    .m_rresp            ( axiA_rresp ),
+    .m_rlast            ( axiA_rlast ),
+    .s_awaddr           ( hs_axi_awaddr ),
+    .s_awlen            ( hs_axi_awlen ),
+    .s_awsize           ( hs_axi_awsize ),
+    .s_awburst          ( hs_axi_awburst ),
+    .s_awlock           ( hs_axi_awlock ),
+    .s_awcache          ( hs_axi_awcache ),
+    .s_awprot           ( hs_axi_awprot ),
+    .s_awqos            ( hs_axi_awqos ),
+    .s_awregion         ( hs_axi_awregion ),
+    .s_wdata            ( hs_axi_wdata ),
+    .s_wstrb            ( hs_axi_wstrb ),
+    .s_wlast            ( hs_axi_wlast ),
+    .s_araddr           ( hs_axi_araddr ),
+    .s_arlen            ( hs_axi_arlen ),
+    .s_arsize           ( hs_axi_arsize ),
+    .s_arburst          ( hs_axi_arburst ),
+    .s_arlock           ( hs_axi_arlock ),
+    .s_arcache          ( hs_axi_arcache ),
+    .s_arprot           ( hs_axi_arprot ),
+    .s_arqos            ( hs_axi_arqos ),
+    .s_arregion         ( hs_axi_arregion ),
+    .s0_awvalid         ( hs_slb_awvalid ),
+    .s0_awready         ( hs_slb_awready ),
+    .s0_wvalid          ( hs_slb_wvalid ),
+    .s0_wready          ( hs_slb_wready ),
+    .s0_bvalid          ( hs_slb_bvalid ),
+    .s0_bready          ( hs_slb_bready ),
+    .s0_bresp           ( hs_slb_bresp ),
+    .s0_arvalid         ( hs_slb_arvalid ),
+    .s0_arready         ( hs_slb_arready ),
+    .s0_rvalid          ( hs_slb_rvalid ),
+    .s0_rready          ( hs_slb_rready ),
+    .s0_rdata           ( hs_slb_rdata ),
+    .s0_rresp           ( hs_slb_rresp ),
+    .s0_rlast           ( hs_slb_rlast ),
+    .s1_awvalid         ( hs_pe_awvalid ),
+    .s1_awready         ( hs_pe_awready ),
+    .s1_wvalid          ( hs_pe_wvalid ),
+    .s1_wready          ( hs_pe_wready ),
+    .s1_bvalid          ( hs_pe_bvalid ),
+    .s1_bready          ( hs_pe_bready ),
+    .s1_bresp           ( hs_pe_bresp ),
+    .s1_arvalid         ( hs_pe_arvalid ),
+    .s1_arready         ( hs_pe_arready ),
+    .s1_rvalid          ( hs_pe_rvalid ),
+    .s1_rready          ( hs_pe_rready ),
+    .s1_rdata           ( hs_pe_rdata ),
+    .s1_rresp           ( hs_pe_rresp ),
+    .s1_rlast           ( hs_pe_rlast )
+);
+
+//-------------------------------------------------------------------
+// The FCU's AXI-A has nothing behind it any more: gTSE and gSDHC belong
+// to the hard SoC. Every access completes with DECERR, so a NuttX build
+// that still enables those drivers takes a bus error at its first access
+// instead of hanging. The terminator lives on the FCU's side of the
+// reset tree, so it is cleared whenever the FCU is.
+//-------------------------------------------------------------------
+reg [1:0] fcu_bus_rst_q;
+always @(posedge io_peripheralClk or posedge sp_asyncReset)
+    if (sp_asyncReset)
+        fcu_bus_rst_q <= 2'b11;
+    else
+        fcu_bus_rst_q <= {fcu_bus_rst_q[0], 1'b0};
+
+axi_err_slave #(
+    .IDW                ( 8 ),
+    .DW                 ( 32 )
+) u_fcu_axi_err (
+    .clk                ( io_peripheralClk ),
+    .rst                ( fcu_bus_rst_q[1] ),
+    .awvalid            ( sp_m_axis_awvalid ),
+    .awready            ( sp_m_axis_awready ),
+    .awid               ( sp_m_axis_awid ),
+    .wvalid             ( sp_m_axis_wvalid ),
+    .wready             ( sp_m_axis_wready ),
+    .wlast              ( sp_m_axis_wlast ),
+    .bvalid             ( sp_m_axis_bvalid ),
+    .bready             ( sp_m_axis_bready ),
+    .bid                ( ),
+    .bresp              ( sp_m_axis_bresp ),
+    .arvalid            ( sp_m_axis_arvalid ),
+    .arready            ( sp_m_axis_arready ),
+    .arid               ( sp_m_axis_arid ),
+    .arlen              ( sp_m_axis_arlen ),
+    .rvalid             ( sp_m_axis_rvalid ),
+    .rready             ( sp_m_axis_rready ),
+    .rid                ( ),
+    .rdata              ( sp_m_axis_rdata ),
+    .rresp              ( sp_m_axis_rresp ),
+    .rlast              ( sp_m_axis_rlast )
+);
+
+//-------------------------------------------------------------------
+// The hard SoC reaches the gTSE and gSDHC register files through this
+// switch, with a 25-bit offset into the 0xEA00_0000 window.
 //-------------------------------------------------------------------
 gAXIS_1to2_switch u_AXIS_1to2_switch
 (
@@ -517,47 +753,47 @@ gAXIS_1to2_switch u_AXIS_1to2_switch
     .m_axi_rresp        ( s_axis_rresp ),
     .m_axi_rlast        ( s_axis_rlast ),
 
-    .s_axi_awvalid      ( sp_m_axis_awvalid ),
-    .s_axi_awready      ( sp_m_axis_awready ),
-    .s_axi_awaddr       ( {7'b0, sp_m_axis_awaddr[24:0]} ),
-    .s_axi_awid         ( sp_m_axis_awid ),
-    .s_axi_awburst      ( sp_m_axis_awburst ),
-    .s_axi_awlen        ( sp_m_axis_awlen ),
-    .s_axi_awsize       ( sp_m_axis_awsize ),
-    .s_axi_awprot       ( {1'b0, sp_m_axis_awprot} ),
-    .s_axi_awlock       ( {1'b0, sp_m_axis_awlock} ),
-    .s_axi_awcache      ( sp_m_axis_awcache ),
-    .s_axi_awqos        ( sp_m_axis_awqos ),
+    .s_axi_awvalid      ( hs_pe_awvalid ),
+    .s_axi_awready      ( hs_pe_awready ),
+    .s_axi_awaddr       ( {7'b0, hs_axi_awaddr[24:0]} ),
+    .s_axi_awid         ( 8'b0 ),
+    .s_axi_awburst      ( hs_axi_awburst ),
+    .s_axi_awlen        ( hs_axi_awlen ),
+    .s_axi_awsize       ( hs_axi_awsize ),
+    .s_axi_awprot       ( {1'b0, hs_axi_awprot} ),
+    .s_axi_awlock       ( {1'b0, hs_axi_awlock} ),
+    .s_axi_awcache      ( hs_axi_awcache ),
+    .s_axi_awqos        ( hs_axi_awqos ),
     .s_axi_awuser       ( 3'b0 ),
-    .s_axi_wvalid       ( sp_m_axis_wvalid ),
-    .s_axi_wready       ( sp_m_axis_wready ),
+    .s_axi_wvalid       ( hs_pe_wvalid ),
+    .s_axi_wready       ( hs_pe_wready ),
     .s_axi_wid          ( 8'b0 ),
-    .s_axi_wdata        ( sp_m_axis_wdata ),
-    .s_axi_wlast        ( sp_m_axis_wlast ),
-    .s_axi_wstrb        ( sp_m_axis_wstrb ),
+    .s_axi_wdata        ( hs_axi_wdata ),
+    .s_axi_wlast        ( hs_axi_wlast ),
+    .s_axi_wstrb        ( hs_axi_wstrb ),
     .s_axi_wuser        ( 3'b0 ),
-    .s_axi_bvalid       ( sp_m_axis_bvalid ),
-    .s_axi_bready       ( sp_m_axis_bready ),
-    .s_axi_bresp        ( sp_m_axis_bresp ),
+    .s_axi_bvalid       ( hs_pe_bvalid ),
+    .s_axi_bready       ( hs_pe_bready ),
+    .s_axi_bresp        ( hs_pe_bresp ),
     .s_axi_bid          ( ),
     .s_axi_buser        ( ),
-    .s_axi_arvalid      ( sp_m_axis_arvalid ),
-    .s_axi_arready      ( sp_m_axis_arready ),
-    .s_axi_araddr       ( {7'b0, sp_m_axis_araddr[24:0]} ),
+    .s_axi_arvalid      ( hs_pe_arvalid ),
+    .s_axi_arready      ( hs_pe_arready ),
+    .s_axi_araddr       ( {7'b0, hs_axi_araddr[24:0]} ),
     .s_axi_arid         ( 8'b0 ),
-    .s_axi_arburst      ( sp_m_axis_arburst ),
-    .s_axi_arlen        ( sp_m_axis_arlen ),
-    .s_axi_arsize       ( sp_m_axis_arsize ),
-    .s_axi_arprot       ( {1'b0, sp_m_axis_arprot} ),
-    .s_axi_arlock       ( {1'b0, sp_m_axis_arlock} ),
-    .s_axi_arcache      ( sp_m_axis_arcache ),
-    .s_axi_arqos        ( sp_m_axis_arqos ),
+    .s_axi_arburst      ( hs_axi_arburst ),
+    .s_axi_arlen        ( hs_axi_arlen ),
+    .s_axi_arsize       ( hs_axi_arsize ),
+    .s_axi_arprot       ( {1'b0, hs_axi_arprot} ),
+    .s_axi_arlock       ( {1'b0, hs_axi_arlock} ),
+    .s_axi_arcache      ( hs_axi_arcache ),
+    .s_axi_arqos        ( hs_axi_arqos ),
     .s_axi_aruser       ( 3'b0 ),
-    .s_axi_rready       ( sp_m_axis_rready ),
-    .s_axi_rvalid       ( sp_m_axis_rvalid ),
-    .s_axi_rdata        ( sp_m_axis_rdata ),
-    .s_axi_rresp        ( sp_m_axis_rresp ),
-    .s_axi_rlast        ( sp_m_axis_rlast ),
+    .s_axi_rready       ( hs_pe_rready ),
+    .s_axi_rvalid       ( hs_pe_rvalid ),
+    .s_axi_rdata        ( hs_pe_rdata ),
+    .s_axi_rresp        ( hs_pe_rresp ),
+    .s_axi_rlast        ( hs_pe_rlast ),
     .s_axi_rid          ( ),
     .s_axi_ruser        ( )
 );
@@ -807,30 +1043,34 @@ tseCore u_tseCore (
 assign userInterruptG = dma_interrupts[0];
 assign userInterruptH = dma_interrupts[1];
 
-// The soft SoC APB window is split: PADDR[14]=0 stays with the DMA
-// control, PADDR[14]=1 is reserved (always ready, reads as zero). The
-// StalyaNPU CSR lives on the hard SoC window below.
-wire [31:0] sp_dma_prdata;
-wire        sp_dma_pready;
-wire        sp_dma_pslverr;
+// The gDMA control port belongs to the hard SoC: the lowest quarter of
+// its APB window, 0xE810_0000 (see the split after the NPU region).
+wire [31:0] hp_dma_prdata;
+wire        hp_dma_pready;
+wire        hp_dma_pslverr;
 
-assign sp_apbSlave_0_PRDATA    = sp_apbSlave_0_PADDR[14] ? 32'd0 : sp_dma_prdata;
-assign sp_apbSlave_0_PREADY    = sp_apbSlave_0_PADDR[14] ? 1'b1  : sp_dma_pready;
-assign sp_apbSlave_0_PSLVERROR = sp_apbSlave_0_PADDR[14] ? 1'b0  : sp_dma_pslverr;
+// The soft SoC APB window, 0xF810_0000, now holds only amp_ctrl's FCU
+// port, at +0x8000. Its lower half used to be the gDMA control port;
+// accesses there complete with an error, so a NuttX build that still
+// carries the DMA driver fails at its first access instead of reading
+// silent zeros.
+assign sp_apbSlave_0_PRDATA    = sp_apbSlave_0_PADDR[15] ? amp_f_prdata  : 32'd0;
+assign sp_apbSlave_0_PREADY    = sp_apbSlave_0_PADDR[15] ? amp_f_pready  : 1'b1;
+assign sp_apbSlave_0_PSLVERROR = sp_apbSlave_0_PADDR[15] ? amp_f_pslverr : 1'b1;
 
 gDMA u_gDMA (
     .clk                     ( io_ddrMasters_0_clk ),
     .reset                   ( io_ddrMasters_0_reset ),
     .ctrl_clk                ( io_peripheralClk ),
     .ctrl_reset              ( io_peripheralReset ),
-    .ctrl_PADDR              ( sp_apbSlave_0_PADDR[13:0] ),
-    .ctrl_PREADY             ( sp_dma_pready ),
-    .ctrl_PENABLE            ( sp_apbSlave_0_PENABLE ),
-    .ctrl_PSEL               ( sp_apbSlave_0_PSEL & ~sp_apbSlave_0_PADDR[14] ),
-    .ctrl_PWRITE             ( sp_apbSlave_0_PWRITE ),
-    .ctrl_PWDATA             ( sp_apbSlave_0_PWDATA ),
-    .ctrl_PRDATA             ( sp_dma_prdata ),
-    .ctrl_PSLVERROR          ( sp_dma_pslverr ),
+    .ctrl_PADDR              ( hp_apb_PADDR[13:0] ),
+    .ctrl_PREADY             ( hp_dma_pready ),
+    .ctrl_PENABLE            ( hp_apb_PENABLE ),
+    .ctrl_PSEL               ( hp_apb_PSEL & (hp_apb_PADDR[15:14] == 2'b00) ),
+    .ctrl_PWRITE             ( hp_apb_PWRITE ),
+    .ctrl_PWDATA             ( hp_apb_PWDATA ),
+    .ctrl_PRDATA             ( hp_dma_prdata ),
+    .ctrl_PSLVERROR          ( hp_dma_pslverr ),
     .ctrl_interrupts         ( dma_interrupts ),
     .read_arvalid            ( m_axis_arvalid[MTSE*1 +: 1] ),
     .read_araddr             ( m_axis_araddr[MTSE*32 +: 32] ),
@@ -1301,38 +1541,128 @@ end
 assign userInterruptJ = npu_npu1_irq_sync[1];
 // <<< stalyanpu:generated region=npu
 
+//-------------------------------------------------------------------
+// Hard SoC APB window, 0xE810_0000, split three ways by PADDR[15:14]:
+//   00  0xE810_0000  gDMA control port
+//   01  0xE810_4000  StalyaNPU CSRs (the generated region above)
+//   1x  0xE810_8000  amp_ctrl, host port
+// The generated NPU region keeps its own view of the window; it only gets
+// PSEL for its quarter, and its answers are only used there.
+//-------------------------------------------------------------------
+wire hp_apb_npu = (hp_apb_PADDR[15:14] == 2'b01);
+wire hp_apb_amp =  hp_apb_PADDR[15];
+
+assign hp_apbSlave_0_PADDR   = hp_apb_PADDR;
+assign hp_apbSlave_0_PSEL    = hp_apb_PSEL & hp_apb_npu;
+assign hp_apbSlave_0_PENABLE = hp_apb_PENABLE;
+assign hp_apbSlave_0_PWRITE  = hp_apb_PWRITE;
+assign hp_apbSlave_0_PWDATA  = hp_apb_PWDATA;
+
+assign hp_apb_PRDATA    = hp_apb_amp ? amp_h_prdata  : hp_apb_npu ? hp_apbSlave_0_PRDATA    : hp_dma_prdata;
+assign hp_apb_PREADY    = hp_apb_amp ? amp_h_pready  : hp_apb_npu ? hp_apbSlave_0_PREADY    : hp_dma_pready;
+assign hp_apb_PSLVERROR = hp_apb_amp ? amp_h_pslverr : hp_apb_npu ? hp_apbSlave_0_PSLVERROR : hp_dma_pslverr;
+
+//-------------------------------------------------------------------
+// AMP control: the hard SoC holds, starts and signals the FCU.
+//
+// Reset comes from io_asyncReset (reset button, PLL lock, first
+// configuration), deliberately not from io_peripheralReset. Rebooting
+// the hard SoC must not stop the flight controller: FCU_HOLD, the entry
+// point and the doorbells survive it, and the restarted boot chain finds
+// the FCU already running and attaches to it instead of reloading it.
+//-------------------------------------------------------------------
+reg [1:0] amp_rst_q;
+always @(posedge io_peripheralClk or posedge io_asyncReset)
+    if (io_asyncReset)
+        amp_rst_q <= 2'b11;
+    else
+        amp_rst_q <= {amp_rst_q[0], 1'b0};
+
+amp_ctrl #(
+    .AW                 ( 15 ),
+    .FCU_HOLD_RESET     ( 1'b1 ),
+    .BOOT_ADDR_RESET    ( 32'h0000_1000 )
+) u_amp_ctrl (
+    .clk                ( io_peripheralClk ),
+    .rst                ( amp_rst_q[1] ),
+    .h_paddr            ( hp_apb_PADDR[14:0] ),
+    .h_psel             ( hp_apb_PSEL & hp_apb_amp ),
+    .h_penable          ( hp_apb_PENABLE ),
+    .h_pwrite           ( hp_apb_PWRITE ),
+    .h_pwdata           ( hp_apb_PWDATA ),
+    .h_prdata           ( amp_h_prdata ),
+    .h_pready           ( amp_h_pready ),
+    .h_pslverr          ( amp_h_pslverr ),
+    .f_paddr            ( sp_apbSlave_0_PADDR[14:0] ),
+    .f_psel             ( sp_apbSlave_0_PSEL & sp_apbSlave_0_PADDR[15] ),
+    .f_penable          ( sp_apbSlave_0_PENABLE ),
+    .f_pwrite           ( sp_apbSlave_0_PWRITE ),
+    .f_pwdata           ( sp_apbSlave_0_PWDATA ),
+    .f_prdata           ( amp_f_prdata ),
+    .f_pready           ( amp_f_pready ),
+    .f_pslverr          ( amp_f_pslverr ),
+    .fcu_hold           ( amp_fcu_hold ),
+    .host_irq           ( amp_host_irq ),
+    .fcu_irq            ( amp_fcu_irq )
+);
+
+//-------------------------------------------------------------------
+// Hard SoC PLIC lines, userInterruptA..L = PLIC 1..12. The soft logic
+// block pairs each line with one of its peripherals; lines whose
+// peripheral now has its pins on the FCU carry fabric sources or stay low.
+//   A  1  UART0, Linux console              soft logic block
+//   B  2  -
+//   C  3  -
+//   D  4  SPI0, boot flash 0                soft logic block
+//   E  5  SPI1, boot flash 1                soft logic block
+//   F  6  gSDHC
+//   G  7  gDMA channel 0
+//   H  8  gDMA channel 1
+//   I  9  StalyaNPU npu0                    generated region
+//   J 10  StalyaNPU npu1                    generated region
+//   K 11  amp_ctrl, doorbell from the FCU
+//   L 12  watchdog                          soft logic block
+//-------------------------------------------------------------------
+assign userInterruptA = hp_uart0_irq;
+assign userInterruptB = 1'b0;
+assign userInterruptC = 1'b0;
+assign userInterruptD = hp_spi0_irq;
+assign userInterruptE = hp_spi1_irq;
+assign userInterruptK = amp_host_irq;
+assign userInterruptL = hp_wdt_irq;
+
 //axi4 bridge to various I/O
 EfxSapphireHpSoc_slb u_top_peripherals(
 
-	.system_spi_0_io_sclk_write             (  ),
-	.system_spi_0_io_data_0_writeEnable     (  ),
-	.system_spi_0_io_data_0_read            (  ),
-	.system_spi_0_io_data_0_write           (  ),
-	.system_spi_0_io_data_1_writeEnable     (  ),
-	.system_spi_0_io_data_1_read            (  ),
-	.system_spi_0_io_data_1_write           (  ),
-	.system_spi_0_io_data_2_writeEnable     (  ),
-	.system_spi_0_io_data_2_read            (  ),
-	.system_spi_0_io_data_2_write           (  ),
-	.system_spi_0_io_data_3_writeEnable     (  ),
-	.system_spi_0_io_data_3_read            (  ),
-	.system_spi_0_io_data_3_write           (  ),
-	.system_spi_0_io_ss                     (  ),
+	.system_spi_0_io_sclk_write             ( hp_spi_0_io_sclk_write ),
+	.system_spi_0_io_data_0_writeEnable     ( sys_spi_0_io_data_0_writeEnable ),
+	.system_spi_0_io_data_0_read            ( sys_spi_0_io_data_0_read ),
+	.system_spi_0_io_data_0_write           ( sys_spi_0_io_data_0_write ),
+	.system_spi_0_io_data_1_writeEnable     ( sys_spi_0_io_data_1_writeEnable ),
+	.system_spi_0_io_data_1_read            ( sys_spi_0_io_data_1_read ),
+	.system_spi_0_io_data_1_write           ( sys_spi_0_io_data_1_write ),
+	.system_spi_0_io_data_2_writeEnable     ( sys_spi_0_io_data_2_writeEnable ),
+	.system_spi_0_io_data_2_read            ( sys_spi_0_io_data_2_read ),
+	.system_spi_0_io_data_2_write           ( sys_spi_0_io_data_2_write ),
+	.system_spi_0_io_data_3_writeEnable     ( sys_spi_0_io_data_3_writeEnable ),
+	.system_spi_0_io_data_3_read            ( sys_spi_0_io_data_3_read ),
+	.system_spi_0_io_data_3_write           ( sys_spi_0_io_data_3_write ),
+	.system_spi_0_io_ss                     ( sys_spi_0_io_ss ),
 
-	.system_spi_1_io_sclk_write             (  ),
-	.system_spi_1_io_data_0_writeEnable     (  ),
-	.system_spi_1_io_data_0_read            (  ),
-	.system_spi_1_io_data_0_write           (  ),
-	.system_spi_1_io_data_1_writeEnable     (  ),
-	.system_spi_1_io_data_1_read            (  ),
-	.system_spi_1_io_data_1_write           (  ),
-	.system_spi_1_io_data_2_writeEnable     (  ),
-	.system_spi_1_io_data_2_read            (  ),
-	.system_spi_1_io_data_2_write           (  ),
-	.system_spi_1_io_data_3_writeEnable     (  ),
-	.system_spi_1_io_data_3_read            (  ),
-	.system_spi_1_io_data_3_write           (  ),
-	.system_spi_1_io_ss                     (  ),
+	.system_spi_1_io_sclk_write             ( hp_spi_1_io_sclk_write ),
+	.system_spi_1_io_data_0_writeEnable     ( sys_spi_1_io_data_0_writeEnable ),
+	.system_spi_1_io_data_0_read            ( sys_spi_1_io_data_0_read ),
+	.system_spi_1_io_data_0_write           ( sys_spi_1_io_data_0_write ),
+	.system_spi_1_io_data_1_writeEnable     ( sys_spi_1_io_data_1_writeEnable ),
+	.system_spi_1_io_data_1_read            ( sys_spi_1_io_data_1_read ),
+	.system_spi_1_io_data_1_write           ( sys_spi_1_io_data_1_write ),
+	.system_spi_1_io_data_2_writeEnable     ( sys_spi_1_io_data_2_writeEnable ),
+	.system_spi_1_io_data_2_read            ( sys_spi_1_io_data_2_read ),
+	.system_spi_1_io_data_2_write           ( sys_spi_1_io_data_2_write ),
+	.system_spi_1_io_data_3_writeEnable     ( sys_spi_1_io_data_3_writeEnable ),
+	.system_spi_1_io_data_3_read            ( sys_spi_1_io_data_3_read ),
+	.system_spi_1_io_data_3_write           ( sys_spi_1_io_data_3_write ),
+	.system_spi_1_io_ss                     ( sys_spi_1_io_ss ),
 
 	.system_spi_2_io_sclk_write             (  ),
 	.system_spi_2_io_data_0_writeEnable     (  ),
@@ -1349,8 +1679,8 @@ EfxSapphireHpSoc_slb u_top_peripherals(
 	.system_spi_2_io_data_3_write           (  ),
 	.system_spi_2_io_ss                     (  ),
 
-	.system_uart_0_io_txd                   (  ),
-	.system_uart_0_io_rxd                   (  ),
+	.system_uart_0_io_txd                   ( sys_uart_0_io_txd ),
+	.system_uart_0_io_rxd                   ( sys_uart_0_io_rxd ),
 	.system_uart_1_io_txd                   (  ),
 	.system_uart_1_io_rxd                   (  ),
 	.system_uart_2_io_txd                   (  ),
@@ -1396,69 +1726,70 @@ EfxSapphireHpSoc_slb u_top_peripherals(
 	.ut_jtagCtrl_update                     ( ut_jtagCtrl_update ),
 	.ut_jtagCtrl_reset                      ( ut_jtagCtrl_reset ),
 
-	// These userInterrupt outputs belong to the soft peripheral subsystem
-	// inside the slb wrapper and are its own IRQ sources. That subsystem is
-	// unused here, so they stay open. Fabric interrupts reach the hard SoC
-	// PLIC through the top level userInterrupt* ports instead; the DNN done
-	// flag drives userInterruptI at the top level.
-	.userInterruptA                         (  ),
+	// These userInterrupt outputs are the IRQs of the soft logic block's
+	// own peripherals, one per PLIC line. Those whose peripheral is in use
+	// (UART0, SPI0, SPI1, watchdog) are forwarded to the top-level
+	// userInterrupt* ports alongside the fabric sources; see the PLIC table
+	// after the NPU region. The rest have their pins on the FCU and stay
+	// open.
+	.userInterruptA                         ( hp_uart0_irq ),
 	.userInterruptB                         (  ),
 	.userInterruptC                         (  ),
-	.userInterruptD                         (  ),
-	.userInterruptE                         (  ),
+	.userInterruptD                         ( hp_spi0_irq ),
+	.userInterruptE                         ( hp_spi1_irq ),
 	.userInterruptF 						(  ),
 	.userInterruptG 						(  ),
 	.userInterruptH 						(  ),
 	.userInterruptI 						(  ),
 	.userInterruptJ 						(  ),
 	.userInterruptK 						(  ),
-	.userInterruptL 						(  ),
+	.userInterruptL 						( hp_wdt_irq ),
 
-	.axiA_awvalid                         ( axiA_awvalid ),
-	.axiA_awready                         ( axiA_awready ),
-	.axiA_awaddr                          ( axiA_awaddr ),
-	.axiA_awlen                           ( axiA_awlen ),
-	.axiA_awburst                         ( axiA_awburst ),
-	.axiA_awsize                          ( axiA_awsize ),
-	.axiA_awcache                         ( axiA_awcache ),
-	.axiA_awprot                          ( axiA_awprot ),
-	.axiA_wvalid                          ( axiA_wvalid ),
-	.axiA_wready                          ( axiA_wready ),
-	.axiA_wdata                           ( axiA_wdata ),
-	.axiA_wstrb                           ( axiA_wstrb ),
-	.axiA_wlast                           ( axiA_wlast ),
-	.axiA_bvalid                          ( axiA_bvalid ),
-	.axiA_bready                          ( axiA_bready ),
-	.axiA_bresp                           ( axiA_bresp ),
-	.axiA_arvalid                         ( axiA_arvalid ),
-	.axiA_arready                         ( axiA_arready ),
-	.axiA_araddr                          ( axiA_araddr ),
-	.axiA_arlen                           ( axiA_arlen ),
-	.axiA_arburst                         ( axiA_arburst ),
-	.axiA_arsize                          ( axiA_arsize ),
-	.axiA_arcache                         ( axiA_arcache ),
-	.axiA_arprot                          ( axiA_arprot ),
-	.axiA_rvalid                          ( axiA_rvalid ),
-	.axiA_rready                          ( axiA_rready ),
-	.axiA_rdata                           ( axiA_rdata ),
-	.axiA_rresp                           ( axiA_rresp ),
-	.axiA_rlast                           ( axiA_rlast ),
-	.axiA_awlock                            ( axiA_awlock ),
-	.axiA_awqos                             ( axiA_awqos ),
-	.axiA_awregion                          ( axiA_awregion ),
-	.axiA_arlock                            ( axiA_arlock ),
-	.axiA_arqos                             ( axiA_arqos ),
-	.axiA_arregion                          ( axiA_arregion ),
+	.axiA_awvalid                         ( hs_slb_awvalid ),
+	.axiA_awready                         ( hs_slb_awready ),
+	.axiA_awaddr                          ( hs_axi_awaddr ),
+	.axiA_awlen                           ( hs_axi_awlen ),
+	.axiA_awburst                         ( hs_axi_awburst ),
+	.axiA_awsize                          ( hs_axi_awsize ),
+	.axiA_awcache                         ( hs_axi_awcache ),
+	.axiA_awprot                          ( hs_axi_awprot ),
+	.axiA_wvalid                          ( hs_slb_wvalid ),
+	.axiA_wready                          ( hs_slb_wready ),
+	.axiA_wdata                           ( hs_axi_wdata ),
+	.axiA_wstrb                           ( hs_axi_wstrb ),
+	.axiA_wlast                           ( hs_axi_wlast ),
+	.axiA_bvalid                          ( hs_slb_bvalid ),
+	.axiA_bready                          ( hs_slb_bready ),
+	.axiA_bresp                           ( hs_slb_bresp ),
+	.axiA_arvalid                         ( hs_slb_arvalid ),
+	.axiA_arready                         ( hs_slb_arready ),
+	.axiA_araddr                          ( hs_axi_araddr ),
+	.axiA_arlen                           ( hs_axi_arlen ),
+	.axiA_arburst                         ( hs_axi_arburst ),
+	.axiA_arsize                          ( hs_axi_arsize ),
+	.axiA_arcache                         ( hs_axi_arcache ),
+	.axiA_arprot                          ( hs_axi_arprot ),
+	.axiA_rvalid                          ( hs_slb_rvalid ),
+	.axiA_rready                          ( hs_slb_rready ),
+	.axiA_rdata                           ( hs_slb_rdata ),
+	.axiA_rresp                           ( hs_slb_rresp ),
+	.axiA_rlast                           ( hs_slb_rlast ),
+	.axiA_awlock                            ( hs_axi_awlock ),
+	.axiA_awqos                             ( hs_axi_awqos ),
+	.axiA_awregion                          ( hs_axi_awregion ),
+	.axiA_arlock                            ( hs_axi_arlock ),
+	.axiA_arqos                             ( hs_axi_arqos ),
+	.axiA_arregion                          ( hs_axi_arregion ),
 	.axiAInterrupt                          ( axiAInterrupt ),
 
-	.io_apbSlave_0_PADDR                     ( hp_apbSlave_0_PADDR ),
-	.io_apbSlave_0_PSEL                      ( hp_apbSlave_0_PSEL ),
-	.io_apbSlave_0_PENABLE                   ( hp_apbSlave_0_PENABLE ),
-	.io_apbSlave_0_PWRITE                    ( hp_apbSlave_0_PWRITE ),
-	.io_apbSlave_0_PWDATA                    ( hp_apbSlave_0_PWDATA ),
-	.io_apbSlave_0_PRDATA                    ( hp_apbSlave_0_PRDATA ),
-	.io_apbSlave_0_PREADY                    ( hp_apbSlave_0_PREADY ),
-	.io_apbSlave_0_PSLVERROR                 ( hp_apbSlave_0_PSLVERROR ),
+	.io_apbSlave_0_PADDR                     ( hp_apb_PADDR ),
+	.io_apbSlave_0_PSEL                      ( hp_apb_PSEL ),
+	.io_apbSlave_0_PENABLE                   ( hp_apb_PENABLE ),
+	.io_apbSlave_0_PWRITE                    ( hp_apb_PWRITE ),
+	.io_apbSlave_0_PWDATA                    ( hp_apb_PWDATA ),
+	.io_apbSlave_0_PRDATA                    ( hp_apb_PRDATA ),
+	.io_apbSlave_0_PREADY                    ( hp_apb_PREADY ),
+	.io_apbSlave_0_PSLVERROR                 ( hp_apb_PSLVERROR ),
 
 	.cfg_done                               ( cfg_done ),
 	.cfg_start                              ( cfg_start ),
@@ -1472,10 +1803,19 @@ EfxSapphireHpSoc_slb u_top_peripherals(
 	.pll_system_locked                      ( pll_system_locked )
 );
 
-assign sp_asyncReset = sp_watchdogReset | io_asyncReset;
-assign sp_spi_io_sclk_write = sp_spi_0_io_sclk_write | sp_spi_1_io_sclk_write;
-assign sys_spi_0_io_sclk_write = sp_spi_io_sclk_write;
-assign sys_spi_1_io_sclk_write = sp_spi_io_sclk_write;
+// The FCU also stays in reset while amp_ctrl holds it, from power-up until
+// the hard SoC has loaded its image.
+assign sp_asyncReset = sp_watchdogReset | io_asyncReset | amp_fcu_hold;
+
+// SPI0 and SPI1 are two IS25WP512M flashes. The FPGA configures from SPI0
+// (x1 active mode); SPI1 is plain storage. The board gives them one shared
+// SCLK pin (sys_spi_1_io_sclk_write has no pin of its own), so both
+// controllers' clocks are ORed onto it. That only works while one CPU
+// serialises every access, which is why both controllers belong to the
+// hard SoC.
+assign boot_spi_sclk = hp_spi_0_io_sclk_write | hp_spi_1_io_sclk_write;
+assign sys_spi_0_io_sclk_write = boot_spi_sclk;
+assign sys_spi_1_io_sclk_write = boot_spi_sclk;
 
 EfxSapphireFCU u_EfxSapphireFCU
 (
@@ -1580,44 +1920,44 @@ EfxSapphireFCU u_EfxSapphireFCU
     .axiA_rlast        						( sp_m_axis_rlast ),
 	.axiAInterrupt     						(  ),
 
-	.userInterruptA 						(  ),
+	.userInterruptA 						( amp_fcu_irq ),
 	.userInterruptB 						(  ),
 	.userInterruptC 						(  ),
 	.userInterruptD 						(  ),
 	.userInterruptE 						(  ),
-	.userInterruptF 						( sd_int ),				/*	SDHC interrupt 				*/
-	.userInterruptG 						( dma_interrupts[0] ),	/*	DMA SG RX channel interrupt */
-	.userInterruptH 						( dma_interrupts[1] ),	/*	DMA SG TX channel interrupt */
+	.userInterruptF 						( 1'b0 ),				/*	gSDHC is the hard SoC's now	*/
+	.userInterruptG 						( 1'b0 ),				/*	gDMA ch0 is the hard SoC's now	*/
+	.userInterruptH 						( 1'b0 ),				/*	gDMA ch1 is the hard SoC's now	*/
 	
-	.system_spi_0_io_ss 					( sys_spi_0_io_ss[0] ),
-	.system_spi_0_io_data_0_read 			( sys_spi_0_io_data_0_read ),
-	.system_spi_0_io_data_0_write 			( sys_spi_0_io_data_0_write ),
-	.system_spi_0_io_data_0_writeEnable 	( sys_spi_0_io_data_0_writeEnable ),
-	.system_spi_0_io_data_1_read 			( sys_spi_0_io_data_1_read ),
-	.system_spi_0_io_data_1_write 			( sys_spi_0_io_data_1_write ),
-	.system_spi_0_io_data_1_writeEnable	 	( sys_spi_0_io_data_1_writeEnable ),
-	.system_spi_0_io_data_2_read 			( sys_spi_0_io_data_2_read ),
-	.system_spi_0_io_data_2_write 			( sys_spi_0_io_data_2_write ),
-	.system_spi_0_io_data_2_writeEnable 	( sys_spi_0_io_data_2_writeEnable ),
-	.system_spi_0_io_data_3_read 			( sys_spi_0_io_data_3_read ),
-	.system_spi_0_io_data_3_write 			( sys_spi_0_io_data_3_write ),
-	.system_spi_0_io_data_3_writeEnable 	( sys_spi_0_io_data_3_writeEnable ),
-	.system_spi_0_io_sclk_write 			( sp_spi_0_io_sclk_write ),
+	.system_spi_0_io_ss 					(  ),
+	.system_spi_0_io_data_0_read 			( 1'b0 ),
+	.system_spi_0_io_data_0_write 			(  ),
+	.system_spi_0_io_data_0_writeEnable 	(  ),
+	.system_spi_0_io_data_1_read 			( 1'b0 ),
+	.system_spi_0_io_data_1_write 			(  ),
+	.system_spi_0_io_data_1_writeEnable	 	(  ),
+	.system_spi_0_io_data_2_read 			( 1'b0 ),
+	.system_spi_0_io_data_2_write 			(  ),
+	.system_spi_0_io_data_2_writeEnable 	(  ),
+	.system_spi_0_io_data_3_read 			( 1'b0 ),
+	.system_spi_0_io_data_3_write 			(  ),
+	.system_spi_0_io_data_3_writeEnable 	(  ),
+	.system_spi_0_io_sclk_write 			(  ),
 
-	.system_spi_1_io_ss 					( sys_spi_1_io_ss[0] ),
-	.system_spi_1_io_data_0_read 			( sys_spi_1_io_data_0_read ),
-	.system_spi_1_io_data_0_write 			( sys_spi_1_io_data_0_write ),
-	.system_spi_1_io_data_0_writeEnable 	( sys_spi_1_io_data_0_writeEnable ),
-	.system_spi_1_io_data_1_read 			( sys_spi_1_io_data_1_read ),
-	.system_spi_1_io_data_1_write 			( sys_spi_1_io_data_1_write ),
-	.system_spi_1_io_data_1_writeEnable 	( sys_spi_1_io_data_1_writeEnable ),
-	.system_spi_1_io_data_2_read 			( sys_spi_1_io_data_2_read ),
-	.system_spi_1_io_data_2_write 			( sys_spi_1_io_data_2_write ),
-	.system_spi_1_io_data_2_writeEnable 	( sys_spi_1_io_data_2_writeEnable ),
-	.system_spi_1_io_data_3_read 			( sys_spi_1_io_data_3_read ),
-	.system_spi_1_io_data_3_write 			( sys_spi_1_io_data_3_write ),
-	.system_spi_1_io_data_3_writeEnable 	( sys_spi_1_io_data_3_writeEnable ),
-	.system_spi_1_io_sclk_write 			( sp_spi_1_io_sclk_write ),
+	.system_spi_1_io_ss 					(  ),
+	.system_spi_1_io_data_0_read 			( 1'b0 ),
+	.system_spi_1_io_data_0_write 			(  ),
+	.system_spi_1_io_data_0_writeEnable 	(  ),
+	.system_spi_1_io_data_1_read 			( 1'b0 ),
+	.system_spi_1_io_data_1_write 			(  ),
+	.system_spi_1_io_data_1_writeEnable 	(  ),
+	.system_spi_1_io_data_2_read 			( 1'b0 ),
+	.system_spi_1_io_data_2_write 			(  ),
+	.system_spi_1_io_data_2_writeEnable 	(  ),
+	.system_spi_1_io_data_3_read 			( 1'b0 ),
+	.system_spi_1_io_data_3_write 			(  ),
+	.system_spi_1_io_data_3_writeEnable 	(  ),
+	.system_spi_1_io_sclk_write 			(  ),
 
 	.system_spi_2_io_ss 					( sys_spi_2_io_ss[0] ),
 	.system_spi_2_io_data_0_read 			( sys_spi_2_io_data_0_read ),
@@ -1634,8 +1974,8 @@ EfxSapphireFCU u_EfxSapphireFCU
 	.system_spi_2_io_data_3_writeEnable 	( sys_spi_2_io_data_3_writeEnable ),
 	.system_spi_2_io_sclk_write 			( sys_spi_2_io_sclk_write ),
 
-	.system_uart_0_io_rxd 					( sys_uart_0_io_rxd ),
-	.system_uart_0_io_txd 					( sys_uart_0_io_txd ),
+	.system_uart_0_io_rxd 					( 1'b1 ),
+	.system_uart_0_io_txd 					(  ),
 	.system_uart_1_io_rxd 					( sys_uart_1_io_rxd ),
 	.system_uart_1_io_txd 					( sys_uart_1_io_txd ),
 	.system_uart_2_io_rxd 					( sys_uart_2_io_rxd ),

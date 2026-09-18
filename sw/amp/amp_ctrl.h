@@ -50,9 +50,10 @@
  * the FCU, loads the image into the FCU memory region, writes BOOT_ADDR and
  * AMP_BOOT_MAGIC, then releases it. The on-chip RAM image jumps to BOOT_ADDR
  * with every hart only when the magic is present and the address lies in the
- * region; otherwise it runs the LED test. The magic is cleared by the host
- * when it stops the FCU, and amp_ctrl comes up with it cleared at power-up,
- * so the FSBL's release at power-up always gets the LED test.
+ * region; otherwise it runs the LED test, which is only a diagnostic. The
+ * magic is cleared by the host when it stops the FCU. At power-up and after a
+ * system reset amp_ctrl holds the FCU with the magic cleared, and the FSBL
+ * leaves it held: Linux starts the FCU.
  *
  * To stop the FCU without wedging the shared DDR switch, the host asks it to
  * park first: doorbell bit AMP_DB_PARK. The FCU finishes its bus traffic, sets

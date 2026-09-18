@@ -12,8 +12,13 @@
  *   stop    ask the FCU to park (no bus traffic), wait for it, then hold it;
  *           a hold in the middle of a DDR burst could wedge the AXI switch
  *           the FCU shares with gDMA, gSDHC and npu1
- *   attach  the FSBL releases the FCU at power-up, so it is usually running
- *           when Linux comes up; the driver attaches instead of restarting it
+ *
+ * The FCU comes out of reset held and the FSBL leaves it so: Linux starts it.
+ * With "stalya,auto-boot" in the device tree the driver loads firmware-name
+ * and starts it as soon as it probes; otherwise it waits for
+ * "echo start > /sys/class/remoteproc/remoteproc0/state". An FCU that is
+ * already running when the driver probes (started by an earlier Linux that
+ * went away without a system reset) is attached to, not restarted.
  *
  * Firmware segments may only land in the FCU reserved-memory region. The FCU
  * is left running when this driver goes away (module unload, unbind): Linux
@@ -353,11 +358,13 @@ static int fcu_rproc_probe(struct platform_device *pdev)
 		return ret;
 	amp_wr(fr, AMP_REG_DB_MASK, AMP_DB_USER | AMP_DB_PARK);
 
-	rproc->auto_boot = false;
 	if (!fcu_held(fr)) {
-		/* Released by the FSBL (or a previous Linux): take it over as is. */
+		/* Started by a previous Linux: take it over as it is. */
 		rproc->state = RPROC_DETACHED;
 		rproc->auto_boot = true;
+	} else {
+		/* Held since reset: start it now if the board asks for that. */
+		rproc->auto_boot = of_property_read_bool(dev->of_node, "stalya,auto-boot");
 	}
 
 	platform_set_drvdata(pdev, rproc);
@@ -365,8 +372,9 @@ static int fcu_rproc_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	dev_info(dev, "FCU region %pa+%#llx, FCU %s\n", &fr->rmem->base,
-		 (u64)fr->rmem->size, fcu_held(fr) ? "held" : "running, attached");
+	dev_info(dev, "FCU region %pa+%#llx, FCU %s\n", &fr->rmem->base, (u64)fr->rmem->size,
+		 !fcu_held(fr) ? "running, attached" :
+		 rproc->auto_boot ? "held, starting it" : "held");
 	return 0;
 }
 

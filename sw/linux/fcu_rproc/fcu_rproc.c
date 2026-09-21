@@ -30,7 +30,9 @@
 #include <linux/firmware.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#include <linux/miscdevice.h>
 #include <linux/module.h>
+#include <linux/poll.h>
 #include <linux/of.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
@@ -56,6 +58,14 @@ struct fcu_rproc {
 	void __iomem *amp;
 	struct reserved_mem *rmem;
 	struct completion parked;
+
+	/* console shared with the FCU firmware, /dev/fcucon */
+	void __iomem *con;
+	struct miscdevice con_dev;
+	wait_queue_head_t con_wait;
+	struct delayed_work con_poll;
+	int con_open;
+	struct mutex con_lock;
 };
 
 static u32 amp_rd(struct fcu_rproc *fr, u32 reg)
@@ -315,6 +325,228 @@ static struct attribute *fcu_attrs[] = {
 };
 ATTRIBUTE_GROUPS(fcu);
 
+/*
+ * Console
+ *
+ * The FCU has no UART pin of its own on this board, so its firmware puts the
+ * console in two ring buffers in the reserved region (struct amp_con, see
+ * amp_ctrl.h, and the NuttX side in sapphire_ramcon.c). Here they show up as
+ * /dev/fcucon: what is read comes from the FCU, what is written goes to it.
+ *
+ * The mapping is uncached, so nothing of this CPU's caches gets in the way;
+ * the FCU writes its cache back before it moves an index. Each side owns one
+ * index of each ring, which is what keeps this lock free against the FCU.
+ * The local mutex only serialises readers and writers here.
+ */
+
+#define FCU_CON_POLL_MS		10
+
+static u32 con_rd(struct fcu_rproc *fr, unsigned int off)
+{
+	return readl(fr->con + off);
+}
+
+static void con_wr(struct fcu_rproc *fr, unsigned int off, u32 val)
+{
+	writel(val, fr->con + off);
+}
+
+/* Field offsets of struct amp_con */
+#define CON_MAGIC	0x00
+#define CON_TX_SIZE	0x04
+#define CON_RX_SIZE	0x08
+#define CON_TX_HEAD	0x0c
+#define CON_TX_TAIL	0x10
+#define CON_RX_HEAD	0x14
+#define CON_RX_TAIL	0x18
+#define CON_OVERRUN	0x1c
+#define CON_TX_DATA	AMP_CON_HDR_SIZE
+#define CON_RX_DATA	(AMP_CON_HDR_SIZE + AMP_CON_TX_SIZE)
+
+static bool con_ready(struct fcu_rproc *fr)
+{
+	return fr->con && con_rd(fr, CON_MAGIC) == AMP_CON_MAGIC;
+}
+
+static u32 con_pending(struct fcu_rproc *fr)
+{
+	if (!con_ready(fr))
+		return 0;
+	return con_rd(fr, CON_TX_HEAD) - con_rd(fr, CON_TX_TAIL);
+}
+
+/* Wake anyone waiting for FCU output while the device is open. */
+static void fcu_con_poll(struct work_struct *work)
+{
+	struct fcu_rproc *fr = container_of(to_delayed_work(work), struct fcu_rproc, con_poll);
+
+	if (con_pending(fr))
+		wake_up_interruptible(&fr->con_wait);
+	if (READ_ONCE(fr->con_open))
+		schedule_delayed_work(&fr->con_poll, msecs_to_jiffies(FCU_CON_POLL_MS));
+}
+
+static int fcu_con_open(struct inode *inode, struct file *filp)
+{
+	struct fcu_rproc *fr = container_of(filp->private_data, struct fcu_rproc, con_dev);
+
+	filp->private_data = fr;
+	mutex_lock(&fr->con_lock);
+	if (fr->con_open++ == 0)
+		schedule_delayed_work(&fr->con_poll, msecs_to_jiffies(FCU_CON_POLL_MS));
+	mutex_unlock(&fr->con_lock);
+	return 0;
+}
+
+static int fcu_con_release(struct inode *inode, struct file *filp)
+{
+	struct fcu_rproc *fr = filp->private_data;
+
+	mutex_lock(&fr->con_lock);
+	if (--fr->con_open == 0)
+		cancel_delayed_work(&fr->con_poll);
+	mutex_unlock(&fr->con_lock);
+	return 0;
+}
+
+static ssize_t fcu_con_read(struct file *filp, char __user *buf, size_t len, loff_t *ppos)
+{
+	struct fcu_rproc *fr = filp->private_data;
+	u32 head, tail, avail;
+	size_t done = 0;
+	int ret;
+
+	if (!con_ready(fr))
+		return 0;
+
+	while (!(avail = con_pending(fr))) {
+		if (filp->f_flags & O_NONBLOCK)
+			return -EAGAIN;
+		ret = wait_event_interruptible_timeout(fr->con_wait, con_pending(fr),
+						       msecs_to_jiffies(FCU_CON_POLL_MS));
+		if (ret < 0)
+			return ret;
+	}
+
+	mutex_lock(&fr->con_lock);
+	head = con_rd(fr, CON_TX_HEAD);
+	tail = con_rd(fr, CON_TX_TAIL);
+	avail = head - tail;
+
+	/* The FCU wrote faster than this side read: start from what is left. */
+	if (avail > AMP_CON_TX_SIZE) {
+		tail = head - AMP_CON_TX_SIZE;
+		avail = AMP_CON_TX_SIZE;
+	}
+	if (avail > len)
+		avail = len;
+
+	while (done < avail) {
+		u8 ch = readb(fr->con + CON_TX_DATA + ((tail + done) % AMP_CON_TX_SIZE));
+
+		if (put_user(ch, buf + done)) {
+			done = done ? done : -EFAULT;
+			goto out;
+		}
+		done++;
+	}
+
+	con_wr(fr, CON_TX_TAIL, tail + done);
+out:
+	mutex_unlock(&fr->con_lock);
+	return done;
+}
+
+static ssize_t fcu_con_write(struct file *filp, const char __user *buf, size_t len, loff_t *ppos)
+{
+	struct fcu_rproc *fr = filp->private_data;
+	u32 head, tail, room;
+	size_t done = 0;
+
+	if (!con_ready(fr))
+		return -ENODEV;
+
+	mutex_lock(&fr->con_lock);
+	head = con_rd(fr, CON_RX_HEAD);
+	tail = con_rd(fr, CON_RX_TAIL);
+	room = AMP_CON_RX_SIZE - (head - tail);
+	if (room > len)
+		room = len;
+
+	while (done < room) {
+		u8 ch;
+
+		if (get_user(ch, buf + done)) {
+			done = done ? done : -EFAULT;
+			goto out;
+		}
+		writeb(ch, fr->con + CON_RX_DATA + ((head + done) % AMP_CON_RX_SIZE));
+		done++;
+	}
+
+	con_wr(fr, CON_RX_HEAD, head + done);
+out:
+	mutex_unlock(&fr->con_lock);
+	if (done == 0 && !(filp->f_flags & O_NONBLOCK))
+		return -ENOSPC;
+	return done;
+}
+
+static __poll_t fcu_con_poll_file(struct file *filp, struct poll_table_struct *wait)
+{
+	struct fcu_rproc *fr = filp->private_data;
+
+	poll_wait(filp, &fr->con_wait, wait);
+	return EPOLLOUT | EPOLLWRNORM | (con_pending(fr) ? EPOLLIN | EPOLLRDNORM : 0);
+}
+
+static const struct file_operations fcu_con_fops = {
+	.owner		= THIS_MODULE,
+	.open		= fcu_con_open,
+	.release	= fcu_con_release,
+	.read		= fcu_con_read,
+	.write		= fcu_con_write,
+	.poll		= fcu_con_poll_file,
+	.llseek		= no_llseek,
+};
+
+static int fcu_con_init(struct fcu_rproc *fr)
+{
+	int ret;
+
+	if (!in_region(fr, AMP_CON_BASE, AMP_CON_SIZE))
+		return dev_err_probe(fr->dev, -EINVAL,
+				     "console at %#x is outside the FCU region\n", AMP_CON_BASE);
+
+	/* Uncached: the FCU writes this through its own cache. */
+	fr->con = devm_ioremap(fr->dev, AMP_CON_BASE, AMP_CON_SIZE);
+	if (!fr->con)
+		return -ENOMEM;
+
+	init_waitqueue_head(&fr->con_wait);
+	mutex_init(&fr->con_lock);
+	INIT_DELAYED_WORK(&fr->con_poll, fcu_con_poll);
+
+	fr->con_dev.minor = MISC_DYNAMIC_MINOR;
+	fr->con_dev.name = "fcucon";
+	fr->con_dev.fops = &fcu_con_fops;
+	fr->con_dev.parent = fr->dev;
+	ret = misc_register(&fr->con_dev);
+	if (ret)
+		return ret;
+
+	dev_info(fr->dev, "console at %#x, /dev/%s\n", AMP_CON_BASE, fr->con_dev.name);
+	return 0;
+}
+
+static void fcu_con_exit(struct fcu_rproc *fr)
+{
+	if (!fr->con)
+		return;
+	misc_deregister(&fr->con_dev);
+	cancel_delayed_work_sync(&fr->con_poll);
+}
+
 static int fcu_rproc_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -367,10 +599,16 @@ static int fcu_rproc_probe(struct platform_device *pdev)
 		rproc->auto_boot = of_property_read_bool(dev->of_node, "stalya,auto-boot");
 	}
 
-	platform_set_drvdata(pdev, rproc);
-	ret = rproc_add(rproc);
+	ret = fcu_con_init(fr);
 	if (ret)
 		return ret;
+
+	platform_set_drvdata(pdev, rproc);
+	ret = rproc_add(rproc);
+	if (ret) {
+		fcu_con_exit(fr);
+		return ret;
+	}
 
 	dev_info(dev, "FCU region %pa+%#llx, FCU %s\n", &fr->rmem->base, (u64)fr->rmem->size,
 		 !fcu_held(fr) ? "running, attached" :
@@ -393,6 +631,7 @@ static void fcu_rproc_remove(struct platform_device *pdev)
 		dev_info(&pdev->dev, "leaving the FCU running\n");
 	}
 	mutex_unlock(&rproc->lock);
+	fcu_con_exit(rproc->priv);
 	rproc_del(rproc);
 }
 

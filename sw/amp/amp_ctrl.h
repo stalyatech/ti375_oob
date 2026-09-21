@@ -15,6 +15,10 @@
 #ifndef AMP_CTRL_H
 #define AMP_CTRL_H
 
+#if !defined(__ASSEMBLY__) && !defined(__KERNEL__)
+#  include <stdint.h>
+#endif
+
 #define AMP_HOST_BASE           0xE8108000u
 #define AMP_FCU_BASE            0xF8108000u
 
@@ -85,5 +89,51 @@
                                                    FCU->host: FCU started */
 #define AMP_DB_PARK             (1u << 1)       /* host->FCU: park request;
                                                    FCU->host: parked */
+
+/*
+ * Shared memory console
+ *
+ * The FCU firmware has no UART of its own on this board, so its console is a
+ * pair of ring buffers in the last 64 KiB before the rpmsg area. The FCU
+ * writes what it prints into tx and reads what it is given from rx; the host
+ * (sw/linux/fcu_rproc, /dev/fcucon) does the opposite. Each side only ever
+ * advances its own index, so no lock is needed:
+ *
+ *   tx_head  FCU writes    tx_tail  host writes
+ *   rx_head  host writes   rx_tail  FCU writes
+ *
+ * An index counts bytes since reset and wraps naturally; the ring position is
+ * index % size. The FCU writes through its data cache, so it writes back the
+ * cache before it updates its index; the host maps the region uncached.
+ *
+ * The layout of the FCU region (the Linux device tree reserves all of it):
+ *
+ *   0x1E000000   8 MiB   firmware text, rodata, load image of .data
+ *   0x1E800000  ~22 MiB  firmware data, bss, heap, stacks
+ *   0x1FDF0000  64 KiB   this console
+ *   0x1FE00000   2 MiB   rpmsg vrings and buffers
+ */
+#define AMP_CON_BASE            0x1FDF0000u
+#define AMP_CON_SIZE            0x00010000u     /* 64 KiB */
+#define AMP_CON_MAGIC           0x434F4E31u     /* "CON1" */
+#define AMP_CON_HDR_SIZE        64u
+#define AMP_CON_TX_SIZE         0x8000u         /* 32 KiB, FCU -> host */
+#define AMP_CON_RX_SIZE         0x1000u         /*  4 KiB, host -> FCU */
+
+#ifndef __ASSEMBLY__
+struct amp_con {
+        volatile uint32_t magic;                /* AMP_CON_MAGIC once ready */
+        volatile uint32_t tx_size;
+        volatile uint32_t rx_size;
+        volatile uint32_t tx_head;              /* FCU: bytes written */
+        volatile uint32_t tx_tail;              /* host: bytes read */
+        volatile uint32_t rx_head;              /* host: bytes written */
+        volatile uint32_t rx_tail;              /* FCU: bytes read */
+        volatile uint32_t overrun;              /* FCU: bytes dropped from tx */
+        volatile uint32_t reserved[8];
+        volatile uint8_t tx[AMP_CON_TX_SIZE];
+        volatile uint8_t rx[AMP_CON_RX_SIZE];
+};
+#endif
 
 #endif /* AMP_CTRL_H */

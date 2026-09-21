@@ -49,12 +49,16 @@ int rproc_elf_sanity_check(struct rproc *rproc, const struct firmware *fw);
 u64 rproc_elf_get_boot_addr(struct rproc *rproc, const struct firmware *fw);
 int rproc_elf_load_segments(struct rproc *rproc, const struct firmware *fw);
 int rproc_elf_load_rsc_table(struct rproc *rproc, const struct firmware *fw);
+struct resource_table *rproc_elf_find_loaded_rsc_table(struct rproc *rproc,
+						       const struct firmware *fw);
+irqreturn_t rproc_vq_interrupt(struct rproc *rproc, int vq_id);
 
 #define FCU_PARK_TIMEOUT_MS	500
 #define FCU_BOOT_TIMEOUT_MS	100
 
 struct fcu_rproc {
 	struct device *dev;
+	struct rproc *rproc;
 	void __iomem *amp;
 	struct reserved_mem *rmem;
 	struct completion parked;
@@ -101,38 +105,79 @@ static bool in_region(struct fcu_rproc *fr, u64 addr, u64 len)
 	       addr - fr->rmem->base <= fr->rmem->size - len;
 }
 
-/* The region is no-map reserved memory, so it has to be mapped here. */
+/*
+ * The region is no-map reserved memory, so it has to be mapped here, and it
+ * is mapped uncached: the FCU does not snoop this CPU's caches, so the vrings
+ * and the firmware image have to reach DDR without a writeback in between.
+ */
 static int fcu_mem_alloc(struct rproc *rproc, struct rproc_mem_entry *mem)
 {
-	void *va = memremap(mem->dma, mem->len, MEMREMAP_WB);
+	void __iomem *va = ioremap(mem->dma, mem->len);
 
 	if (!va)
 		return -ENOMEM;
-	mem->va = va;
+	mem->va = (__force void *)va;
 	return 0;
 }
 
 static int fcu_mem_release(struct rproc *rproc, struct rproc_mem_entry *mem)
 {
-	memunmap(mem->va);
+	iounmap((__force void __iomem *)mem->va);
 	return 0;
 }
 
-static int fcu_prepare(struct rproc *rproc)
+/*
+ * Hand remoteproc the memory it may use. Beside the whole region, which the
+ * firmware image is loaded into, the vrings and the buffer pool are
+ * registered under the names remoteproc looks for, so that they land where
+ * the firmware's resource table says they are instead of somewhere the FCU
+ * cannot reach.
+ */
+static int fcu_carveout(struct rproc *rproc, u64 base, size_t len,
+			const char *name)
 {
 	struct fcu_rproc *fr = rproc->priv;
 	struct rproc_mem_entry *mem;
 
-	mem = rproc_mem_entry_init(fr->dev, NULL, fr->rmem->base, fr->rmem->size,
-				   fr->rmem->base, fcu_mem_alloc, fcu_mem_release,
-				   "fcu-mem");
+	if (!in_region(fr, base, len))
+		return dev_err_probe(fr->dev, -EINVAL,
+				     "%s at %#llx is outside the FCU region\n", name, base);
+
+	mem = rproc_mem_entry_init(fr->dev, NULL, base, len, base,
+				   fcu_mem_alloc, fcu_mem_release, "%s", name);
 	if (!mem)
 		return -ENOMEM;
 	rproc_add_carveout(rproc, mem);
 	return 0;
 }
 
-/* FCU images need no resource table until rpmsg is added. */
+static int fcu_prepare(struct rproc *rproc)
+{
+	struct fcu_rproc *fr = rproc->priv;
+	int ret;
+
+	ret = fcu_carveout(rproc, fr->rmem->base, fr->rmem->size, "fcu-mem");
+	if (ret)
+		return ret;
+
+	ret = fcu_carveout(rproc, AMP_RPMSG_VRING0, AMP_RPMSG_VRING_SIZE,
+			   "vdev0vring0");
+	if (ret)
+		return ret;
+
+	ret = fcu_carveout(rproc, AMP_RPMSG_VRING1, AMP_RPMSG_VRING_SIZE,
+			   "vdev0vring1");
+	if (ret)
+		return ret;
+
+	return fcu_carveout(rproc, AMP_RPMSG_BUF_BASE, AMP_RPMSG_BUF_SIZE,
+			    "vdev0buffer");
+}
+
+/*
+ * An image without a resource table is fine (the LED test has none); one with
+ * a table gets its vdev, and with it the rpmsg link.
+ */
 static int fcu_parse_fw(struct rproc *rproc, const struct firmware *fw)
 {
 	if (rproc_elf_load_rsc_table(rproc, fw))
@@ -255,6 +300,14 @@ static int fcu_stop(struct rproc *rproc)
 }
 
 /* The FCU was started before Linux; there is nothing to do to take it over. */
+/* Tell the FCU that a vring has something in it. */
+static void fcu_kick(struct rproc *rproc, int vqid)
+{
+	struct fcu_rproc *fr = rproc->priv;
+
+	amp_wr(fr, AMP_REG_DB_SEND, AMP_DB_RPMSG);
+}
+
 static int fcu_attach(struct rproc *rproc)
 {
 	return 0;
@@ -275,6 +328,12 @@ static const struct rproc_ops fcu_rproc_ops = {
 	.sanity_check	= fcu_sanity_check,
 	.load		= fcu_load,
 	.get_boot_addr	= rproc_elf_get_boot_addr,
+	/*
+	 * Without this the core would keep writing the vdev status into its own
+	 * cached copy of the table, and the FCU would wait forever for DRIVER_OK.
+	 */
+	.find_loaded_rsc_table = rproc_elf_find_loaded_rsc_table,
+	.kick		= fcu_kick,
 };
 
 static irqreturn_t fcu_irq(int irq, void *data)
@@ -289,6 +348,21 @@ static irqreturn_t fcu_irq(int irq, void *data)
 		complete(&fr->parked);
 	if (pending & AMP_DB_USER)
 		dev_dbg(fr->dev, "FCU image started\n");
+
+	/*
+	 * The vrings are handled in thread context: a first message announces a
+	 * new channel, and registering its device sleeps.
+	 */
+	return (pending & AMP_DB_RPMSG) ? IRQ_WAKE_THREAD : IRQ_HANDLED;
+}
+
+static irqreturn_t fcu_irq_thread(int irq, void *data)
+{
+	struct fcu_rproc *fr = data;
+
+	/* The doorbell carries no queue number: look at both vrings. */
+	rproc_vq_interrupt(fr->rproc, 0);
+	rproc_vq_interrupt(fr->rproc, 1);
 	return IRQ_HANDLED;
 }
 
@@ -564,6 +638,7 @@ static int fcu_rproc_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	fr = rproc->priv;
 	fr->dev = dev;
+	fr->rproc = rproc;
 	init_completion(&fr->parked);
 
 	fr->amp = devm_platform_ioremap_resource(pdev, 0);
@@ -585,10 +660,11 @@ static int fcu_rproc_probe(struct platform_device *pdev)
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0)
 		return irq;
-	ret = devm_request_irq(dev, irq, fcu_irq, 0, dev_name(dev), fr);
+	ret = devm_request_threaded_irq(dev, irq, fcu_irq, fcu_irq_thread, 0,
+					dev_name(dev), fr);
 	if (ret)
 		return ret;
-	amp_wr(fr, AMP_REG_DB_MASK, AMP_DB_USER | AMP_DB_PARK);
+	amp_wr(fr, AMP_REG_DB_MASK, AMP_DB_USER | AMP_DB_PARK | AMP_DB_RPMSG);
 
 	if (!fcu_held(fr)) {
 		/* Started by a previous Linux: take it over as it is. */

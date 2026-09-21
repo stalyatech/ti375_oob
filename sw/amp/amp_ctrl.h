@@ -89,6 +89,7 @@
                                                    FCU->host: FCU started */
 #define AMP_DB_PARK             (1u << 1)       /* host->FCU: park request;
                                                    FCU->host: parked */
+#define AMP_DB_RPMSG            (1u << 2)       /* either way: a vring was filled */
 
 /*
  * Shared memory console
@@ -119,6 +120,28 @@
 #define AMP_CON_HDR_SIZE        64u
 #define AMP_CON_TX_SIZE         0x8000u         /* 32 KiB, FCU -> host */
 #define AMP_CON_RX_SIZE         0x1000u         /*  4 KiB, host -> FCU */
+
+/*
+ * rpmsg
+ *
+ * The last 2 MiB of the FCU region carry the virtio rings and the buffers
+ * Linux and the FCU exchange messages through. The addresses are fixed on
+ * both sides: the FCU firmware puts them in its resource table, and the host
+ * registers carveouts at the same places (remoteproc looks them up by the
+ * names vdev0vring0, vdev0vring1 and vdev0buffer).
+ *
+ * 256 descriptors per ring and 512 byte buffers is what rpmsg uses by
+ * default, so one buffer pool of 256 KiB covers both directions.
+ */
+#define AMP_RPMSG_BASE          0x1FE00000u
+#define AMP_RPMSG_SIZE          0x00200000u     /* 2 MiB */
+#define AMP_RPMSG_VRING0        (AMP_RPMSG_BASE + 0x00000u)
+#define AMP_RPMSG_VRING1        (AMP_RPMSG_BASE + 0x08000u)
+#define AMP_RPMSG_VRING_SIZE    0x8000u         /* 32 KiB each */
+#define AMP_RPMSG_VRING_NUM     256u            /* descriptors per ring */
+#define AMP_RPMSG_VRING_ALIGN   0x1000u
+#define AMP_RPMSG_BUF_BASE      (AMP_RPMSG_BASE + 0x10000u)
+#define AMP_RPMSG_BUF_SIZE      0x40000u        /* 256 KiB */
 
 #ifndef __ASSEMBLY__
 struct amp_con {

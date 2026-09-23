@@ -74,8 +74,8 @@
         <efx:ip instance_name="gAXIM_3to1_switch" path="ip/gAXIM_3to1_switch/settings.json" ooc="false">
             <efx:ip_src_file name="gAXIM_3to1_switch.v" />
         </efx:ip>
-        <efx:ip instance_name="gAXIS_1to2_switch" path="ip/gAXIS_1to2_switch/settings.json" ooc="false">
-            <efx:ip_src_file name="gAXIS_1to2_switch.v" />
+        <efx:ip instance_name="gAXIS_1to3_switch" path="ip/gAXIS_1to3_switch/settings.json" ooc="false">
+            <efx:ip_src_file name="gAXIS_1to3_switch.v" />
         </efx:ip>
         <efx:ip instance_name="gAXIM_5to1_switch" path="ip/gAXIM_5to1_switch/settings.json" ooc="false">
             <efx:ip_src_file name="gAXIM_5to1_switch.v" />
@@ -133,7 +133,7 @@
         <efx:param name="include" value="ip/gTSE_core_fifo_ctrl" value_type="e_string" />
         <efx:param name="include" value="ip/EfxSapphireFCU" value_type="e_string" />
         <efx:param name="include" value="ip/gAXIM_3to1_switch" value_type="e_string" />
-        <efx:param name="include" value="ip/gAXIS_1to2_switch" value_type="e_string" />
+        <efx:param name="include" value="ip/gAXIS_1to3_switch" value_type="e_string" />
         <efx:param name="include" value="ip/gAXIM_5to1_switch" value_type="e_string" />
     </efx:synthesis>
     <efx:place_and_route tool_name="efx_pnr">

@@ -8,6 +8,7 @@ module tseCore #(
     input                       io_peripheralReset,
     input                       io_tseClk,
     input                       pll_locked,
+    input                       rx_clk_restart,     // pulse after rgmii_rxc comes back
     output                      phy_sw_rst,
     output                      mac_ext_rst,
     output                      dma_rx_rst,
@@ -236,7 +237,10 @@ gTSE_streamControl #(
 
 gTSE u_gTSE (
     .mac_reset              ( mac_ext_srst ),
-    .proto_reset            ( mac_ext_srst || proto_reset ),
+    // proto_reset also follows rx_clk_restart: the receive side runs on
+    // rgmii_rxc, which stops or changes rate with the link, and a reset
+    // pulse given while it was not running never reaches that side.
+    .proto_reset            ( mac_ext_srst || proto_reset || rx_clk_restart ),
     .tx_mac_aclk            ( io_tseClk ),
     .rx_mac_aclk            (),
     .eth_speed              ( eth_speed  ),

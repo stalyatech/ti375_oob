@@ -1,0 +1,57 @@
+# Efinity Interface Configuration
+# Version: 2026.1
+#
+# The on-board eMMC (U43, H26M41208HPRI) on the second SD host controller
+# (u_gSDHC_emmc in ti375_oob_top.v). Imported into ti375_oob.peri.xml with
+#   efx_run_pt_import_isf.py --peri_design ti375_oob.peri.xml --isf_files ti375_oob_emmc.isf
+#
+# Bank 2E is already a 1.8 V bank (it carries the RGMII), which is the eMMC's
+# VCCQ, so the pins take the bank's default I/O standard. The controller has
+# four data lines: DATA4..7 (F18, E18, B15, B16) stay unused, held by the
+# board's 47.5k pull-ups. The controller has no reset output, so RSTn is a
+# constant high from the pad.
+#
+# Pins from sheet 12 of the Rev A1 schematic (U20M, bank 2E):
+#   J18 EMMC_DATA0   C15 EMMC_DATA1   D18 EMMC_DATA2   C18 EMMC_DATA3
+#   H19, G19, F19    EMMC_RSTn, EMMC_CMD, EMMC_CLK in some order: CHECK ON THE
+#                    SHEET before importing (see the three assign_pkg_pin lines
+#                    marked below).
+
+design.create_output_gpio("emmc_clk")
+design.create_inout_gpio("emmc_cmd")
+design.create_inout_gpio("emmc_dat",3,0)
+design.create_output_gpio("emmc_rst_n")
+
+design.set_property("emmc_clk","OUT_REG","REG")
+design.set_property("emmc_clk","OUT_PIN","emmc_clk_hi")
+design.set_property("emmc_clk","OUT_CLK_PIN","sd_base_clk")
+
+design.set_property("emmc_cmd","IN_PIN","emmc_cmd_i")
+design.set_property("emmc_cmd","OUT_PIN","emmc_cmd_o")
+design.set_property("emmc_cmd","OUT_CLK_PIN","sd_base_clk")
+design.set_property("emmc_cmd","OE_PIN","emmc_cmd_oe")
+
+design.set_property("emmc_dat","OUT_CLK_PIN","sd_base_clk")
+design.set_property("emmc_dat[0]","IN_PIN","emmc_dat_i[0]")
+design.set_property("emmc_dat[0]","OUT_PIN","emmc_dat_o[0]")
+design.set_property("emmc_dat[0]","OE_PIN","emmc_dat_oe[0]")
+design.set_property("emmc_dat[1]","IN_PIN","emmc_dat_i[1]")
+design.set_property("emmc_dat[1]","OUT_PIN","emmc_dat_o[1]")
+design.set_property("emmc_dat[1]","OE_PIN","emmc_dat_oe[1]")
+design.set_property("emmc_dat[2]","IN_PIN","emmc_dat_i[2]")
+design.set_property("emmc_dat[2]","OUT_PIN","emmc_dat_o[2]")
+design.set_property("emmc_dat[2]","OE_PIN","emmc_dat_oe[2]")
+design.set_property("emmc_dat[3]","IN_PIN","emmc_dat_i[3]")
+design.set_property("emmc_dat[3]","OUT_PIN","emmc_dat_o[3]")
+design.set_property("emmc_dat[3]","OE_PIN","emmc_dat_oe[3]")
+
+design.set_property("emmc_rst_n","CONST_OUTPUT","1")
+
+design.assign_pkg_pin("emmc_dat[0]","J18")
+design.assign_pkg_pin("emmc_dat[1]","C15")
+design.assign_pkg_pin("emmc_dat[2]","D18")
+design.assign_pkg_pin("emmc_dat[3]","C18")
+# CHECK ON THE SHEET: which of H19, G19, F19 is RSTn, CMD and CLK
+design.assign_pkg_pin("emmc_rst_n","H19")
+design.assign_pkg_pin("emmc_cmd","G19")
+design.assign_pkg_pin("emmc_clk","F19")

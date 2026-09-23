@@ -256,6 +256,7 @@ input           io_gpio_sw_n,
 input           pll_peripheral_locked,
 input           pll_system_locked,
 input           pll_tse_locked,
+input           pll_rgmii_rx_locked,    // rgmii_rx_pll, locked to the PHY's RXC
 //  SDHC
 input           sd_base_clk, 
 output          sd_clk_hi,
@@ -268,6 +269,14 @@ output [3:0]    sd_dat_o,
 output [3:0]    sd_dat_oe,
 input           sd_cd_n, 
 input           sd_wp,
+//  eMMC: the second SD host controller, 4 bit, on bank 2E (1.8 V)
+output          emmc_clk_hi,
+input           emmc_cmd_i,
+output          emmc_cmd_o,
+output          emmc_cmd_oe,
+input  [3:0]    emmc_dat_i,
+output [3:0]    emmc_dat_o,
+output [3:0]    emmc_dat_oe,
 // TSEMAC
 input           io_tseClk,
 // MAC 
@@ -298,13 +307,14 @@ localparam PERI_FREQ = 200;
 
 localparam TSE		= 0;	// AXI S1
 localparam SDHC		= 1;	// AXI S0
-localparam AXIS_DEV	= 2;
+localparam EMMC		= 2;	// on-board eMMC, a second SD host controller
+localparam AXIS_DEV	= 3;
 
 localparam MTSE		= 0;
 localparam MSDHC	= 1;
 localparam MFCU		= 2;
 localparam MDNN		= 3;	// StalyaNPU accelerator -> DDR
-localparam MCODEC	= 4;	// H.264/H.265 codec -> DDR (stub for now)
+localparam MEMMC	= 4;	// eMMC DMA -> DDR (the slot held for the codec)
 localparam AXIM_DEV	= 5;
 
 ////////////////////////////////////////////////////////////////////////////
@@ -565,7 +575,8 @@ wire                        hp_wdt_irq;
 // of the 256 MB window would alias onto it. The 32 MB window at
 // 0xEA00_0000 is taken out and sent to the switch below:
 //   0xEA00_0000  gTSE register file   16 MB, switch port 0
-//   0xEB00_0000  gSDHC register file  64 KB, switch port 1
+//   0xEB00_0000  gSDHC register file  64 KB, switch port 1 (SD card)
+//   0xEB10_0000  gSDHC register file  64 KB, switch port 2 (eMMC)
 //-------------------------------------------------------------------
 axi_addr_split #(
     .MATCH_MASK         ( 32'hFE00_0000 ),
@@ -702,10 +713,11 @@ axi_err_slave #(
 );
 
 //-------------------------------------------------------------------
-// The hard SoC reaches the gTSE and gSDHC register files through this
-// switch, with a 25-bit offset into the 0xEA00_0000 window.
+// The hard SoC reaches the gTSE register file and both SD host
+// controllers through this switch, with a 25-bit offset into the
+// 0xEA00_0000 window.
 //-------------------------------------------------------------------
-gAXIS_1to2_switch u_AXIS_1to2_switch
+gAXIS_1to3_switch u_AXIS_1to3_switch
 (
     .rst_n              ( ~io_peripheralReset ),
     .clk                ( io_peripheralClk ),
@@ -972,6 +984,120 @@ gSDHC u_gSDHC
     .sd_dat_oe          ( sd_dat_oe_i )
 );
 
+//-------------------------------------------------------------------
+// The on-board eMMC (U43, H26M41208HPRI) on a second SD host controller.
+// The IP only has 4 data lines, so the eMMC runs 4 bit; DATA4..7 stay
+// unconnected with the board's pull-ups on them. It is soldered on, so card
+// detect reads "present" and write protect "off". RSTn is held high by the
+// pad itself (constant output), the controller has no reset line for it.
+// Registers at 0xEB10_0000 (switch port 2), DMA on the DDR slot MEMMC,
+// interrupt on userInterruptB (PLIC 2).
+//-------------------------------------------------------------------
+wire                        emmc_int;
+wire                        emmc_dat_oe_i;
+
+assign s_axis_rlast[EMMC*1 +: 1]   = 1'b1;
+assign emmc_dat_oe                 = {4{emmc_dat_oe_i}};
+assign m_axis_awqos   [MEMMC*4 +: 4] = 4'b0;
+assign m_axis_arqos   [MEMMC*4 +: 4] = 4'b0;
+assign m_axis_awregion[MEMMC*4 +: 4] = 4'b0;
+assign m_axis_arregion[MEMMC*4 +: 4] = 4'b0;
+
+gSDHC u_gSDHC_emmc
+(
+    .sd_rst             ( sd_rst ),
+    .sd_base_clk        ( sd_base_clk ),
+    .sd_int             ( emmc_int ),
+    .sd_cd_n            ( 1'b0 ),
+    .sd_wp              ( 1'b0 ),
+
+    .s_axi_aclk         ( io_peripheralClk ),
+    .s_axi_awaddr       ( s_axis_awaddr[EMMC*32 +: 32] ),
+    .s_axi_awready      ( s_axis_awready[EMMC*1 +: 1] ),
+    .s_axi_awvalid      ( s_axis_awvalid[EMMC*1 +: 1] ),
+    .s_axi_wstrb        ( s_axis_wstrb[EMMC*4 +: 4]),
+    .s_axi_wdata        ( s_axis_wdata[EMMC*32 +: 32] ),
+    .s_axi_wready       ( s_axis_wready[EMMC*1 +: 1] ),
+    .s_axi_wvalid       ( s_axis_wvalid[EMMC*1 +: 1] ),
+    .s_axi_bresp        ( s_axis_bresp[EMMC*2 +: 2] ),
+    .s_axi_bvalid       ( s_axis_bvalid[EMMC*1 +: 1] ),
+    .s_axi_araddr       ( s_axis_araddr[EMMC*32 +: 32] ),
+    .s_axi_bready       ( s_axis_bready[EMMC*1 +: 1] ),
+    .s_axi_arready      ( s_axis_arready[EMMC*1 +: 1] ),
+    .s_axi_arvalid      ( s_axis_arvalid[EMMC*1 +: 1] ),
+    .s_axi_rresp        ( s_axis_rresp[EMMC*2 +: 2] ),
+    .s_axi_rdata        ( s_axis_rdata[EMMC*32 +: 32]),
+    .s_axi_rvalid       ( s_axis_rvalid[EMMC*1 +: 1] ),
+    .s_axi_rready       ( s_axis_rready[EMMC*1 +: 1] ),
+
+    .m_axi_clk          ( io_ddrMasters_0_clk ),
+    .m_axi_awaddr       ( m_axis_awaddr[MEMMC*32 +: 32] ),
+    .m_axi_awvalid      ( m_axis_awvalid[MEMMC*1 +: 1] ),
+    .m_axi_awlen        ( m_axis_awlen[MEMMC*8 +: 8] ),
+    .m_axi_awready      ( m_axis_awready[MEMMC*1 +: 1] ),
+    .m_axi_awburst      ( m_axis_awburst[MEMMC*2 +: 2] ),
+    .m_axi_awsize       ( m_axis_awsize[MEMMC*3 +: 3] ),
+    .m_axi_awcache      ( m_axis_awcache[MEMMC*4 +: 4] ),
+    .m_axi_awlock       ( m_axis_awlock[MEMMC*2 +: 2] ),
+    .m_axi_awprot       ( m_axis_awprot[MEMMC*4 +: 4] ),
+    .m_axi_wdata        ( m_axis_wdata[MEMMC*128 +: 128] ),
+    .m_axi_wstrb        ( m_axis_wstrb[MEMMC*16 +: 16] ),
+    .m_axi_wlast        ( m_axis_wlast[MEMMC*1 +: 1] ),
+    .m_axi_wvalid       ( m_axis_wvalid[MEMMC*1 +: 1] ),
+    .m_axi_wready       ( m_axis_wready[MEMMC*1 +:1] ),
+    .m_axi_bresp        ( m_axis_bresp[MEMMC*2 +: 2] ),
+    .m_axi_bvalid       ( m_axis_bvalid[MEMMC*1 +: 1] ),
+    .m_axi_bready       ( m_axis_bready[MEMMC*1 +: 1] ),
+    .m_axi_arvalid      ( m_axis_arvalid[MEMMC*1 +: 1] ),
+    .m_axi_araddr       ( m_axis_araddr[MEMMC*32 +: 32] ),
+    .m_axi_arlen        ( m_axis_arlen[MEMMC*8 +: 8] ),
+    .m_axi_arsize       ( m_axis_arsize[MEMMC*3 +: 3] ),
+    .m_axi_arburst      ( m_axis_arburst[MEMMC*2 +: 2] ),
+    .m_axi_arprot       ( m_axis_arprot[MEMMC*4 +: 4] ),
+    .m_axi_arlock       ( m_axis_arlock[MEMMC*2 +: 2] ),
+    .m_axi_arcache      ( m_axis_arcache[MEMMC*4 +: 4] ),
+    .m_axi_arready      ( m_axis_arready[MEMMC*1 +: 1] ),
+    .m_axi_rvalid       ( m_axis_rvalid[MEMMC*1 +: 1] ),
+    .m_axi_rdata        ( m_axis_rdata[MEMMC*128 +: 128] ),
+    .m_axi_rlast        ( m_axis_rlast[MEMMC*1 +: 1] ),
+    .m_axi_rresp        ( m_axis_rresp[MEMMC*2 +: 2] ),
+    .m_axi_rready       ( m_axis_rready[MEMMC*1 +: 1] ),
+
+    .sd_clk_hi          ( emmc_clk_hi ),
+    .sd_clk_lo          ( ),
+    .sd_cmd_i           ( emmc_cmd_i ),
+    .sd_cmd_o           ( emmc_cmd_o ),
+    .sd_cmd_oe          ( emmc_cmd_oe ),
+    .sd_dat_i           ( emmc_dat_i ),
+    .sd_dat_o           ( emmc_dat_o ),
+    .sd_dat_oe          ( emmc_dat_oe_i )
+);
+
+// rgmii_rxc comes from rgmii_rx_pll, locked to the PHY's RXC. When the link
+// drops, RXC stops or changes rate, the PLL loses lock and the receive side
+// of the MAC is left without a clock, or with a bad one, in whatever state
+// it was in; the reset the driver gives when it brings the link back up
+// happens while that side still has no clock, so it never sees it. The MAC
+// then damages every frame it receives until the FPGA is reconfigured.
+// So every time the PLL locks again, rx_clk_restart holds the MAC's protocol
+// reset and the receive stream's reset for 256 io_tseClk cycles (about 2 us),
+// with rgmii_rxc already running. io_tseClk comes from the PHY's CLKOUT and
+// never stops. The MAC is left alone while the link is down, so MDIO keeps
+// working and the link can come back.
+reg  [2:0]                  rx_lock_q;
+reg  [8:0]                  rx_lock_cnt;
+wire                        rx_clk_restart;
+
+always @(posedge io_tseClk) begin
+    rx_lock_q <= {rx_lock_q[1:0], pll_rgmii_rx_locked};
+    if (!rx_lock_q[2])
+        rx_lock_cnt <= 9'd0;
+    else if (!rx_lock_cnt[8])
+        rx_lock_cnt <= rx_lock_cnt + 9'd1;
+end
+
+assign rx_clk_restart = rx_lock_q[2] & ~rx_lock_cnt[8];
+
 assign m_eth_rx_tdest = 4'h0;
 assign phy_rst = phy_sw_rst;
 assign tse_pll_ok = pll_tse_locked & pll_peripheral_locked;
@@ -981,6 +1107,7 @@ tseCore u_tseCore (
     .io_peripheralReset      ( io_peripheralReset ),
     .io_tseClk               ( io_tseClk ),
     .pll_locked              ( tse_pll_ok ),
+    .rx_clk_restart          ( rx_clk_restart ),
     .phy_sw_rst              ( phy_sw_rst ),
     .mac_ext_rst             ( mac_ext_rst ),
     .dma_rx_rst              ( dma_rx_rst ),
@@ -1121,7 +1248,11 @@ gDMA u_gDMA (
 `else
     .dat0_i_clk              ( rgmii_rxc_slow ),
 `endif
-    .dat0_i_reset            ( mac_ext_rst | dma_rx_rst ),
+    // rgmii_rxc comes from a PLL locked to the PHY's RXC, which stops or
+    // changes rate whenever the link does; the receive stream is held in
+    // reset until that PLL is locked again. Only this stream: the MAC's
+    // own reset (and with it MDIO) must not follow the link.
+    .dat0_i_reset            ( mac_ext_rst | dma_rx_rst | ~pll_rgmii_rx_locked | rx_clk_restart ),
     .dat0_i_tvalid           ( m_eth_rx_tvalid ),
     .dat0_i_tready           ( m_eth_rx_tready ),
     .dat0_i_tdata            ( m_eth_rx_tdata ),
@@ -1486,34 +1617,9 @@ assign m_axis_awqos   [MDNN*4 +: 4] = 4'b0;
 assign m_axis_awregion[MDNN*4 +: 4] = 4'b0;
 assign m_axis_awprot  [MDNN*4 +: 4] = 4'b0;
 
-// Codec DDR master slot (MCODEC) reserved and held idle until the real
-// H.264/H.265 core (codec_h26x_stub interface) replaces this tie-off.
-assign m_axis_awvalid [MCODEC*1  +: 1]   = 1'b0;
-assign m_axis_awaddr  [MCODEC*32 +: 32]  = 32'b0;
-assign m_axis_awlen   [MCODEC*8  +: 8]   = 8'b0;
-assign m_axis_awsize  [MCODEC*3  +: 3]   = 3'b0;
-assign m_axis_awburst [MCODEC*2  +: 2]   = 2'b01;
-assign m_axis_awlock  [MCODEC*2  +: 2]   = 2'b0;
-assign m_axis_awcache [MCODEC*4  +: 4]   = 4'b0;
-assign m_axis_awprot  [MCODEC*4  +: 4]   = 4'b0;
-assign m_axis_awqos   [MCODEC*4  +: 4]   = 4'b0;
-assign m_axis_awregion[MCODEC*4  +: 4]   = 4'b0;
-assign m_axis_wvalid  [MCODEC*1  +: 1]   = 1'b0;
-assign m_axis_wdata   [MCODEC*128+: 128] = 128'b0;
-assign m_axis_wstrb   [MCODEC*16 +: 16]  = 16'b0;
-assign m_axis_wlast   [MCODEC*1  +: 1]   = 1'b0;
-assign m_axis_bready  [MCODEC*1  +: 1]   = 1'b1;
-assign m_axis_arvalid [MCODEC*1  +: 1]   = 1'b0;
-assign m_axis_araddr  [MCODEC*32 +: 32]  = 32'b0;
-assign m_axis_arlen   [MCODEC*8  +: 8]   = 8'b0;
-assign m_axis_arsize  [MCODEC*3  +: 3]   = 3'b0;
-assign m_axis_arburst [MCODEC*2  +: 2]   = 2'b01;
-assign m_axis_arlock  [MCODEC*2  +: 2]   = 2'b0;
-assign m_axis_arcache [MCODEC*4  +: 4]   = 4'b0;
-assign m_axis_arprot  [MCODEC*4  +: 4]   = 4'b0;
-assign m_axis_arqos   [MCODEC*4  +: 4]   = 4'b0;
-assign m_axis_arregion[MCODEC*4  +: 4]   = 4'b0;
-assign m_axis_rready  [MCODEC*1  +: 1]   = 1'b1;
+// The DDR master slot held for the H.264/H.265 codec (codec_h26x_stub
+// interface) carries the eMMC controller's DMA until that core exists; the
+// codec then needs a sixth port on the DDR switch.
 
 // The level interrupt crosses into the peripheral clock with two flops
 // before it enters the hard SoC PLIC (interrupt id 9). The CPU clears it
@@ -1646,7 +1752,7 @@ wire hp_gpio_sw_n = io_gpio_sw_n & ~sysrst_q;
 //   L 12  watchdog                          soft logic block
 //-------------------------------------------------------------------
 assign userInterruptA = hp_uart0_irq;
-assign userInterruptB = 1'b0;
+assign userInterruptB = emmc_int;
 assign userInterruptC = 1'b0;
 assign userInterruptD = hp_spi0_irq;
 assign userInterruptE = hp_spi1_irq;
@@ -1838,6 +1944,18 @@ assign sp_asyncReset = sp_watchdogReset | io_asyncReset | amp_fcu_hold;
 assign boot_spi_sclk = hp_spi_0_io_sclk_write | hp_spi_1_io_sclk_write;
 assign sys_spi_0_io_sclk_write = boot_spi_sclk;
 assign sys_spi_1_io_sclk_write = boot_spi_sclk;
+
+// The SoC's I2C controllers only say which level they want on each line:
+// write = 0 pulls it low, write = 1 lets it go. The pad drives its output
+// value only while its enable is set, so the enable is the inverse of
+// write and a released line is left to the pull-up (open drain). Without
+// these the enables were never driven and all three buses were dead.
+assign sys_i2c_0_io_scl_writeEnable = ~sys_i2c_0_io_scl_write;
+assign sys_i2c_0_io_sda_writeEnable = ~sys_i2c_0_io_sda_write;
+assign sys_i2c_1_io_scl_writeEnable = ~sys_i2c_1_io_scl_write;
+assign sys_i2c_1_io_sda_writeEnable = ~sys_i2c_1_io_sda_write;
+assign sys_i2c_2_io_scl_writeEnable = ~sys_i2c_2_io_scl_write;
+assign sys_i2c_2_io_sda_writeEnable = ~sys_i2c_2_io_sda_write;
 
 EfxSapphireFCU u_EfxSapphireFCU
 (

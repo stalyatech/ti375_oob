@@ -24,17 +24,24 @@ create_clock -period 5.0000 io_peripheralClk
 create_clock -period 4.0000 io_ddrMasters_0_clk
 create_clock -period 10.0000 io_dnnClk
 create_clock -period 10.0000 sd_base_clk
-create_clock -period 8.0000 rgmii_rxc
+# rgmii_rxc and rgmii_rx_pll_CLKOUT0 come from rgmii_rx_pll (PLL_TR1), locked
+# to the PHY's RXC; io_tseClk and io_tseClk_90 from tse_pll_clk, locked to the
+# PHY's CLKOUT. When the PHY is the 1000BASE-T slave those two differ by a few
+# ppm, so receive and transmit are unrelated clocks.
+create_clock -waveform {2.8000 6.8000} -period 8.0000 rgmii_rxc
+create_clock -period 8.0000 rgmii_rx_pll_CLKOUT0
 create_clock -waveform {2.0000 6.0000} -period 8.0000 io_tseClk_90
 create_clock -period 8.0000 io_tseClk
 create_clock -name io_jtagClk -period 100.0 [get_ports {system_jtag_io_tck}]
 
-set_clock_groups -exclusive -group {rgmii_rxc io_tseClk_90 io_tseClk} -group {sd_base_clk} -group {io_dnnClk} -group {io_peripheralClk} -group {io_ddrMasters_0_clk} -group {io_jtagClk}
+set_clock_groups -exclusive -group {rgmii_rxc rgmii_rx_pll_CLKOUT0} -group {io_tseClk_90 io_tseClk} -group {sd_base_clk} -group {io_dnnClk} -group {io_peripheralClk} -group {io_ddrMasters_0_clk} -group {io_jtagClk}
 
 # GPIO Constraints
 ####################
 set_output_delay -clock sd_base_clk -reference_pin [get_ports {sd_base_clk~CLKOUT~347~2}] -max 0.079 [get_ports {sd_clk}]
 set_output_delay -clock sd_base_clk -reference_pin [get_ports {sd_base_clk~CLKOUT~347~2}] -min -0.045 [get_ports {sd_clk}]
+set_output_delay -clock sd_base_clk -reference_pin [get_ports {sd_base_clk~CLKOUT~453~964}] -max 0.985 [get_ports {emmc_clk_hi}]
+set_output_delay -clock sd_base_clk -reference_pin [get_ports {sd_base_clk~CLKOUT~453~964}] -min -0.371 [get_ports {emmc_clk_hi}]
 # set_input_delay -clock <CLOCK> [-reference_pin <clkout_pad>] -max <MAX CALCULATION> [get_ports {io_gpio_sw_n}]
 # set_input_delay -clock <CLOCK> [-reference_pin <clkout_pad>] -min <MIN CALCULATION> [get_ports {io_gpio_sw_n}]
 # set_input_delay -clock <CLOCK> [-reference_pin <clkout_pad>] -max <MAX CALCULATION> [get_ports {system_uart_0_io_rxd}]

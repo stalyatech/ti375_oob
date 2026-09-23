@@ -1,0 +1,59 @@
+# Efinity Interface Configuration
+# Version: 2026.1
+#
+# Sample the RGMII receive data with a clock made from the PHY's own RXC.
+# Imported into ti375_oob.peri.xml with
+#   efx_run_pt_import_isf.py --peri_design ti375_oob.peri.xml --isf_files ti375_oob_rgmii_rx.isf
+#
+# Until now rgmii_rxc, the clock the rgmii_rxd / rgmii_rx_ctl DDIO registers
+# sample on, came out of tse_pll_clk, whose reference is the PHY's CLKOUT pin
+# (A14, GE_PHY_CLKOUT). The receive data is launched on RXC (D15, ETH0_RXC),
+# not on CLKOUT. When the PHY is the 1000BASE-T slave, RXC is the clock it
+# recovers from the link partner while CLKOUT comes from its own crystal, so
+# the two differ by a few ppm and the sampling point walks through the data
+# eye; which side ends up master is settled again at every link-up. That is
+# the intermittent receive corruption.
+#
+# D15 is the dedicated reference input (EXT_CLK0) of PLL_TR1, which was free.
+# The new PLL mirrors tse_pll_clk: 125 MHz in, CLKOUT0 as the local feedback,
+# CLKOUT1 the sampling clock. The PHY adds no receive delay (phy-mode
+# "rgmii"). The sampling phase was measured on the board rather than
+# computed (the timing model put the eye elsewhere): with the periphery
+# bitstream rebuilt for every PHASE_STEP (18 degrees each) and for the
+# inverted clock (+180), the board received cleanly, as 1000BASE-T master and
+# as slave, from 54 to 180 degrees; 36 and 216 degrees and beyond failed, 198
+# lost 45%. PHASE_STEP 7 (126 degrees, 2.8 ns) sits about 70 degrees inside
+# both edges. tse_pll_clk keeps making the transmit clocks from CLKOUT and
+# drops its CLKOUT1.
+#
+# 1000 Mbit/s only: at 100 Mbit/s RXC is 25 MHz and this PLL does not lock,
+# which is no worse than before (the design is built with ETH_1000MBPS).
+
+design.delete_gpio("rgmii_rxc_slow")
+design.create_pll_input_clock_gpio("rgmii_rxc_in")
+design.assign_pkg_pin("rgmii_rxc_in","D15")
+
+design.create_block("rgmii_rx_pll","PLL")
+design.set_property("rgmii_rx_pll","REFCLK_SOURCE","EXTERNAL","PLL")
+design.set_property("rgmii_rx_pll","EXT_CLK","EXT_CLK0","PLL")
+design.set_property("rgmii_rx_pll","REFCLK_FREQ","125.0","PLL")
+design.set_property("rgmii_rx_pll","M","1","PLL")
+design.set_property("rgmii_rx_pll","N","1","PLL")
+design.set_property("rgmii_rx_pll","O","4","PLL")
+design.set_property("rgmii_rx_pll","FEEDBACK_MODE","LOCAL","PLL")
+design.set_property("rgmii_rx_pll","FEEDBACK_CLK","CLK0","PLL")
+design.set_property("rgmii_rx_pll","CLKOUT0_EN","1","PLL")
+design.set_property("rgmii_rx_pll","CLKOUT0_CONN_TYPE","gclk","PLL")
+design.set_property("rgmii_rx_pll","CLKOUT0_DIV","10","PLL")
+design.set_property("rgmii_rx_pll","CLKOUT0_PHASE_STEP","0","PLL")
+design.set_property("rgmii_rx_pll","CLKOUT0_PIN","rgmii_rx_pll_CLKOUT0","PLL")
+design.set_property("rgmii_rx_pll","CLKOUT1_EN","1","PLL")
+design.set_property("rgmii_rx_pll","CLKOUT1_CONN_TYPE","gclk","PLL")
+design.set_property("rgmii_rx_pll","CLKOUT1_DIV","10","PLL")
+design.set_property("rgmii_rx_pll","CLKOUT1_PHASE_STEP","7","PLL")
+design.set_property("rgmii_rx_pll","CLKOUT1_PIN","rgmii_rxc","PLL")
+design.set_property("rgmii_rx_pll","LOCKED_PIN","pll_rgmii_rx_locked","PLL")
+design.assign_resource("rgmii_rx_pll","PLL_TR1","PLL")
+
+design.set_property("tse_pll_clk","CLKOUT1_EN","0","PLL")
+design.set_property("tse_pll_clk","CLKOUT1_PIN","","PLL")

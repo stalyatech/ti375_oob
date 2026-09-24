@@ -1544,6 +1544,34 @@ always @(posedge io_ddrMasters_0_clk)
     npu_npu1_rst_q <= {npu_npu1_rst_q[0], npu_rst};
 wire npu_npu1_rst = npu_npu1_rst_q[1];
 
+// npu1 reaches the switch through a register slice: its DMA logic and
+// the switch's arbiter otherwise form one long path.
+wire npu_npu1_m_arvalid;
+wire npu_npu1_m_arready;
+wire [31:0] npu_npu1_m_araddr;
+wire [7:0] npu_npu1_m_arlen;
+wire [2:0] npu_npu1_m_arsize;
+wire [1:0] npu_npu1_m_arburst;
+wire npu_npu1_m_rvalid;
+wire npu_npu1_m_rready;
+wire [127:0] npu_npu1_m_rdata;
+wire npu_npu1_m_rlast;
+wire [1:0] npu_npu1_m_rresp;
+wire npu_npu1_m_awvalid;
+wire npu_npu1_m_awready;
+wire [31:0] npu_npu1_m_awaddr;
+wire [7:0] npu_npu1_m_awlen;
+wire [2:0] npu_npu1_m_awsize;
+wire [1:0] npu_npu1_m_awburst;
+wire npu_npu1_m_wvalid;
+wire npu_npu1_m_wready;
+wire [127:0] npu_npu1_m_wdata;
+wire [15:0] npu_npu1_m_wstrb;
+wire npu_npu1_m_wlast;
+wire npu_npu1_m_bvalid;
+wire npu_npu1_m_bready;
+wire [1:0] npu_npu1_m_bresp;
+
 // Instance npu1: 128-bit AXI master on the MDNN slot of the shared
 // switch, so no width adapter.
 snpu_top #(
@@ -1573,17 +1601,76 @@ snpu_top #(
     .pslverr_o ( npu_npu1_pslverr ),
     .irq_o     ( npu_npu1_irq ),
     .dbg_ext_i ( 32'd0 ),
+    .m_arvalid ( npu_npu1_m_arvalid ),
+    .m_arready ( npu_npu1_m_arready ),
+    .m_araddr  ( npu_npu1_m_araddr ),
+    .m_arlen   ( npu_npu1_m_arlen ),
+    .m_arsize  ( npu_npu1_m_arsize ),
+    .m_arburst ( npu_npu1_m_arburst ),
+    .m_arid    ( ),
+    .m_rvalid  ( npu_npu1_m_rvalid ),
+    .m_rready  ( npu_npu1_m_rready ),
+    .m_rdata   ( npu_npu1_m_rdata ),
+    .m_rid     ( 4'd0 ),
+    .m_rlast   ( npu_npu1_m_rlast ),
+    .m_rresp   ( npu_npu1_m_rresp ),
+    .m_awvalid ( npu_npu1_m_awvalid ),
+    .m_awready ( npu_npu1_m_awready ),
+    .m_awaddr  ( npu_npu1_m_awaddr ),
+    .m_awlen   ( npu_npu1_m_awlen ),
+    .m_awsize  ( npu_npu1_m_awsize ),
+    .m_awburst ( npu_npu1_m_awburst ),
+    .m_awid    ( ),
+    .m_wvalid  ( npu_npu1_m_wvalid ),
+    .m_wready  ( npu_npu1_m_wready ),
+    .m_wdata   ( npu_npu1_m_wdata ),
+    .m_wstrb   ( npu_npu1_m_wstrb ),
+    .m_wlast   ( npu_npu1_m_wlast ),
+    .m_bvalid  ( npu_npu1_m_bvalid ),
+    .m_bready  ( npu_npu1_m_bready ),
+    .m_bresp   ( npu_npu1_m_bresp )
+);
+
+axi_reg_slice #(
+    .DW ( 128 ),
+    .AW ( 32 )
+) u_npu1_slice (
+    .clk       ( io_ddrMasters_0_clk ),
+    .rst       ( npu_npu1_rst ),
+    .s_arvalid ( npu_npu1_m_arvalid ),
+    .s_arready ( npu_npu1_m_arready ),
+    .s_araddr  ( npu_npu1_m_araddr ),
+    .s_arlen   ( npu_npu1_m_arlen ),
+    .s_arsize  ( npu_npu1_m_arsize ),
+    .s_arburst ( npu_npu1_m_arburst ),
+    .s_rvalid  ( npu_npu1_m_rvalid ),
+    .s_rready  ( npu_npu1_m_rready ),
+    .s_rdata   ( npu_npu1_m_rdata ),
+    .s_rlast   ( npu_npu1_m_rlast ),
+    .s_rresp   ( npu_npu1_m_rresp ),
+    .s_awvalid ( npu_npu1_m_awvalid ),
+    .s_awready ( npu_npu1_m_awready ),
+    .s_awaddr  ( npu_npu1_m_awaddr ),
+    .s_awlen   ( npu_npu1_m_awlen ),
+    .s_awsize  ( npu_npu1_m_awsize ),
+    .s_awburst ( npu_npu1_m_awburst ),
+    .s_wvalid  ( npu_npu1_m_wvalid ),
+    .s_wready  ( npu_npu1_m_wready ),
+    .s_wdata   ( npu_npu1_m_wdata ),
+    .s_wstrb   ( npu_npu1_m_wstrb ),
+    .s_wlast   ( npu_npu1_m_wlast ),
+    .s_bvalid  ( npu_npu1_m_bvalid ),
+    .s_bready  ( npu_npu1_m_bready ),
+    .s_bresp   ( npu_npu1_m_bresp ),
     .m_arvalid ( m_axis_arvalid[MDNN*1 +: 1] ),
     .m_arready ( m_axis_arready[MDNN*1 +: 1] ),
     .m_araddr  ( m_axis_araddr[MDNN*32 +: 32] ),
     .m_arlen   ( m_axis_arlen[MDNN*8 +: 8] ),
     .m_arsize  ( m_axis_arsize[MDNN*3 +: 3] ),
     .m_arburst ( m_axis_arburst[MDNN*2 +: 2] ),
-    .m_arid    ( ),
     .m_rvalid  ( m_axis_rvalid[MDNN*1 +: 1] ),
     .m_rready  ( m_axis_rready[MDNN*1 +: 1] ),
     .m_rdata   ( m_axis_rdata[MDNN*128 +: 128] ),
-    .m_rid     ( 4'd0 ),
     .m_rlast   ( m_axis_rlast[MDNN*1 +: 1] ),
     .m_rresp   ( m_axis_rresp[MDNN*2 +: 2] ),
     .m_awvalid ( m_axis_awvalid[MDNN*1 +: 1] ),
@@ -1592,7 +1679,6 @@ snpu_top #(
     .m_awlen   ( m_axis_awlen[MDNN*8 +: 8] ),
     .m_awsize  ( m_axis_awsize[MDNN*3 +: 3] ),
     .m_awburst ( m_axis_awburst[MDNN*2 +: 2] ),
-    .m_awid    ( ),
     .m_wvalid  ( m_axis_wvalid[MDNN*1 +: 1] ),
     .m_wready  ( m_axis_wready[MDNN*1 +: 1] ),
     .m_wdata   ( m_axis_wdata[MDNN*128 +: 128] ),

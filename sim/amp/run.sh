@@ -2,7 +2,8 @@
 # Run the AMP / bus-routing testbenches with Icarus Verilog.
 #
 #   sim/amp/run.sh            all testbenches, then the top-level check
-#   sim/amp/run.sh amp_ctrl   one of: amp_ctrl axi_addr_split axi_err_slave top
+#   sim/amp/run.sh amp_ctrl   one of: amp_ctrl axi_addr_split axi_err_slave
+#                             axi_reg_slice top
 #
 # "top" elaborates ti375_oob_top.v against port-only stubs of the encrypted
 # IP (make_stubs.py). It fails on any elaboration error and on any implicit
@@ -26,6 +27,7 @@ declare -A SRC=(
     [amp_ctrl]="$RTL/amp_ctrl.v"
     [axi_addr_split]="$RTL/axi_addr_split.v"
     [axi_err_slave]="$RTL/axi_err_slave.v"
+    [axi_reg_slice]="$RTL/axi_reg_slice.v"
 )
 
 run() {
@@ -38,7 +40,7 @@ run() {
 }
 
 STUBS=(
-    gAXIS_1to2_switch=ip/gAXIS_1to2_switch/gAXIS_1to2_switch.v
+    gAXIS_1to3_switch=ip/gAXIS_1to3_switch/gAXIS_1to3_switch.v
     gAXIM_5to1_switch=ip/gAXIM_5to1_switch/gAXIM_5to1_switch.v
     gSDHC=ip/gSDHC/gSDHC.v
     tseCore=rtl/tseCore.v
@@ -55,7 +57,7 @@ run_top() {
     (cd "$proj" && python3 sim/amp/make_stubs.py . sim/amp/top_stubs.v "${STUBS[@]}") || return 1
     (cd "$proj" && iverilog -g2012 -Wimplicit -Wportbind -I . -s ti375_oob_top -o sim/amp/top_elab.vvp \
         ti375_oob_top.v sim/amp/top_stubs.v rtl/snpu_apb_cdc.v \
-        rtl/amp_ctrl.v rtl/axi_addr_split.v rtl/axi_err_slave.v) > "$log" 2>&1
+        rtl/amp_ctrl.v rtl/axi_addr_split.v rtl/axi_err_slave.v rtl/axi_reg_slice.v) > "$log" 2>&1
     local rc=$?
     n=$(grep -ci "implicit" "$log")
     if [ $rc -ne 0 ]; then
@@ -66,7 +68,7 @@ run_top() {
     echo "top: elaborates, no implicit nets ($(grep -ci warning "$log") pre-existing width warnings, see $log)"
 }
 
-tbs=${1:-amp_ctrl axi_addr_split axi_err_slave top}
+tbs=${1:-amp_ctrl axi_addr_split axi_err_slave axi_reg_slice top}
 failed=0
 for tb in $tbs; do
     if [ "$tb" = top ]; then run_top || failed=1; else run "$tb" || failed=1; fi

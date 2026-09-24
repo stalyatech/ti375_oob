@@ -11,6 +11,7 @@
         <efx:design_file name="rtl/design_modules.v" version="default" library="default" />
         <efx:design_file name="rtl/pulse_sync.v" version="default" library="default" />
         <efx:design_file name="rtl/snpu_apb_cdc.v" version="default" library="default" />
+        <efx:design_file name="rtl/axi_reg_slice.v" version="default" library="default" />
         <efx:design_file name="rtl/amp_ctrl.v" version="default" library="default" />
         <efx:design_file name="rtl/axi_addr_split.v" version="default" library="default" />
         <efx:design_file name="rtl/axi_err_slave.v" version="default" library="default" />
@@ -139,7 +140,7 @@
     <efx:place_and_route tool_name="efx_pnr">
         <efx:param name="work_dir" value="work_pnr" value_type="e_string" />
         <efx:param name="verbose" value="off" value_type="e_bool" />
-        <efx:param name="seed" value="6" value_type="e_integer" />
+        <efx:param name="seed" value="2" value_type="e_integer" />
         <efx:param name="placer_effort_level" value="3" value_type="e_option" />
         <efx:param name="max_threads" value="-1" value_type="e_integer" />
         <efx:param name="beneficial_skew" value="on" value_type="e_option" />

@@ -150,3 +150,11 @@
 - Güncellenen sayfalar: [[stalyanpu-patent-disclosure]], index
 - Kaynak dosyalar: `ip/stalyanpu/docs/patent/stalyanpu-technical-disclosure.docx`, `figures/fig01, fig02, fig08, fig12` (güncellendi), `figures/fig13-cnn-primer` (yeni, renkli)
 - İçerik: çoklu örnek sistemi (6.1, 6.15, 7.6), tablo tabanlı epilog (6.7), sabit DSP maliyeti 174 → 74, buluş grubu E, Ek A
+
+## [2026-09-24] ingest | StalyaVPU karar kaydı
+- Oluşturulan sayfalar: [[stalyavpu-decision-record]], [[stalyavpu]]
+- Güncellenen sayfalar: [[overview]] (11. madde, açık sorular), [[stalyanpu]], [[lpddr4x-controller]], [[gsdhc]], [[multi-instance-npu]], [[axi-interconnect-topology]] (güncel yuva dağılımı), [[shared-dram-arbitration]] (codec yükü), index
+- Kaynak dosyalar: `ip/stalyavpu/docs/decision-record.md`, `architecture.md`, `performance-targets.md`
+- Eski iddia düzeltildi: [[axi-interconnect-topology]] ve [[shared-dram-arbitration]] yuva 4'ü boş `MCODEC` olarak anlatıyordu; HEAD'de `MEMMC` (eMMC), `MDNN` npu1
+- Ölçüm: 2026-09-24 build'i RAM10 2305/2688, DSP48 813/1344, XLR 220 760/362 880; npu0 `p_max` 512 + `ibuf` 256 KB model 24,9 fps
+- Test seti: 11 üretilmiş akış (1080p 7,3/18,3/38,8 Mbps), conformance 98/176 akış kapsamda (interlaced 66, FMO 4, Extended 6, monokrom 2 dışarıda); [[stalyavpu]] durum satırı

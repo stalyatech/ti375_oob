@@ -6,3 +6,7 @@
 	path = ip/stalyanpu
 	url = https://github.com/stalyatech/StalyaNPU.git
 	branch = main
+[submodule "ip/stalyavpu"]
+	path = ip/stalyavpu
+	url = https://github.com/stalyatech/StalyaVPU.git
+	branch = main

@@ -69,6 +69,14 @@ sayfalarına ayrıştırılmıştır.
    açılamaz: sert SoC DDR_0'ın AXI hedef 1'ini kullanır ([[efx-sapphire-hpsoc-slb]]). 16×8
    karesi [[analytic-performance-model]]'e dördüncü çapa olarak eklendi (model 6,86, ölçüm 6,87 fps).
 
+## Video codec hattı (2026-09)
+
+11. **StalyaVPU (2026-09-24).** H.264/H.265 codec IP'si [[stalyavpu]] `ip/stalyavpu`
+   submodule'ü olarak başladı. İlk blok 1080p30 H.264 decoder (stateless: slice header ve DPB
+   yazılımda, slice verisi donanımda), sonra aynı boru hattına HEVC decoder, en son encoder.
+   Kaynak ölçümü codec'i sınırlayanın DSP48 değil RAM10 olduğunu gösterdi; npu0 tamponları
+   küçültülür (yaklaşık 461 RAM10, model 25,1 → 24,9 fps) ([[stalyavpu-decision-record]]).
+
 ## Gelişen sonuçlar
 
 - Uçuş-kritik yazılım [[efx-sapphire-fcu]] üzerinde yoğunlaşır; [[efx-sapphire-hpsoc-slb]] bir
@@ -83,8 +91,11 @@ sayfalarına ayrıştırılmıştır.
 > elaboration log ile doğrulanmalıdır.
 
 - `MAC_SOURCE_ADDRESS` ve statik IP henüz sağlanmamıştır (placeholder).
-- StalyaNPU karışım önerisinin en yüksek fps'li iki örnekli sonucu ve `MDNN` ile `MCODEC`'in
-  bant genişliğini bölüştüğü yapılandırma board'da ölçülmedi ([[multi-instance-npu]]).
+- StalyaNPU karışım önerisinin en yüksek fps'li iki örnekli sonucu board'da ölçülmedi
+  ([[multi-instance-npu]]). `MCODEC` yuvası artık eMMC'de (`MEMMC`); codec 6:1 switch ile
+  yuva 5'e gidecek, npu1 ile paylaşımlı yol üzerindeki eşzamanlı yük ölçülmedi ([[stalyavpu]]).
+- StalyaVPU: H.264 + HEVC decoder'ın kullanılabilir XLR'a sığıp sığmadığı HEVC aşamasından
+  önce ölçülecek; encoder için ek NPU küçültmesi veya ayrı bitstream varyantı gerekebilir.
 - `rtl/` altındaki tutkal RTL dosyaları ve `gAXIS_1to3_switch` henüz üst modüle bağlanmamıştır.
 - FMU için kanonik NuttX boot varyantı (`hp`/`x2`/`x3`) netleştirilmelidir.
 - NPU CSR yolunun belgelerdeki iki hali (yumuşak SoC M7, sert SoC M8): HEAD sert SoC;

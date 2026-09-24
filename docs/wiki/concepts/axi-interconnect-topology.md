@@ -2,7 +2,7 @@
 title: "AXI Ara-Bağlantı Topolojisi"
 type: concept
 created: 2026-07-03
-updated: 2026-09-15
+updated: 2026-09-24
 source_count: 6
 tags: [axi, interconnect, concept, rtl, axi-target0]
 ---
@@ -24,7 +24,7 @@ Port index'leri `ti375_oob_top.v:246-253`'teki localparam'larla sabittir.
 
 ### Genişletme: 5'e 1 veri düzlemi anahtarı (2026-08)
 `gAXIM_3to1_switch` yerini `gAXIM_5to1_switch`'e bıraktı (`ti375_oob_top.v` HEAD): yuvalar
-`MTSE=0, MSDHC=1, MFCU=2, MDNN=3, MCODEC=4` (codec yuvası boşta). `MDNN` önce
+`MTSE=0, MSDHC=1, MFCU=2, MDNN=3, MCODEC=4` (codec yuvası o tarihte boştaydı). `MDNN` önce
 [[gdma-dnn]]/[[openeye]], sonra M7 ve M8'de [[stalyanpu]] tarafından kullanıldı; 128-bit,
 `io_ddrMasters_0_clk`. Anahtar AXI ID taşımaz; `snpu_rd_dma` yanıtları ihraç sırasıyla
 eşler. Yukarıdaki 3'e 1 anlatımı `docs/help` kaynaklarının tarihindeki durumdur.
@@ -38,6 +38,14 @@ bağımsız DDR yolu vardır: anahtar üzerinden sert SoC köprüsü (`io_ddrMas
 gDMA, SDHC) ve doğrudan denetleyici portu (NPU). Kontrol düzlemi değişmedi; NPU CSR'ı sert
 SoC AXI-A → `io_apbSlave_0` yolundan sürülür ([[accelerator-control-plane-apb]]). Port
 pinlerinin zamanlama kısıtları için bkz. [[ddr-port-pin-constraints]].
+
+### Güncel yuva dağılımı ve codec (2026-09-24)
+Yukarıdaki "yuva boşta" ifadeleri eskidi. HEAD'de `MDNN=3` ikinci NPU örneğini (npu1, 16x8,
+`axi_reg_slice` arkasında) taşır ([[multi-instance-npu]]); `MCODEC` adı kalktı, yuva 4
+`MEMMC` olarak eMMC [[gsdhc]] DMA'sına verildi (`ti375_oob_top.v:317, 1706-1708`). Böylece
+anahtarda boş yuva kalmadı. Video codec [[stalyavpu]] için anahtar 6:1 olarak yeniden
+üretilecek ve codec yuva 5'i (`MVPU`, 128-bit, `vpu_clk` 160 MHz'ten asenkron köprüyle)
+kullanacak ([[stalyavpu-decision-record]]).
 
 ## Örnekler
 - Kontrol: FCU'nun `sp_m_axis_awaddr[24:0]` üzerinden MAC reset CSR'lerini (`0x080..0x083`) yazması.

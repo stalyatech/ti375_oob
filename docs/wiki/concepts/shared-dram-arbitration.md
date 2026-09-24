@@ -2,7 +2,7 @@
 title: "Paylaşımlı DRAM Arbitrasyonu"
 type: concept
 created: 2026-07-03
-updated: 2026-09-15
+updated: 2026-09-24
 source_count: 6
 tags: [dram, axi, arbitration, concept, m9]
 ---
@@ -39,6 +39,13 @@ dedicated 512-bit `axi_target0` portuna [[snpu-axi-up512]] genişleticisiyle ba�
 `MDNN` yuvası boşta kaldı (bağlantı `ti375_oob_top.v` HEAD'de). Paylaşımlı anahtar
 artık yalnız FCU, gDMA ve SDHC trafiğini serileştirir; NPU trafiği bu arbitrasyonun
 dışındadır. Sonuç 5,69 M çevrim, 43,9 fps, MAC %85.
+
+### Güncel durum ve codec yükü (2026-09-24)
+Paylaşımlı anahtar HEAD'de beş master taşır: gDMA, SD, FCU, npu1 (`MDNN`) ve eMMC (`MEMMC`,
+codec için ayrılan eski yuva). Video codec [[stalyavpu]] altıncı master olarak eklenecek;
+1080p30 IPB çözmede tahmini yükü 500 MB/s altında (çıkış yazma 94, MC okuma 190-380 MB/s).
+Bu yol sert SoC önbellekleriyle tutarlı olduğu için Linux sürücüsü açısından da tercih edildi
+([[stalyavpu-decision-record]]).
 
 ## Örnekler
 - FCU DDR penceresi `0x0000_1000` tabanında; DMA `MTSE` portu üzerinden Ethernet çerçevelerini aynı belleğe yazar.

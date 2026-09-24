@@ -3,7 +3,7 @@ title: "StalyaNPU"
 type: entity
 category: product
 created: 2026-09-15
-updated: 2026-09-16
+updated: 2026-09-24
 source_count: 10
 tags: [stalyanpu, npu, dnn, accelerator, int8, dsp48, rtl]
 ---
@@ -126,4 +126,5 @@ kontrol satırı hâlâ eski yolu anlatır; bu tablolar **eskidir**, güncel kay
 - [[efinity-toolchain]]: sentez ve programlama aracı
 - [[stalyanpu-patent-disclosure]]: patent başvurusu için teknik açıklama belgesi ve çizimler
 - [[multi-instance-npu]]: aynı FPGA'da farklı geometrilerde birden çok örnek
+- [[stalyavpu]]: aynı FPGA'daki video codec; npu0 tamponları onun için küçültülür, decoder çıkışı NPU girdisi olabilir
 - Kavramlar: [[dsp-chain-systolic-array]], [[descriptor-isa]], [[int8-quantization-flow]], [[analytic-performance-model]], [[fpga-timing-closure]], [[ddr-port-pin-constraints]], [[board-bringup-flow]], [[shared-dram-arbitration]], [[axi-interconnect-topology]], [[dual-soc-architecture]]

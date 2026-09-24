@@ -3,7 +3,7 @@ title: "gSDHC — SD-Host Denetleyicisi"
 type: entity
 category: product
 created: 2026-07-03
-updated: 2026-07-03
+updated: 2026-09-24
 source_count: 2
 tags: [sd, storage, ip, axi]
 ---
@@ -33,3 +33,4 @@ Yazılım tarafında `efx_mmc_driver` ve FatFs/FreeRTOS+FAT ile kullanılır.
 - [[gdma]]: yazım hatasının çapraz bağladığı port
 - [[lpddr4x-controller]]: `MSDHC` üzerinden yazdığı DRAM
 - [[efx-sapphire-fcu]]: CSR master'ı ve sürücü sahibi
+- [[stalyavpu]]: eMMC örneğinin kullandığı `MEMMC` (yuva 4) codec için ayrılmıştı; codec 6:1 switch'in yuva 5'ine gider

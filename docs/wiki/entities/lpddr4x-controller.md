@@ -3,7 +3,7 @@ title: "LPDDR4x DRAM Denetleyicisi"
 type: entity
 category: product
 created: 2026-07-03
-updated: 2026-09-15
+updated: 2026-09-24
 source_count: 5
 tags: [dram, lpddr4x, memory, axi, axi-target0]
 ---
@@ -52,3 +52,4 @@ bu tek belleği paylaşır ([[shared-dram-arbitration]]). FCU bellek haritasınd
 - [[analytic-performance-model]]: DDR bant genişliği varsayımı ve dedicated port sonrası düzeltmesi
 - [[dnn-accelerator-options]]: veri yolu karşılaştırması
 - [[gdma-dnn]]: eskiden `MDNN` yuvasından erişen DMA
+- [[stalyavpu]]: paylaşımlı switch'e eklenecek yuva 5'ten (`MVPU`, 6:1 switch) erişecek video codec

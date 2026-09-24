@@ -1,9 +1,9 @@
 # Wiki Dizini
 
-Son güncelleme: 2026-09-16
+Son güncelleme: 2026-09-24
 
 Bu wiki, `docs/help/` FMU mimari yardım sayfalarının, `docs/dnn-integration/` OpenEye
-entegrasyon notlarının ve `ip/stalyanpu/docs/` StalyaNPU belgelerinin [[overview|genel bakış]],
+entegrasyon notlarının `ip/stalyanpu/docs/` StalyaNPU ve `ip/stalyavpu/docs/` StalyaVPU belgelerinin [[overview|genel bakış]],
 kaynak, varlık, kavram ve karşılaştırma sayfalarına ayrıştırılmış halidir. Şema: kök
 `CLAUDE.md`.
 
@@ -27,6 +27,7 @@ kaynak, varlık, kavram ve karşılaştırma sayfalarına ayrıştırılmış ha
 - [[stalyanpu-accuracy-report]] — INT8 PTQ kalibrasyon taraması, COCO mAP 44,86 → 44,07 (volvox, 2026-08-28) [stalyanpu, quantization, coco]
 - [[stalyanpu-perf-plan]] — 24,6 → 30 fps planı ve sonucu: çift tampon, A2, zamanlama, dedicated DDR portu ile 43,9 fps; L0 modu marj işi (volvox, 2026-09-15) [stalyanpu, performance, plan]
 - [[stalyanpu-ip-generator]] — Yerel web arayüzü (Design, Models, FPGA, Board adımları; tek hızlandırıcı bir örnekli tasarım), `ipgen` ve `project`: örnek başına fps ve kaynak kestirimi, model hazırlama, IP paketi, Efinity projesine bağlama ve yeniden sentez bildirimi, board adımları (volvox, 2026-09-16) [stalyanpu, gui, ip-generator]
+- [[stalyavpu-decision-record]] — StalyaVPU kararı: 1080p30 H.264 decoder önce, RAM10 darboğazı, npu0 tampon küçültmesi, stateless bölüm, 160 MHz saat, 6:1 switch (volvox, 2026-09-24) [stalyavpu, codec, decision]
 
 ## Varlıklar
 - [[ti375c529]] — Efinix Titanium FPGA (product) [source_count: 5]
@@ -49,6 +50,7 @@ kaynak, varlık, kavram ve karşılaştırma sayfalarına ayrıştırılmış ha
 - [[stalyanpu-toolchain]] — py/stalyanpu: lowering, nicemleme, altın model, perf modeli, board araçları, web arayüzü ve `ipgen` (product) [source_count: 7]
 - [[ti375-devkit]] — Titanium Ti375C529 Development Kit, FT4232H JTAG/UART, bring-up board'u (product) [source_count: 2]
 - [[snpu-axi-up512]] — 256→512 bit AXI genişletici, NPU ile LPDDR4x `axi_target0` portu arasında (product) [source_count: 3]
+- [[stalyavpu]] — H.264/H.265 video codec IP'si, önce 1080p30 H.264 decoder; `ip/stalyavpu` submodule (product) [source_count: 1]
 
 ## Kavramlar
 - [[flight-management-unit]] — Uçuş Yönetim Birimi rolü [source_count: 3]

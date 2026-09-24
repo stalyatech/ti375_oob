@@ -23,6 +23,8 @@ __pycache__/
 sim/openeye/sim_build*/
 # StalyaNPU
 .venv-stalyanpu/
+# StalyaVPU
+.venv-stalyavpu/
 .pytest_cache/
 .data/
 # Build record the ip generator writes next to the geometry header. It

@@ -2,7 +2,7 @@
 title: "Bir FPGA'da Birden Çok StalyaNPU"
 type: concept
 created: 2026-09-16
-updated: 2026-09-16
+updated: 2026-09-24
 source_count: 1
 tags: [stalyanpu, multi-instance, system, gui, drc, csr, plic, ddr]
 ---
@@ -104,6 +104,7 @@ CSR yalıtımı, tek tek koşum, birlikte koşum ve örnek başına fps, kendi P
 - [[shared-dram-arbitration]]: paylaşımlı yuvaların bant genişliği
 - [[analytic-performance-model]]: örnek başına fps ve kaynak toplamı
 - [[board-bringup-flow]]: tek hızlandırıcılı T1..T5 testlerinin sistem karşılığı S1..S6
+- [[stalyavpu]]: codec'e RAM10 açmak için npu0 tamponları küçültülür (`p_max` 512, `ibuf` 256 KB); platform JSON'undaki `MCODEC` yuvası top ile uyumsuz, entegrasyonda düzeltilecek
 - Varlıklar: [[stalyanpu]], [[snpu-axi-up512]], [[lpddr4x-controller]], [[stalyanpu-toolchain]]
 
 ## Kaynaklar

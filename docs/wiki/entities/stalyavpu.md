@@ -35,6 +35,12 @@ Ti375 için tasarlanan H.264/H.265 video codec IP'si. `ip/stalyavpu` submodule'�
   11 akışlık üretilmiş test seti (`python -m stalyavpu streams`, ffmpeg 9.0.2 + libx264) ve
   ITU-T H.264.1 conformance seçimi (`python -m stalyavpu conformance`: 176 akıştan 98'i
   kapsamda, 13 996 kare; ölçekleme matrisi, I_PCM ve constrained intra gerektiriyor).
+- **V1 (2026-09-24):** Python referans modeli (`py/stalyavpu/h264/`): yazılım tarafı (parametre
+  setleri, POC, DPB, referans listeleri, MMCO, descriptor) ve decoder tarafı (CAVLC, CABAC, MV
+  tahmini, intra/inter, ağırlıklı tahmin, dönüşüm, deblocking). Conformance 98/98 ve üretilmiş
+  küçük akışlar ffmpeg ile bit bit aynı. Descriptor ikili düzeni ve C başlığı hazır; model her
+  resmi bu ikili biçimden çözer. Perf modeli 1080p'de 20 Mbps için ortalama 213 çevrim/MB
+  (92 fps), 40 Mbps için 344 (57 fps) tahmin ediyor; sınırlayıcı aşama I resimlerinde CABAC.
 
 > ❓ **Belirsiz:** `amp_ctrl`'ün APB adres aralığının `0xE810_C000` penceresine taşmadığı
 > entegrasyon adımında (V5) doğrulanacak. Linux `no-map` bölgesinin adresi V6'da DTS ile

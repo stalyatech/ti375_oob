@@ -158,3 +158,9 @@
 - Eski iddia düzeltildi: [[axi-interconnect-topology]] ve [[shared-dram-arbitration]] yuva 4'ü boş `MCODEC` olarak anlatıyordu; HEAD'de `MEMMC` (eMMC), `MDNN` npu1
 - Ölçüm: 2026-09-24 build'i RAM10 2305/2688, DSP48 813/1344, XLR 220 760/362 880; npu0 `p_max` 512 + `ibuf` 256 KB model 24,9 fps
 - Test seti: 11 üretilmiş akış (1080p 7,3/18,3/38,8 Mbps), conformance 98/176 akış kapsamda (interlaced 66, FMO 4, Extended 6, monokrom 2 dışarıda); [[stalyavpu]] durum satırı
+
+## [2026-09-24] update | StalyaVPU V1: H.264 referans modeli
+- Güncellenen sayfalar: [[stalyavpu]] (V1 durumu)
+- Kaynak dosyalar: `ip/stalyavpu/docs/architecture.md` (descriptor, referans model), `performance-targets.md` (model tahmini), `verification-guide.md`
+- Ölçüm: conformance 98/98 bit bit (13 996 kare), üretilmiş küçük akışlar 8/8; perf modeli 1080p 20 Mbps ortalama 213 çevrim/MB, 40 Mbps 344, I resminde 846 (CABAC sınırlı)
+- Bulgu: FFmpeg'in 4x4 normAdjust tablosunun sütun sırası standarttan farklı (çift-çift, karışık, tek-tek); ilk uyumsuzluğun kaynağı buydu

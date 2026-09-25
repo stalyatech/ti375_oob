@@ -164,3 +164,9 @@
 - Kaynak dosyalar: `ip/stalyavpu/docs/architecture.md` (descriptor, referans model), `performance-targets.md` (model tahmini), `verification-guide.md`
 - Ölçüm: conformance 98/98 bit bit (13 996 kare), üretilmiş küçük akışlar 8/8; perf modeli 1080p 20 Mbps ortalama 213 çevrim/MB, 40 Mbps 344, I resminde 846 (CABAC sınırlı)
 - Bulgu: FFmpeg'in 4x4 normAdjust tablosunun sütun sırası standarttan farklı (çift-çift, karışık, tek-tek); ilk uyumsuzluğun kaynağı buydu
+
+## [2026-09-25] update | StalyaVPU V2: RTL ön uç
+- Güncellenen sayfalar: [[stalyavpu]] (V2 durumu)
+- Kaynak dosyalar: `ip/stalyavpu/docs/frontend.md`
+- Ölçüm: tb_bsr, tb_cabac (1 014 826 bin), tb_cavlc (35 338 blok), tb_syn (52 slice, 9306 MB), tb_top (12 resim) modelle aynı; sentez 166,9 MHz, 18,9k XLR, 25 RAM10, 1 DSP
+- Bulgu: Efinity 2025.2 eşleyicisi küçük dizilere kısmen değişken adresli yazımda çöküyor; diziler düz vektöre çevrildi

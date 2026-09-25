@@ -3,7 +3,7 @@ title: "StalyaVPU"
 type: entity
 category: product
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 source_count: 1
 tags: [stalyavpu, vpu, codec, h264, hevc, video, rtl]
 ---
@@ -31,7 +31,7 @@ Ti375 için tasarlanan H.264/H.265 video codec IP'si. `ip/stalyavpu` submodule'�
   DSP48 ≤ 96.
 - **Kaynak dengesi:** DSP48 bol, RAM10 ve XLR kıt; sabit katsayılı çarpımlar DSP48'e eşlenir.
   Yer açmak için npu0 tamponları küçültülür ([[stalyavpu-decision-record]]).
-- **Durum (2026-09-24):** V0 tamam, commit bekliyor. Submodule iskeleti, belgeler (`docs/`),
+- **Durum (2026-09-24):** V0 tamam. Submodule iskeleti, belgeler (`docs/`),
   11 akışlık üretilmiş test seti (`python -m stalyavpu streams`, ffmpeg 9.0.2 + libx264) ve
   ITU-T H.264.1 conformance seçimi (`python -m stalyavpu conformance`: 176 akıştan 98'i
   kapsamda, 13 996 kare; ölçekleme matrisi, I_PCM ve constrained intra gerektiriyor).
@@ -41,6 +41,11 @@ Ti375 için tasarlanan H.264/H.265 video codec IP'si. `ip/stalyavpu` submodule'�
   küçük akışlar ffmpeg ile bit bit aynı. Descriptor ikili düzeni ve C başlığı hazır; model her
   resmi bu ikili biçimden çözer. Perf modeli 1080p'de 20 Mbps için ortalama 213 çevrim/MB
   (92 fps), 40 Mbps için 344 (57 fps) tahmin ediyor; sınırlayıcı aşama I resimlerinde CABAC.
+- **V2 (2026-09-25):** RTL ön uç (`svpu_bsr`, `svpu_cabac`, `svpu_cabac_se`, `svpu_cabac_res`,
+  `svpu_cavlc`, `svpu_h264_syn`, `svpu_h264_fe`, `svpu_rd_dma`, `svpu_seq`, `svpu_csr`, `svpu_top`).
+  Descriptor'ı DDR'dan okuyup MB komut akışını üretiyor; iverilog'da gerçek akışlarda modelle
+  birebir (I, P, B, CAVLC, CABAC, PCM, 8x8, çoklu slice). Tek başına sentez 166,9 MHz, 18,9k
+  XLR, 25 RAM10, 1 DSP; ayrıntı `docs/frontend.md`.
 
 > ❓ **Belirsiz:** `amp_ctrl`'ün APB adres aralığının `0xE810_C000` penceresine taşmadığı
 > entegrasyon adımında (V5) doğrulanacak. Linux `no-map` bölgesinin adresi V6'da DTS ile

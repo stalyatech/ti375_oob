@@ -1,4 +1,4 @@
-<efx:project xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="ti375_oob" description="" last_change="1789627159" sw_version="2026.1.132" last_run_state="pass" last_run_flow="bitstream" config_result_in_sync="sync" design_ood="sync" place_ood="sync" route_ood="sync" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
+<efx:project xmlns:efx="http://www.efinixinc.com/enf_proj" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="ti375_oob" description="" last_change="1790855121" sw_version="2025.2.288" last_run_state="pass" last_run_flow="bitstream" config_result_in_sync="sync" design_ood="sync" place_ood="sync" route_ood="sync" xsi:schemaLocation="http://www.efinixinc.com/enf_proj enf_proj.xsd">
     <efx:device_info>
         <efx:family name="Titanium" />
         <efx:device name="Ti375C529" />
@@ -36,7 +36,31 @@
         <efx:design_file name="ip/stalyanpu/rtl/snpu_top.v" version="default" library="default" />
         <efx:design_file name="ip/stalyanpu/rtl/snpu_axi_up512.v" version="default" library="default" />
         <efx:design_file name="rtl/openeye_axilite_adapter.v" version="default" library="default" />
-        <efx:design_file name="rtl/codec_h26x_stub.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_afifo.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_axi_cdc.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_bsr.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_cabac.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_cabac_se.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_cabac_res.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_cavlc.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_h264_syn.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_h264_fe.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_rd_dma.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_wr_dma.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_csr.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_seq.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_iq_it.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_intra.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_mvp.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_be_ctx.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_rd_arb.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_mc.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_mc_luma.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_mc_chroma.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_be_mb.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_dbk.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_out_wr.v" version="default" library="default" />
+        <efx:design_file name="ip/stalyavpu/rtl/svpu_top.v" version="default" library="default" />
         <efx:design_file name="ip/stalyanpu/rtl/snpu_apb_demux.v" version="default" library="default" />
         <efx:top_vhdl_arch name="" />
     </efx:design_info>
@@ -78,8 +102,8 @@
         <efx:ip instance_name="gAXIS_1to3_switch" path="ip/gAXIS_1to3_switch/settings.json" ooc="false">
             <efx:ip_src_file name="gAXIS_1to3_switch.v" />
         </efx:ip>
-        <efx:ip instance_name="gAXIM_5to1_switch" path="ip/gAXIM_5to1_switch/settings.json" ooc="false">
-            <efx:ip_src_file name="gAXIM_5to1_switch.v" />
+        <efx:ip instance_name="gAXIM_6to1_switch" path="ip/gAXIM_6to1_switch/settings.json" ooc="false">
+            <efx:ip_src_file name="gAXIM_6to1_switch.v" />
         </efx:ip>
     </efx:ip_info>
     <efx:synthesis tool_name="efx_map">
@@ -135,12 +159,14 @@
         <efx:param name="include" value="ip/EfxSapphireFCU" value_type="e_string" />
         <efx:param name="include" value="ip/gAXIM_3to1_switch" value_type="e_string" />
         <efx:param name="include" value="ip/gAXIS_1to3_switch" value_type="e_string" />
-        <efx:param name="include" value="ip/gAXIM_5to1_switch" value_type="e_string" />
+        <efx:param name="include" value="ip/gAXIM_6to1_switch" value_type="e_string" />
+        <efx:param name="include" value="ip/stalyavpu/rtl" value_type="e_string" />
     </efx:synthesis>
     <efx:place_and_route tool_name="efx_pnr">
         <efx:param name="work_dir" value="work_pnr" value_type="e_string" />
         <efx:param name="verbose" value="off" value_type="e_bool" />
-        <efx:param name="seed" value="2" value_type="e_integer" />
+        <efx:param name="seed" value="5" value_type="e_integer" />
+        <efx:param name="optimization_level" value="TIMING_2" value_type="e_option" />
         <efx:param name="placer_effort_level" value="3" value_type="e_option" />
         <efx:param name="max_threads" value="-1" value_type="e_integer" />
         <efx:param name="beneficial_skew" value="on" value_type="e_option" />

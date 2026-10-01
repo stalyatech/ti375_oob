@@ -249,7 +249,7 @@ output          cfg_start,
 output          cfg_sel,
 output          cfg_reset,
 input		    io_peripheralClk,
-input           io_dnnClk,          // ~100 MHz PLL output for the OpenEye DNN core (timing)
+input           io_vpuClk,          // 160 MHz PLL output, StalyaVPU decoder clock
 input           io_peripheralReset,
 output          io_asyncReset,
 input           io_gpio_sw_n, 
@@ -314,8 +314,9 @@ localparam MTSE		= 0;
 localparam MSDHC	= 1;
 localparam MFCU		= 2;
 localparam MDNN		= 3;	// StalyaNPU accelerator -> DDR
-localparam MEMMC	= 4;	// eMMC DMA -> DDR (the slot held for the codec)
-localparam AXIM_DEV	= 5;
+localparam MEMMC	= 4;	// eMMC DMA -> DDR
+localparam MVPU		= 5;	// StalyaVPU decoder -> DDR
+localparam AXIM_DEV	= 6;
 
 ////////////////////////////////////////////////////////////////////////////
 // Switch between the hard SoC -> SDHC, TSEMAC (fed by u_hs_axi_split)
@@ -812,9 +813,10 @@ gAXIS_1to3_switch u_AXIS_1to3_switch
 );
 
 //-------------------------------------------------------------------
-// TSEMAC, SP SoC, SDHC can access to the DDRAM using AXI interconnect
+// TSEMAC, SP SoC, SDHC, StalyaNPU npu1, eMMC and StalyaVPU reach the
+// DDR through the AXI interconnect, six ports to one.
 //-------------------------------------------------------------------
-gAXIM_5to1_switch u_AXIM_5to1_switch
+gAXIM_6to1_switch u_AXIM_6to1_switch
 (
     .rst_n              ( ~io_ddrMasters_0_reset ),
     .clk                ( io_ddrMasters_0_clk ),
@@ -1703,9 +1705,8 @@ assign m_axis_awqos   [MDNN*4 +: 4] = 4'b0;
 assign m_axis_awregion[MDNN*4 +: 4] = 4'b0;
 assign m_axis_awprot  [MDNN*4 +: 4] = 4'b0;
 
-// The DDR master slot held for the H.264/H.265 codec (codec_h26x_stub
-// interface) carries the eMMC controller's DMA until that core exists; the
-// codec then needs a sixth port on the DDR switch.
+// The DDR master slot once held for the codec carries the eMMC controller's
+// DMA; the decoder (StalyaVPU) has the sixth port of the switch, MVPU.
 
 // The level interrupt crosses into the peripheral clock with two flops
 // before it enters the hard SoC PLIC (interrupt id 9). The CPU clears it
@@ -1735,15 +1736,196 @@ assign userInterruptJ = npu_npu1_irq_sync[1];
 // <<< stalyanpu:generated region=npu
 
 //-------------------------------------------------------------------
-// Hard SoC APB window, 0xE810_0000, split three ways by PADDR[15:14]:
+// Hard SoC APB window, 0xE810_0000, split four ways by PADDR[15:14]:
 //   00  0xE810_0000  gDMA control port
 //   01  0xE810_4000  StalyaNPU CSRs (the generated region above)
-//   1x  0xE810_8000  amp_ctrl, host port
+//   10  0xE810_8000  amp_ctrl, host port
+//   11  0xE810_C000  StalyaVPU registers
 // The generated NPU region keeps its own view of the window; it only gets
 // PSEL for its quarter, and its answers are only used there.
 //-------------------------------------------------------------------
 wire hp_apb_npu = (hp_apb_PADDR[15:14] == 2'b01);
-wire hp_apb_amp =  hp_apb_PADDR[15];
+wire hp_apb_amp = (hp_apb_PADDR[15:14] == 2'b10);
+wire hp_apb_vpu = (hp_apb_PADDR[15:14] == 2'b11);
+
+//-------------------------------------------------------------------
+// StalyaVPU, the H.264 decoder (ip/stalyavpu). The core runs in
+// io_vpuClk (160 MHz). Its registers sit in the last quarter of the hard
+// SoC APB window, 0xE810_C000, behind an APB clock crossing. Its AXI
+// master reaches the DDR switch slot MVPU through svpu_axi_cdc. The done
+// and error interrupt goes to userInterruptC (PLIC 3).
+//-------------------------------------------------------------------
+wire [31:0] vpu_h_prdata;
+wire        vpu_h_pready;
+wire        vpu_h_pslverr;
+
+// Resets of the two sides of the decoder, both from the DDR master reset.
+reg [1:0] vpu_rst_q;
+always @(posedge io_vpuClk)
+    vpu_rst_q <= {vpu_rst_q[0], io_ddrMasters_0_reset};
+wire vpu_rst = vpu_rst_q[1];
+
+reg [1:0] vpu_mrst_q;
+always @(posedge io_ddrMasters_0_clk)
+    vpu_mrst_q <= {vpu_mrst_q[0], io_ddrMasters_0_reset};
+wire vpu_mrst = vpu_mrst_q[1];
+
+wire [7:0]   vpu_paddr;
+wire         vpu_psel, vpu_penable, vpu_pwrite;
+wire [31:0]  vpu_pwdata, vpu_prdata;
+wire         vpu_pready, vpu_pslverr;
+wire         vpu_irq;
+
+snpu_apb_cdc #(
+    .AW        ( 8 )
+) u_vpu_apb_cdc (
+    .s_clk     ( io_peripheralClk ),
+    .s_rst     ( io_peripheralReset ),
+    .s_paddr   ( hp_apb_PADDR[7:0] ),
+    .s_psel    ( hp_apb_PSEL & hp_apb_vpu ),
+    .s_penable ( hp_apb_PENABLE ),
+    .s_pwrite  ( hp_apb_PWRITE ),
+    .s_pwdata  ( hp_apb_PWDATA ),
+    .s_prdata  ( vpu_h_prdata ),
+    .s_pready  ( vpu_h_pready ),
+    .s_pslverr ( vpu_h_pslverr ),
+    .d_clk     ( io_vpuClk ),
+    .d_rst     ( vpu_rst ),
+    .d_paddr   ( vpu_paddr ),
+    .d_psel    ( vpu_psel ),
+    .d_penable ( vpu_penable ),
+    .d_pwrite  ( vpu_pwrite ),
+    .d_pwdata  ( vpu_pwdata ),
+    .d_prdata  ( vpu_prdata ),
+    .d_pready  ( vpu_pready ),
+    .d_pslverr ( vpu_pslverr )
+);
+
+wire [31:0]  vpu_araddr, vpu_awaddr;
+wire [7:0]   vpu_arlen, vpu_awlen;
+wire         vpu_arvalid, vpu_arready, vpu_rvalid, vpu_rlast, vpu_rready;
+wire         vpu_awvalid, vpu_awready, vpu_wlast, vpu_wvalid, vpu_wready, vpu_bvalid, vpu_bready;
+wire [127:0] vpu_rdata, vpu_wdata;
+wire [15:0]  vpu_wstrb;
+wire [1:0]   vpu_bresp;
+
+svpu_top #(
+    .MAXW      ( 128 ),
+    .INIT_FILE ( "ip/stalyavpu/rtl/svpu_cabac_init.hex" )
+) u_svpu (
+    .clk           ( io_vpuClk ),
+    .rst           ( vpu_rst ),
+    .psel          ( vpu_psel ),
+    .penable       ( vpu_penable ),
+    .pwrite        ( vpu_pwrite ),
+    .paddr         ( vpu_paddr ),
+    .pwdata        ( vpu_pwdata ),
+    .prdata        ( vpu_prdata ),
+    .pready        ( vpu_pready ),
+    .pslverr       ( vpu_pslverr ),
+    .irq           ( vpu_irq ),
+    .m_araddr      ( vpu_araddr ),
+    .m_arlen       ( vpu_arlen ),
+    .m_arsize      ( ),
+    .m_arburst     ( ),
+    .m_arvalid     ( vpu_arvalid ),
+    .m_arready     ( vpu_arready ),
+    .m_rdata       ( vpu_rdata ),
+    .m_rvalid      ( vpu_rvalid ),
+    .m_rlast       ( vpu_rlast ),
+    .m_rready      ( vpu_rready ),
+    .m_awaddr      ( vpu_awaddr ),
+    .m_awlen       ( vpu_awlen ),
+    .m_awsize      ( ),
+    .m_awburst     ( ),
+    .m_awvalid     ( vpu_awvalid ),
+    .m_awready     ( vpu_awready ),
+    .m_wdata       ( vpu_wdata ),
+    .m_wstrb       ( vpu_wstrb ),
+    .m_wlast       ( vpu_wlast ),
+    .m_wvalid      ( vpu_wvalid ),
+    .m_wready      ( vpu_wready ),
+    .m_bresp       ( vpu_bresp ),
+    .m_bvalid      ( vpu_bvalid ),
+    .m_bready      ( vpu_bready ),
+    .dbg_tok_valid ( ),
+    .dbg_tok_data  ( )
+);
+
+svpu_axi_cdc u_svpu_axi_cdc (
+    .s_clk     ( io_vpuClk ),
+    .s_rst     ( vpu_rst ),
+    .s_araddr  ( vpu_araddr ),
+    .s_arlen   ( vpu_arlen ),
+    .s_arvalid ( vpu_arvalid ),
+    .s_arready ( vpu_arready ),
+    .s_rdata   ( vpu_rdata ),
+    .s_rvalid  ( vpu_rvalid ),
+    .s_rlast   ( vpu_rlast ),
+    .s_rready  ( vpu_rready ),
+    .s_awaddr  ( vpu_awaddr ),
+    .s_awlen   ( vpu_awlen ),
+    .s_awvalid ( vpu_awvalid ),
+    .s_awready ( vpu_awready ),
+    .s_wdata   ( vpu_wdata ),
+    .s_wstrb   ( vpu_wstrb ),
+    .s_wlast   ( vpu_wlast ),
+    .s_wvalid  ( vpu_wvalid ),
+    .s_wready  ( vpu_wready ),
+    .s_bresp   ( vpu_bresp ),
+    .s_bvalid  ( vpu_bvalid ),
+    .s_bready  ( vpu_bready ),
+    .m_clk     ( io_ddrMasters_0_clk ),
+    .m_rst     ( vpu_mrst ),
+    .m_araddr  ( m_axis_araddr[MVPU*32 +: 32] ),
+    .m_arlen   ( m_axis_arlen[MVPU*8 +: 8] ),
+    .m_arsize  ( m_axis_arsize[MVPU*3 +: 3] ),
+    .m_arburst ( m_axis_arburst[MVPU*2 +: 2] ),
+    .m_arvalid ( m_axis_arvalid[MVPU*1 +: 1] ),
+    .m_arready ( m_axis_arready[MVPU*1 +: 1] ),
+    .m_rdata   ( m_axis_rdata[MVPU*128 +: 128] ),
+    .m_rvalid  ( m_axis_rvalid[MVPU*1 +: 1] ),
+    .m_rlast   ( m_axis_rlast[MVPU*1 +: 1] ),
+    .m_rready  ( m_axis_rready[MVPU*1 +: 1] ),
+    .m_awaddr  ( m_axis_awaddr[MVPU*32 +: 32] ),
+    .m_awlen   ( m_axis_awlen[MVPU*8 +: 8] ),
+    .m_awsize  ( m_axis_awsize[MVPU*3 +: 3] ),
+    .m_awburst ( m_axis_awburst[MVPU*2 +: 2] ),
+    .m_awvalid ( m_axis_awvalid[MVPU*1 +: 1] ),
+    .m_awready ( m_axis_awready[MVPU*1 +: 1] ),
+    .m_wdata   ( m_axis_wdata[MVPU*128 +: 128] ),
+    .m_wstrb   ( m_axis_wstrb[MVPU*16 +: 16] ),
+    .m_wlast   ( m_axis_wlast[MVPU*1 +: 1] ),
+    .m_wvalid  ( m_axis_wvalid[MVPU*1 +: 1] ),
+    .m_wready  ( m_axis_wready[MVPU*1 +: 1] ),
+    .m_bresp   ( m_axis_bresp[MVPU*2 +: 2] ),
+    .m_bvalid  ( m_axis_bvalid[MVPU*1 +: 1] ),
+    .m_bready  ( m_axis_bready[MVPU*1 +: 1] )
+);
+
+// Qualifiers the decoder does not drive on the MVPU slot, as on MDNN.
+assign m_axis_arlock  [MVPU*2 +: 2] = 2'b0;
+assign m_axis_arcache [MVPU*4 +: 4] = 4'b1111;
+assign m_axis_arqos   [MVPU*4 +: 4] = 4'b0;
+assign m_axis_arregion[MVPU*4 +: 4] = 4'b0;
+assign m_axis_arprot  [MVPU*4 +: 4] = 4'b0;
+assign m_axis_awlock  [MVPU*2 +: 2] = 2'b0;
+assign m_axis_awcache [MVPU*4 +: 4] = 4'b1111;
+assign m_axis_awqos   [MVPU*4 +: 4] = 4'b0;
+assign m_axis_awregion[MVPU*4 +: 4] = 4'b0;
+assign m_axis_awprot  [MVPU*4 +: 4] = 4'b0;
+
+// The level interrupt crosses into the peripheral clock with two flops
+// before it enters the hard SoC PLIC (interrupt id 3). The CPU clears it
+// through the STATUS register.
+reg [1:0] vpu_irq_sync;
+always @(posedge io_peripheralClk) begin
+    if (io_peripheralReset)
+        vpu_irq_sync <= 2'b00;
+    else
+        vpu_irq_sync <= {vpu_irq_sync[0], vpu_irq};
+end
+
 
 assign hp_apbSlave_0_PADDR   = hp_apb_PADDR;
 assign hp_apbSlave_0_PSEL    = hp_apb_PSEL & hp_apb_npu;
@@ -1751,9 +1933,9 @@ assign hp_apbSlave_0_PENABLE = hp_apb_PENABLE;
 assign hp_apbSlave_0_PWRITE  = hp_apb_PWRITE;
 assign hp_apbSlave_0_PWDATA  = hp_apb_PWDATA;
 
-assign hp_apb_PRDATA    = hp_apb_amp ? amp_h_prdata  : hp_apb_npu ? hp_apbSlave_0_PRDATA    : hp_dma_prdata;
-assign hp_apb_PREADY    = hp_apb_amp ? amp_h_pready  : hp_apb_npu ? hp_apbSlave_0_PREADY    : hp_dma_pready;
-assign hp_apb_PSLVERROR = hp_apb_amp ? amp_h_pslverr : hp_apb_npu ? hp_apbSlave_0_PSLVERROR : hp_dma_pslverr;
+assign hp_apb_PRDATA    = hp_apb_vpu ? vpu_h_prdata  : hp_apb_amp ? amp_h_prdata  : hp_apb_npu ? hp_apbSlave_0_PRDATA    : hp_dma_prdata;
+assign hp_apb_PREADY    = hp_apb_vpu ? vpu_h_pready  : hp_apb_amp ? amp_h_pready  : hp_apb_npu ? hp_apbSlave_0_PREADY    : hp_dma_pready;
+assign hp_apb_PSLVERROR = hp_apb_vpu ? vpu_h_pslverr : hp_apb_amp ? amp_h_pslverr : hp_apb_npu ? hp_apbSlave_0_PSLVERROR : hp_dma_pslverr;
 
 //-------------------------------------------------------------------
 // AMP control: the hard SoC holds, starts and signals the FCU.
@@ -1826,7 +2008,7 @@ wire hp_gpio_sw_n = io_gpio_sw_n & ~sysrst_q;
 // peripheral now has its pins on the FCU carry fabric sources or stay low.
 //   A  1  UART0, Linux console              soft logic block
 //   B  2  -
-//   C  3  -
+//   C  3  StalyaVPU, done and error
 //   D  4  SPI0, boot flash 0                soft logic block
 //   E  5  SPI1, boot flash 1                soft logic block
 //   F  6  gSDHC
@@ -1839,7 +2021,7 @@ wire hp_gpio_sw_n = io_gpio_sw_n & ~sysrst_q;
 //-------------------------------------------------------------------
 assign userInterruptA = hp_uart0_irq;
 assign userInterruptB = emmc_int;
-assign userInterruptC = 1'b0;
+assign userInterruptC = vpu_irq_sync[1];
 assign userInterruptD = hp_spi0_irq;
 assign userInterruptE = hp_spi1_irq;
 assign userInterruptK = amp_host_irq;

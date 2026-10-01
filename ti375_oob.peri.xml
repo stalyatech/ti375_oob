@@ -424,7 +424,7 @@
                 <efxpt:gen_pin/>
                 <efxpt:gen_param/>
             </efxpt:comp_output_clock>
-            <efxpt:comp_output_clock name="io_dnnClk" number="3" out_divider="40" is_dyn_phase="false" phase_setting="0" is_inverted="false" conn_type="gclk" clkmux_buf_name="">
+            <efxpt:comp_output_clock name="io_vpuClk" number="3" out_divider="25" is_dyn_phase="false" phase_setting="0" is_inverted="false" conn_type="gclk" clkmux_buf_name="">
                 <efxpt:gen_pin/>
                 <efxpt:gen_param/>
             </efxpt:comp_output_clock>

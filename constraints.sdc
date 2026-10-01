@@ -22,7 +22,7 @@ create_clock -period 4.0000 io_memoryClk
 create_clock -period 10.0000 io_memFbClk
 create_clock -period 5.0000 io_peripheralClk
 create_clock -period 4.0000 io_ddrMasters_0_clk
-create_clock -period 10.0000 io_dnnClk
+create_clock -period 6.2500 io_vpuClk
 create_clock -period 10.0000 sd_base_clk
 # rgmii_rxc and rgmii_rx_pll_CLKOUT0 come from rgmii_rx_pll (PLL_TR1), locked
 # to the PHY's RXC; io_tseClk and io_tseClk_90 from tse_pll_clk, locked to the
@@ -34,7 +34,7 @@ create_clock -waveform {2.0000 6.0000} -period 8.0000 io_tseClk_90
 create_clock -period 8.0000 io_tseClk
 create_clock -name io_jtagClk -period 100.0 [get_ports {system_jtag_io_tck}]
 
-set_clock_groups -exclusive -group {rgmii_rxc rgmii_rx_pll_CLKOUT0} -group {io_tseClk_90 io_tseClk} -group {sd_base_clk} -group {io_dnnClk} -group {io_peripheralClk} -group {io_ddrMasters_0_clk} -group {io_jtagClk}
+set_clock_groups -exclusive -group {rgmii_rxc rgmii_rx_pll_CLKOUT0} -group {io_tseClk_90 io_tseClk} -group {sd_base_clk} -group {io_vpuClk} -group {io_peripheralClk} -group {io_ddrMasters_0_clk} -group {io_jtagClk}
 
 # GPIO Constraints
 ####################
